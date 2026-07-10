@@ -67,8 +67,10 @@ Linki aç, isim gir, "Yeni Oyun Kur" de, oda kodunu arkadaşlarına gönder
 (en fazla 4 kişi). Kurucu en az 2 kişi katılınca oyunu başlatır.
 
 ### Kurallar (özet)
-- 52 kartlık standart deste; her oyuncuya 4'er kart dağıtılır, masaya 4 kart
-  açılır (açılan kartlar arasında vale çıkarsa deste yeniden karılır).
+- 2 oyuncuda tek 52 kartlık standart deste, 2'den fazla oyuncuda (3-4 kişi)
+  iki deste birleştirilip 104 kartla oynanır. Her oyuncuya 4'er kart dağıtılır,
+  masaya 4 kart açılır (açılan kartlar arasında vale çıkarsa deste yeniden
+  karılır).
 - Sırası gelen elinden bir kart oynar:
   - Masadaki üst kartla **aynı sayıdaysa** → masadaki bütün kartları alır.
   - **Vale** oynarsa → masa boş değilse bütün kartları alır (masa boşken vale
@@ -80,7 +82,8 @@ Linki aç, isim gir, "Yeni Oyun Kur" de, oda kodunu arkadaşlarına gönder
   dağıtılır; deste de biterse oyun sona erer ve masada kalan kartlar son
   yakalayan oyuncuya yazılır.
 - **Puanlama:** En çok kart toplayan +3 · her Pişti +10 · yakalanan her vale
-  +1 · Maça Ası +1 · Kupa 2 +2. En yüksek puan kazanır.
+  +1 · yakalanan her Maça Ası +1 · yakalanan her Kupa 2 +2 (iki desteli
+  oyunlarda bu özel kartlardan ikişer tane olabilir). En yüksek puan kazanır.
 
 ---
 

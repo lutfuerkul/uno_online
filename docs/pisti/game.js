@@ -55,10 +55,13 @@ function uid() {
   return (crypto.randomUUID && crypto.randomUUID()) || "c" + Math.random().toString(36).slice(2);
 }
 
-function buildDeck() {
+// 2 oyuncuda tek 52'lik deste, 2'den fazla oyuncuda iki deste (104 kart) birleştirilir.
+function buildDeck(numDecks = 1) {
   const deck = [];
-  for (const suit of SUITS) {
-    for (const rank of RANKS) deck.push({ suit, rank, id: uid() });
+  for (let n = 0; n < numDecks; n++) {
+    for (const suit of SUITS) {
+      for (const rank of RANKS) deck.push({ suit, rank, id: uid() });
+    }
   }
   return deck;
 }
@@ -196,7 +199,8 @@ async function startGame() {
     if (players[0] !== playerId) return; // sadece kurucu
     if (players.length < MIN_PLAYERS) return;
 
-    const deck = shuffle(buildDeck());
+    const numDecks = players.length > 2 ? 2 : 1;
+    const deck = shuffle(buildDeck(numDecks));
     const hands = dealHands(deck, players);
     const pile = dealTable(deck);
 
@@ -225,12 +229,14 @@ function scoreGame(players, won, pistiCount) {
   for (const p of players) {
     const cards = won[p] || [];
     const jackCount = cards.filter((c) => c.rank === "J").length;
-    const hasAceSpades = cards.some((c) => c.suit === "S" && c.rank === "A");
-    const hasTwoHearts = cards.some((c) => c.suit === "H" && c.rank === "2");
+    // 2'den fazla oyuncuda iki deste kullanıldığından bu özel kartlar birden
+    // fazla olabilir (ör. 2 tane Maça Ası) — bu yüzden sayıya göre puanlanır.
+    const aceSpadesCount = cards.filter((c) => c.suit === "S" && c.rank === "A").length;
+    const twoHeartsCount = cards.filter((c) => c.suit === "H" && c.rank === "2").length;
     const mostCards = cardCounts[p] === maxCards && maxCards > 0;
     const pisti = pistiCount[p] || 0;
-    const total = pisti * 10 + jackCount * 1 + (hasAceSpades ? 1 : 0) + (hasTwoHearts ? 2 : 0) + (mostCards ? 3 : 0);
-    detail[p] = { cardCount: cardCounts[p], jackCount, hasAceSpades, hasTwoHearts, mostCards, pisti, total };
+    const total = pisti * 10 + jackCount * 1 + aceSpadesCount * 1 + twoHeartsCount * 2 + (mostCards ? 3 : 0);
+    detail[p] = { cardCount: cardCounts[p], jackCount, aceSpadesCount, twoHeartsCount, mostCards, pisti, total };
     scores[p] = total;
   }
   let best = -1;
@@ -284,7 +290,6 @@ async function playCard(cardId) {
 
     const players = g.players;
     const curIdx = players.indexOf(playerId);
-    let nextTurn = players[nextIndex(curIdx, players.length, 1)];
 
     const allHandsEmpty = players.every((p) => (hands[p] || []).length === 0);
     let drawPile = [...(g.drawPile || [])];
@@ -293,10 +298,11 @@ async function playCard(cardId) {
 
     if (allHandsEmpty) {
       if (drawPile.length > 0) {
-        // yeni el: herkese 4'er kart daha dağıt (masa aynen kalır)
-        for (const p of players) {
-          hands[p] = drawPile.splice(drawPile.length - 4, 4);
-        }
+        // Yeni el: herkese 4'er kart daha dağıt (masa aynen kalır). 2 desteli
+        // (3-4 kişilik) oyunlarda kalan kart sayısı oyuncu*4'e tam
+        // bölünmeyebilir; bu yüzden mümkün olduğunca 4'er dağıtılır, deste
+        // biterse sıradaki oyuncu(lar) bu turda kart alamayabilir.
+        dealRound(hands, players, drawPile);
       } else {
         // deste bitti, kimsenin eli kalmadı → oyun bitti
         if (pile.length > 0 && lastCapturer) {
@@ -312,12 +318,33 @@ async function playCard(cardId) {
       }
     }
 
+    // Sıra, eli boş olmayan bir sonraki oyuncuya geçer (eşit olmayan
+    // dağıtım durumunda eli hâlâ boş olan oyuncular atlanır).
+    const nextTurn = status === "finished" ? g.currentTurn : nextPlayerWithCards(players, hands, curIdx);
+
     tx.update(ref, {
       hands, pile, drawPile, won, pistiCount, lastCapturer, lastAction,
-      currentTurn: status === "finished" ? g.currentTurn : nextTurn,
+      currentTurn: nextTurn,
       status, winner, winners, scores, scoreDetail,
     });
   });
+}
+
+function dealRound(hands, players, drawPile) {
+  for (const p of players) {
+    if (drawPile.length === 0) break;
+    const take = Math.min(4, drawPile.length);
+    hands[p] = drawPile.splice(drawPile.length - take, take);
+  }
+}
+
+function nextPlayerWithCards(players, hands, fromIdx) {
+  const n = players.length;
+  for (let step = 1; step <= n; step++) {
+    const idx = nextIndex(fromIdx, n, step);
+    if ((hands[players[idx]] || []).length > 0) return players[idx];
+  }
+  return null;
 }
 
 function subscribe(code) {
@@ -381,11 +408,16 @@ async function leaveRoom() {
           updates.winners = result.winners;
           updates.winner = result.winners.length === 1 ? result.winners[0] : null;
         } else if (g.currentTurn === playerId) {
-          // Sırası olan çıktıysa sırayı bir sonraki (kalan) oyuncuya ver.
+          // Sırası olan çıktıysa sırayı elinde kartı olan bir sonraki oyuncuya ver.
           const old = g.players;
           const curIdx = old.indexOf(playerId);
-          const afterPlayer = old[nextIndex(curIdx, old.length, 1)];
-          updates.currentTurn = players.includes(afterPlayer) ? afterPlayer : players[0];
+          let afterPlayer = null;
+          for (let step = 1; step <= old.length; step++) {
+            const candidate = old[nextIndex(curIdx, old.length, step)];
+            if (candidate === playerId) continue;
+            if ((hands[candidate] || []).length > 0) { afterPlayer = candidate; break; }
+          }
+          updates.currentTurn = afterPlayer || players[0];
         }
       }
       tx.update(ref, updates);
@@ -617,8 +649,8 @@ function renderResult() {
           ${d.mostCards ? " · en çok kart +3" : ""}
           ${d.pisti ? ` · ${d.pisti} pişti +${d.pisti * 10}` : ""}
           ${d.jackCount ? ` · ${d.jackCount} vale +${d.jackCount}` : ""}
-          ${d.hasAceSpades ? " · maça ası +1" : ""}
-          ${d.hasTwoHearts ? " · kupa 2 +2" : ""}
+          ${d.aceSpadesCount ? ` · ${d.aceSpadesCount > 1 ? d.aceSpadesCount + " " : ""}maça ası +${d.aceSpadesCount}` : ""}
+          ${d.twoHeartsCount ? ` · ${d.twoHeartsCount > 1 ? d.twoHeartsCount + " " : ""}kupa 2 +${d.twoHeartsCount * 2}` : ""}
         </div>
       </div>`;
   }).join("");
