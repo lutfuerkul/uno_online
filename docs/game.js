@@ -149,6 +149,7 @@ async function createGame(name) {
     direction: 1,
     hasDrawn: false, // sırası olan oyuncu bu turda kart çekti mi?
     unoSafe: [], // "UNO" demiş ve 1 kartı olan oyuncular
+    reverseColor: null, // reverse sonrası aktif renk kilidi
     winner: null,
     createdAt: Date.now(),
   });
@@ -216,6 +217,7 @@ async function startGame() {
       direction: 1,
       hasDrawn: false,
       unoSafe: [],
+      reverseColor: null,
       status: "playing",
     });
   });
@@ -234,8 +236,16 @@ async function playCard(cardId, chosenColor) {
     if (idx === -1) return;
     const card = hand[idx];
     const top = g.discardPile[g.discardPile.length - 1];
-    if (!canPlay(card, top, g.currentColor)) return;
-    if (isWild(card) && !chosenColor) return;
+
+    // Reverse sonrası özel kısıt: sadece aynı renk ya da başka bir reverse.
+    const inReverse = g.reverseColor != null;
+    if (inReverse) {
+      const ok = card.type === "reverse" || card.color === g.reverseColor;
+      if (!ok) return;
+    } else {
+      if (!canPlay(card, top, g.currentColor)) return;
+      if (isWild(card) && !chosenColor) return;
+    }
 
     hand.splice(idx, 1);
     const discard = [...g.discardPile, card];
@@ -249,14 +259,16 @@ async function playCard(cardId, chosenColor) {
     const dir = g.direction || 1;
     const newColor = isWild(card) ? chosenColor : card.color;
 
-    // Kart etkisine göre yön ve kaç adım ilerleneceğini hesapla.
-    let newDir = dir;
+    // Kart etkisine göre sırayı hesapla.
+    const newDir = dir; // (bu varyantta reverse yön çevirmiyor)
     let steps = 1; // sayı / joker
+    let keepTurn = false; // reverse: atan tekrar oynar
+    let nextReverseColor = null; // reverse comboyu sürdürür/başlatır
     if (card.type === "skip") {
       steps = 2; // sıradaki atlanır
     } else if (card.type === "reverse") {
-      newDir = -dir;
-      steps = n === 2 ? 2 : 1; // 2 kişilikte reverse = skip
+      keepTurn = true;
+      nextReverseColor = card.color; // sonraki hamle bu renge/reverse'e kilitli
     } else if (card.type === "drawTwo") {
       const target = players[nextIndex(curIdx, dir, n, 1)];
       drawInto(hands, target, draw, discard, 2);
@@ -267,7 +279,7 @@ async function playCard(cardId, chosenColor) {
       steps = 2;
     }
 
-    const nextTurn = players[nextIndex(curIdx, newDir, n, steps)];
+    const nextTurn = keepTurn ? playerId : players[nextIndex(curIdx, newDir, n, steps)];
 
     let status = g.status;
     let winner = g.winner;
@@ -282,7 +294,7 @@ async function playCard(cardId, chosenColor) {
     tx.update(ref, {
       hands, drawPile: draw, discardPile: discard,
       currentColor: newColor, currentTurn: nextTurn, direction: newDir,
-      hasDrawn: false, unoSafe,
+      hasDrawn: false, unoSafe, reverseColor: nextReverseColor,
       status, winner,
     });
   });
@@ -324,7 +336,7 @@ async function pass() {
     const nextTurn = players[nextIndex(curIdx, dir, players.length, 1)];
     const unoSafe = pruneUno(g.unoSafe, g.hands);
 
-    tx.update(ref, { currentTurn: nextTurn, hasDrawn: false, unoSafe });
+    tx.update(ref, { currentTurn: nextTurn, hasDrawn: false, unoSafe, reverseColor: null });
   });
 }
 
@@ -399,6 +411,7 @@ async function rematch() {
       direction: 1,
       hasDrawn: false,
       unoSafe: [],
+      reverseColor: null,
       winner: null,
     });
   });
@@ -433,6 +446,7 @@ async function leaveRoom() {
           const dir = g.direction || 1;
           updates.currentTurn = old[nextIndex(curIdx, dir, old.length, 1)];
           updates.hasDrawn = false;
+          updates.reverseColor = null;
         }
       }
       tx.update(ref, updates);
@@ -557,6 +571,14 @@ function renderBoard() {
   const dir = state.direction || 1;
   const hasDrawn = !!state.hasDrawn;
   const unoSafe = state.unoSafe || [];
+  const reverseColor = state.reverseColor || null; // reverse kilidi (varsa)
+
+  // Reverse kilidi varken sadece aynı renk ya da reverse oynanabilir.
+  const playableNow = (c) => isMyTurn && (
+    reverseColor != null
+      ? (c.type === "reverse" || c.color === reverseColor)
+      : canPlay(c, top, state.currentColor)
+  );
 
   // Diğer oyuncular (sıra bende olandan sonra saat yönünde diz).
   const others = players.filter((p) => p !== playerId);
@@ -582,7 +604,7 @@ function renderBoard() {
   const iNeedUno = myHand.length === 1 && !unoSafe.includes(playerId);
 
   const handHtml = myHand.map((c) =>
-    cardHtml(c, { clickable: true, playable: isMyTurn && canPlay(c, top, state.currentColor) })
+    cardHtml(c, { clickable: true, playable: playableNow(c) })
   ).join("");
 
   // Joker açık karttaysa, seçilen rengi herkes görsün diye o renkte göster.
@@ -614,6 +636,9 @@ function renderBoard() {
 
       <div class="turn ${isMyTurn ? "mine" : "theirs"}">
         ${isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu")}
+        ${isMyTurn && reverseColor != null
+          ? `<div class="hint">↩️ Reverse! Sadece <b>${COLOR_TR[reverseColor] || reverseColor}</b> ya da başka bir Reverse oyna — yoksa çek/pas.</div>`
+          : ""}
       </div>
 
       <div class="actions">
@@ -666,8 +691,18 @@ async function tryPlay(cardId) {
   const card = myHand.find((c) => c.id === cardId);
   if (!card) return;
   const top = state.discardPile[state.discardPile.length - 1];
+  const reverseColor = state.reverseColor || null;
 
   if (!isMyTurn) return toast("Sıra sende değil.");
+
+  if (reverseColor != null) {
+    // Reverse sonrası: sadece aynı renk ya da başka reverse.
+    const ok = card.type === "reverse" || card.color === reverseColor;
+    if (!ok) return toast(`Reverse sonrası sadece ${COLOR_TR[reverseColor] || ""} ya da Reverse oynayabilirsin.`);
+    playCard(cardId, null);
+    return;
+  }
+
   if (!canPlay(card, top, state.currentColor)) return toast("Bu kart oynanamaz.");
 
   if (isWild(card)) {
