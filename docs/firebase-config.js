@@ -1,18 +1,14 @@
 // ============================================================
-//  BURAYI DOLDUR  👇
+//  Firebase ayarları (Firebase Console'dan alındı)
 // ============================================================
-// Firebase Console'da web uygulaması oluşturunca sana böyle bir
-// "ayar kodu" verecek. Aşağıdaki tırnak içlerini onunla değiştir.
-//
-// Nereden bulunur:
-//   Firebase Console → Proje Ayarları (dişli) → "Uygulamaların"
-//   → Web uygulaması → "SDK kurulumu ve yapılandırması" → Config
-// ------------------------------------------------------------
+// Not: Bu değerler (apiKey dahil) Firebase web uygulamalarında gizli
+// değildir; herkese açık olması normaldir. Güvenlik Firestore
+// kurallarıyla sağlanır.
 window.FIREBASE_CONFIG = {
-  apiKey: "BURAYA_YAPISTIR",
-  authDomain: "BURAYA_YAPISTIR",
-  projectId: "BURAYA_YAPISTIR",
-  storageBucket: "BURAYA_YAPISTIR",
-  messagingSenderId: "BURAYA_YAPISTIR",
-  appId: "BURAYA_YAPISTIR",
+  apiKey: "AIzaSyDB8H-fTzpzVoCyEzGzjvUh57iH8Lh52zA",
+  authDomain: "unoonline-27104.firebaseapp.com",
+  projectId: "unoonline-27104",
+  storageBucket: "unoonline-27104.firebasestorage.app",
+  messagingSenderId: "794492266221",
+  appId: "1:794492266221:web:d5edddbd5899f9490b4ee4",
 };
