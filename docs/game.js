@@ -86,18 +86,6 @@ function canPlay(card, top, currentColor) {
   return false;
 }
 
-function label(c) {
-  switch (c.type) {
-    case "number": return String(c.value);
-    case "skip": return "⊘";
-    case "reverse": return "⇄";
-    case "drawTwo": return "+2";
-    case "wild": return "JOKER";
-    case "wildDrawFour": return "+4";
-    default: return "?";
-  }
-}
-
 // Sıradaki oyuncunun index'i (yönü ve adım sayısını dikkate alır).
 function nextIndex(idx, dir, n, steps = 1) {
   return (((idx + dir * steps) % n) + n) % n;
@@ -482,14 +470,51 @@ async function leaveRoom() {
 // ------------------------------------------------------------------
 // Görünüm (render)
 // ------------------------------------------------------------------
+// Kartın köşe/merkez sembolü.
+function cardSymbol(c) {
+  switch (c.type) {
+    case "number": return String(c.value);
+    case "skip": return "⊘";
+    case "reverse": return "⇄";
+    case "drawTwo": return "+2";
+    case "wild": return "★";
+    case "wildDrawFour": return "+4";
+    default: return "?";
+  }
+}
+
 function cardHtml(card, opts = {}) {
   const { faceDown = false, small = false, big = false, playable = false, clickable = false, colorOverride = null } = opts;
-  const size = small ? " small" : big ? " big" : "";
-  if (!card || faceDown) return `<div class="card back${size}">UNO</div>`;
-  const color = colorOverride || card.color;
-  const click = clickable ? ` data-card="${card.id}"` : "";
+  const w = small ? 34 : big ? 84 : 62;
+  const sv = `--w:${w}px`;
   const pl = playable ? " playable" : "";
-  return `<div class="card ${color}${size}${pl}"${click}>${label(card)}</div>`;
+
+  // Arka yüz (kırmızı UNO logolu).
+  if (!card || faceDown) {
+    return `<div class="card back" style="${sv}"><span class="oval"></span><span class="back-logo">UNO</span></div>`;
+  }
+
+  const click = clickable ? ` data-card="${card.id}"` : "";
+  const sym = cardSymbol(card);
+  const isWildCard = card.color === "wild";
+
+  // Joker / +4 (renk seçilmemiş): ovalde 4 renk.
+  if (isWildCard && !colorOverride) {
+    const center = card.type === "wildDrawFour" ? "+4" : "";
+    return `<div class="card wild${pl}" style="${sv}"${click}>` +
+      `<span class="corner tl">${sym}</span>` +
+      `<span class="oval wildoval"><i></i><i></i><i></i><i></i></span>` +
+      `<span class="pip dark">${center}</span>` +
+      `<span class="corner br">${sym}</span></div>`;
+  }
+
+  // Renkli kart (joker ise seçilen renkle gösterilir).
+  const color = isWildCard ? colorOverride : card.color;
+  return `<div class="card ${color}${pl}" style="${sv}"${click}>` +
+    `<span class="corner tl">${sym}</span>` +
+    `<span class="oval"></span>` +
+    `<span class="pip pip-${color}">${sym}</span>` +
+    `<span class="corner br">${sym}</span></div>`;
 }
 
 function render() {

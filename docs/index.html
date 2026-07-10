@@ -43,23 +43,69 @@
     .error { color: #ff8a80; font-size: 14px; }
     .muted { color: #ffffff99; font-size: 14px; }
 
-    /* --- Kart --- */
+    /* --- Kart (klasik UNO görünümü) --- */
     .card {
-      width: 62px; height: 92px; border-radius: 10px; flex: 0 0 auto;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 900; font-size: 26px; color: #fff;
-      border: 2px solid #ffffff55; box-shadow: 0 2px 5px #0006; user-select: none;
+      --w: 62px;
+      width: var(--w); height: calc(var(--w) * 1.5);
+      position: relative; flex: 0 0 auto; overflow: hidden;
+      border-radius: calc(var(--w) * 0.14);
+      border: calc(var(--w) * 0.07) solid #fff;
+      background: #d32f2f;
+      box-shadow: 0 2px 5px #0006; user-select: none;
     }
-    .card.small { width: 34px; height: 50px; font-size: 14px; }
-    .card.big { width: 84px; height: 124px; font-size: 34px; }
     .card.red { background: #d32f2f; }
     .card.yellow { background: #f9a825; }
     .card.green { background: #388e3c; }
     .card.blue { background: #1976d2; }
-    .card.wild { background: #212121; font-size: 16px; }
-    .card.back { background: #37474f; color: #ffffff99; font-size: 13px; letter-spacing: 1px; }
-    .card.action, .card.wildDrawFour, .card.wild { font-size: 18px; }
-    .card.playable { border-color: #fff; box-shadow: 0 0 0 3px #ffffffaa, 0 2px 5px #0006; }
+    .card.wild { background: #161616; }
+    .card.back { background: #c62828; }
+
+    /* merkezdeki eğik beyaz oval */
+    .oval {
+      position: absolute; left: 50%; top: 50%;
+      width: 80%; height: 98%;
+      background: #fff; border-radius: 50%;
+      transform: translate(-50%, -50%) rotate(24deg);
+    }
+    /* ortadaki büyük sembol (kartın renginde) */
+    .pip {
+      position: absolute; left: 0; right: 0; top: 50%;
+      transform: translateY(-50%);
+      text-align: center; font-weight: 900; z-index: 2;
+      font-size: calc(var(--w) * 0.52); line-height: 1;
+      -webkit-text-stroke: calc(var(--w) * 0.014) rgba(0,0,0,.25);
+    }
+    .pip-red { color: #d32f2f; }
+    .pip-yellow { color: #f9a825; }
+    .pip-green { color: #388e3c; }
+    .pip-blue { color: #1976d2; }
+    .pip.dark { color: #fff; -webkit-text-stroke: 0; text-shadow: 0 1px 2px #000; }
+    /* köşe rakamları */
+    .corner {
+      position: absolute; z-index: 3; color: #fff; font-weight: 800; line-height: 1;
+      font-size: calc(var(--w) * 0.22);
+      text-shadow: 0 1px 1px #0006;
+    }
+    .corner.tl { top: calc(var(--w) * 0.07); left: calc(var(--w) * 0.09); }
+    .corner.br { bottom: calc(var(--w) * 0.07); right: calc(var(--w) * 0.09); transform: rotate(180deg); }
+
+    /* joker: ovalin içinde 4 renk */
+    .wildoval i { position: absolute; width: 50%; height: 50%; }
+    .wildoval i:nth-child(1) { left: 0; top: 0; background: #1976d2; }
+    .wildoval i:nth-child(2) { right: 0; top: 0; background: #d32f2f; }
+    .wildoval i:nth-child(3) { left: 0; bottom: 0; background: #388e3c; }
+    .wildoval i:nth-child(4) { right: 0; bottom: 0; background: #f9a825; }
+
+    /* arka yüz: kırmızı kart, siyah oval, UNO logosu */
+    .card.back .oval { background: #111; }
+    .back-logo {
+      position: absolute; left: 0; right: 0; top: 50%; z-index: 2;
+      transform: translateY(-50%) rotate(-20deg);
+      text-align: center; font-style: italic; font-weight: 900;
+      font-size: calc(var(--w) * 0.34); color: #f9a825;
+      -webkit-text-stroke: calc(var(--w) * 0.022) #c62828;
+    }
+    .card.playable { box-shadow: 0 0 0 calc(var(--w) * 0.06) #ffffffdd, 0 2px 6px #0007; }
 
     /* --- Tahta --- */
     .topbar { display: flex; align-items: center; justify-content: space-between;
