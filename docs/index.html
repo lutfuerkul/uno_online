@@ -92,12 +92,12 @@
     .corner.tl { top: calc(var(--w) * 0.07); left: calc(var(--w) * 0.09); }
     .corner.br { bottom: calc(var(--w) * 0.07); right: calc(var(--w) * 0.09); transform: rotate(180deg); }
 
-    /* joker: ovalin içinde 4 renk */
-    .wildoval i { position: absolute; width: 50%; height: 50%; }
-    .wildoval i:nth-child(1) { left: 0; top: 0; background: #1976d2; }
-    .wildoval i:nth-child(2) { right: 0; top: 0; background: #d32f2f; }
-    .wildoval i:nth-child(3) { left: 0; bottom: 0; background: #388e3c; }
-    .wildoval i:nth-child(4) { right: 0; bottom: 0; background: #f9a825; }
+    /* joker: oval 4 dilimli pasta (kırmızı/sarı/yeşil/mavi) */
+    .oval.wildoval {
+      background: conic-gradient(from 0deg,
+        #d32f2f 0deg 90deg, #f9a825 90deg 180deg,
+        #388e3c 180deg 270deg, #1976d2 270deg 360deg);
+    }
 
     /* arka yüz: kırmızı kart, siyah oval, UNO logosu */
     .card.back .oval { background: #111; }

@@ -475,7 +475,7 @@ function cornerSym(c) {
   switch (c.type) {
     case "number": return String(c.value);
     case "skip": return "Ø";
-    case "reverse": return "⮁";
+    case "reverse": return "⇄";
     case "drawTwo": return "+2";
     case "wild": return "";
     case "wildDrawFour": return "+4";
@@ -495,16 +495,16 @@ function svgReverse(c) {
     `<path d="M62 74 V28 M62 74 l-10 -13 M62 74 l10 -13"/></g></svg>`;
 }
 function svgTwoCards(c) {
-  return `<svg viewBox="0 0 100 100"><g stroke="#fff" stroke-width="4">` +
-    `<rect x="28" y="30" width="30" height="46" rx="5" fill="${c}" transform="rotate(-14 43 53)"/>` +
-    `<rect x="42" y="26" width="30" height="46" rx="5" fill="${c}" transform="rotate(-14 57 49)"/></g></svg>`;
+  return `<svg viewBox="0 0 100 100"><g stroke="#fff" stroke-width="5" stroke-linejoin="round">` +
+    `<rect x="20" y="24" width="40" height="56" rx="7" fill="${c}" transform="rotate(-16 40 52)"/>` +
+    `<rect x="40" y="20" width="40" height="56" rx="7" fill="${c}" transform="rotate(-16 60 48)"/></g></svg>`;
 }
 function svgFourCards() {
-  return `<svg viewBox="0 0 100 100"><g stroke="#fff" stroke-width="3">` +
-    `<rect x="35" y="34" width="20" height="33" rx="3" fill="#1976d2" transform="rotate(-24 50 52)"/>` +
-    `<rect x="39" y="34" width="20" height="33" rx="3" fill="#d32f2f" transform="rotate(-8 50 52)"/>` +
-    `<rect x="43" y="34" width="20" height="33" rx="3" fill="#388e3c" transform="rotate(8 50 52)"/>` +
-    `<rect x="47" y="34" width="20" height="33" rx="3" fill="#f9a825" transform="rotate(24 50 52)"/></g></svg>`;
+  return `<svg viewBox="0 0 100 100"><g stroke="#fff" stroke-width="4" stroke-linejoin="round">` +
+    `<rect x="26" y="26" width="30" height="46" rx="5" fill="#1976d2" transform="rotate(-26 50 52)"/>` +
+    `<rect x="33" y="24" width="30" height="46" rx="5" fill="#d32f2f" transform="rotate(-9 50 52)"/>` +
+    `<rect x="39" y="24" width="30" height="46" rx="5" fill="#388e3c" transform="rotate(9 50 52)"/>` +
+    `<rect x="46" y="26" width="30" height="46" rx="5" fill="#f9a825" transform="rotate(26 50 52)"/></g></svg>`;
 }
 
 function cardHtml(card, opts = {}) {
@@ -525,7 +525,7 @@ function cardHtml(card, opts = {}) {
   if (isWildCard && !colorOverride) {
     if (card.type === "wild") {
       return `<div class="card wild${pl}" style="${sv}"${click}>` +
-        `<span class="oval wildoval"><i></i><i></i><i></i><i></i></span></div>`;
+        `<span class="oval wildoval"></span></div>`;
     }
     // +4: beyaz oval + dört renkli mini kart
     return `<div class="card wild${pl}" style="${sv}"${click}>` +
