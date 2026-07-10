@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// GELİŞTİRME kuralları — sadece test/geliştirme için uygundur.
+// Herkes 'games' koleksiyonundaki odaları okuyup yazabilir.
+//
+// Uyarı: Bu kurallar güvenli DEĞİLDİR (kimlik doğrulama yok, hile engeli yok).
+// Oyunu yayınlamadan önce Firebase Authentication ekleyip kuralları
+// sıkılaştırın (yalnızca odadaki oyuncular yazabilsin, sıra kontrolü vb.).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /games/{gameId} {
+      allow read, write: if true;
+    }
+  }
+}

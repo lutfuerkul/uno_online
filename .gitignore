@@ -1,0 +1,23 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+.metadata
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Firebase (gizli anahtarlar depoya girmesin)
+google-services.json
+GoogleService-Info.plist
+firebase.json
+.firebaserc
+
+# OS
+.DS_Store
