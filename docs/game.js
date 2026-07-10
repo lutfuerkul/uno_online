@@ -317,6 +317,65 @@ function leave() {
   render();
 }
 
+// Oyunu aynı oyuncularla yeniden başlatmak için bekleme odasına döndürür.
+async function rematch() {
+  const ref = doc(db, "games", gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const g = snap.data();
+    if (g.status !== "finished") return; // biri zaten sıfırlamış olabilir
+    tx.update(ref, {
+      status: "waiting",
+      hands: {},
+      drawPile: [],
+      discardPile: [],
+      currentColor: "red",
+      currentTurn: "",
+      direction: 1,
+      winner: null,
+    });
+  });
+}
+
+// Oyuncuyu odadan çıkarır (diğerleri devam edebilsin diye durumu düzeltir).
+async function leaveRoom() {
+  const id = gameId;
+  if (!id) return leave();
+  try {
+    await runTransaction(db, async (tx) => {
+      const ref = doc(db, "games", id);
+      const snap = await tx.get(ref);
+      if (!snap.exists()) return;
+      const g = snap.data();
+      if (!(g.players || []).includes(playerId)) return;
+
+      const players = g.players.filter((p) => p !== playerId);
+      const names = { ...g.playerNames }; delete names[playerId];
+      const hands = { ...(g.hands || {}) }; delete hands[playerId];
+      const updates = { players, playerNames: names, hands };
+
+      if (players.length > 0 && g.status === "playing") {
+        if (players.length < 2) {
+          // Tek kişi kaldı → o kazanır.
+          updates.status = "finished";
+          updates.winner = players[0];
+        } else if (g.currentTurn === playerId) {
+          // Sırası olan çıktıysa sırayı sonraki oyuncuya ver.
+          const old = g.players;
+          const curIdx = old.indexOf(playerId);
+          const dir = g.direction || 1;
+          updates.currentTurn = old[nextIndex(curIdx, dir, old.length, 1)];
+        }
+      }
+      tx.update(ref, updates);
+    });
+  } catch (e) {
+    // hata olsa da yerelden çık
+  }
+  leave();
+}
+
 // ------------------------------------------------------------------
 // Görünüm (render)
 // ------------------------------------------------------------------
@@ -418,7 +477,7 @@ function renderLobby() {
     navigator.clipboard && navigator.clipboard.writeText(gameId);
     document.getElementById("copied").textContent = "Kopyalandı ✓";
   };
-  document.getElementById("back").onclick = leave;
+  document.getElementById("back").onclick = leaveRoom;
   const startBtn = document.getElementById("start");
   if (startBtn) startBtn.onclick = () => { if (state.players.length >= 2) startGame(); };
 }
@@ -454,6 +513,10 @@ function renderBoard() {
 
   app.innerHTML = `
     <div class="screen">
+      <div class="topbar">
+        <span class="muted">Oda: ${gameId}</span>
+        <button class="leave-btn" id="leave">Çık</button>
+      </div>
       <div class="opps">${oppHtml}</div>
 
       <div class="middle" style="background:${colorTint(state.currentColor)}">
@@ -479,6 +542,8 @@ function renderBoard() {
       <div class="hand">${handHtml}</div>
     </div>`;
 
+  document.getElementById("leave").onclick = leaveRoom;
+
   const deckEl = app.querySelector(".middle .pile .card.back");
   if (deckEl && isMyTurn) deckEl.onclick = drawCard;
 
@@ -495,9 +560,12 @@ function renderResult() {
       <div class="emoji">${iWon ? "🎉" : "😔"}</div>
       <div style="font-size:28px;font-weight:800">${iWon ? "Kazandın!" : "Kaybettin"}</div>
       <div class="muted">${escapeHtml(winnerName)} oyunu kazandı.</div>
-      <button class="btn-primary" id="again" style="max-width:260px">Ana menüye dön</button>
+      <button class="btn-primary" id="rematch" style="max-width:260px">🔁 Tekrar Oyna</button>
+      <button class="btn-outline" id="leave" style="max-width:260px">Çık</button>
+      <div class="muted">Tekrar Oyna herkesi bekleme odasına döndürür; kurucu yeniden başlatır.</div>
     </div>`;
-  document.getElementById("again").onclick = leave;
+  document.getElementById("rematch").onclick = rematch;
+  document.getElementById("leave").onclick = leaveRoom;
 }
 
 // Kart oynama denemesi (joker ise renk sorar)
