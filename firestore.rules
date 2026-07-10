@@ -11,5 +11,8 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read, write: if true;
     }
+    match /pisti_games/{gameId} {
+      allow read, write: if true;
+    }
   }
 }
