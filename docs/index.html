@@ -51,9 +51,22 @@
     .card.playable { border-color: #fff; box-shadow: 0 0 0 3px #ffffffaa, 0 2px 5px #0006; }
 
     /* --- Tahta --- */
-    .opponent { padding: 12px; text-align: center; }
-    .opp-cards { display: flex; justify-content: center; margin: 6px 0; }
-    .opp-cards .card { margin-left: -14px; }
+    .opps { display: flex; gap: 8px; overflow-x: auto; padding: 10px; justify-content: center; }
+    .opp { flex: 0 0 auto; text-align: center; padding: 6px 8px; border-radius: 10px;
+      border: 2px solid transparent; min-width: 78px; }
+    .opp-turn { border-color: #66bb6a; background: #66bb6a22; }
+    .opp-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+    .opp-cards { display: flex; justify-content: center; margin: 2px 0; }
+    .opp-cards .card { margin-left: -18px; }
+    .opp-cards .card:first-child { margin-left: 0; }
+    .color-badge { margin-top: 8px; font-size: 13px; display: flex; align-items: center;
+      justify-content: center; gap: 6px; font-weight: 700; }
+    .color-badge .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block;
+      border: 1px solid #fff5; }
+    .lobby-list { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 6px; }
+    .lobby-row { display: flex; justify-content: space-between; padding: 10px 14px;
+      background: #ffffff11; border-radius: 10px; }
+    button:disabled { cursor: default; }
     .middle { flex: 1; display: flex; align-items: center; justify-content: center; gap: 20px; }
     .pile { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .pile small { color: #ffffffaa; }

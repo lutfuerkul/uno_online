@@ -1,5 +1,5 @@
 // UNO Online — tarayıcıda çalışan, Firebase Firestore ile gerçek zamanlı
-// 2 kişilik UNO oyunu. Derleme/kurulum gerektirmez; GitHub Pages'te barınır.
+// 2-4 kişilik UNO oyunu. Derleme/kurulum gerektirmez; GitHub Pages'te barınır.
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -19,6 +19,8 @@ if (!cfg || !cfg.projectId || cfg.projectId === "BURAYA_YAPISTIR") {
 
 const fb = initializeApp(cfg);
 const db = getFirestore(fb);
+
+const MAX_PLAYERS = 4;
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).
 let playerId = localStorage.getItem("uno_player");
@@ -40,6 +42,7 @@ let lastError = null;
 // Kart mantığı
 // ------------------------------------------------------------------
 const COLORS = ["red", "yellow", "green", "blue"];
+const COLOR_TR = { red: "Kırmızı", yellow: "Sarı", green: "Yeşil", blue: "Mavi" };
 
 function uid() {
   return (crypto.randomUUID && crypto.randomUUID()) || "c" + Math.random().toString(36).slice(2);
@@ -95,6 +98,11 @@ function label(c) {
   }
 }
 
+// Sıradaki oyuncunun index'i (yönü ve adım sayısını dikkate alır).
+function nextIndex(idx, dir, n, steps = 1) {
+  return (((idx + dir * steps) % n) + n) % n;
+}
+
 // Desteden [player] eline [count] kart çeker; deste biterse yeniden karılır.
 function drawInto(hands, player, draw, discard, count) {
   const hand = [...(hands[player] || [])];
@@ -130,14 +138,15 @@ async function createGame(name) {
   lastError = null;
   const code = genCode();
   await setDoc(doc(db, "games", code), {
-    status: "waiting",
-    players: [playerId],
+    status: "waiting", // waiting -> playing -> finished
+    players: [playerId], // players[0] = kurucu (host)
     playerNames: { [playerId]: name },
     hands: {},
     drawPile: [],
     discardPile: [],
     currentColor: "red",
     currentTurn: "",
+    direction: 1,
     winner: null,
     createdAt: Date.now(),
   });
@@ -152,41 +161,55 @@ async function joinGame(code, name) {
       const snap = await tx.get(ref);
       if (!snap.exists()) throw new Error("Oda bulunamadı.");
       const g = snap.data();
+      if (g.status !== "waiting") throw new Error("Oyun çoktan başladı.");
       const players = g.players || [];
-      if (players.includes(playerId)) return;
-      if (players.length >= 2) throw new Error("Bu oda dolu.");
+      if (players.includes(playerId)) return; // yeniden bağlanma
+      if (players.length >= MAX_PLAYERS) throw new Error(`Oda dolu (en fazla ${MAX_PLAYERS} kişi).`);
       players.push(playerId);
       const names = g.playerNames || {};
       names[playerId] = name;
-
-      // Oyunu başlat: deste kur, karıştır, 7'şer dağıt.
-      const deck = shuffle(buildDeck());
-      const hands = {};
-      for (const p of players) hands[p] = Array.from({ length: 7 }, () => deck.pop());
-
-      // İlk açık kart sayı kartı olsun.
-      let first = deck.pop();
-      while (first.type !== "number") {
-        deck.unshift(first);
-        first = deck.pop();
-      }
-
-      tx.update(ref, {
-        players,
-        playerNames: names,
-        hands,
-        drawPile: deck,
-        discardPile: [first],
-        currentColor: first.color,
-        currentTurn: players[0],
-        status: "playing",
-      });
+      tx.update(ref, { players, playerNames: names });
     });
     subscribe(code);
   } catch (e) {
     lastError = e.message || String(e);
     render();
   }
+}
+
+// Yalnızca kurucu, en az 2 oyuncu varken oyunu başlatır.
+async function startGame() {
+  const ref = doc(db, "games", gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const g = snap.data();
+    if (g.status !== "waiting") return;
+    const players = g.players || [];
+    if (players[0] !== playerId) return; // sadece kurucu
+    if (players.length < 2) return;
+
+    const deck = shuffle(buildDeck());
+    const hands = {};
+    for (const p of players) hands[p] = Array.from({ length: 7 }, () => deck.pop());
+
+    // İlk açık kart sayı kartı olsun.
+    let first = deck.pop();
+    while (first.type !== "number") {
+      deck.unshift(first);
+      first = deck.pop();
+    }
+
+    tx.update(ref, {
+      hands,
+      drawPile: deck,
+      discardPile: [first],
+      currentColor: first.color,
+      currentTurn: players[0],
+      direction: 1,
+      status: "playing",
+    });
+  });
 }
 
 async function playCard(cardId, chosenColor) {
@@ -211,21 +234,31 @@ async function playCard(cardId, chosenColor) {
     const hands = { ...g.hands };
     hands[playerId] = hand;
 
-    const opponent = g.players.find((p) => p !== playerId);
+    const players = g.players;
+    const n = players.length;
+    const curIdx = players.indexOf(playerId);
+    const dir = g.direction || 1;
     const newColor = isWild(card) ? chosenColor : card.color;
 
-    let nextTurn;
-    if (card.type === "skip" || card.type === "reverse") {
-      nextTurn = playerId; // 2 kişilikte rakip atlanır → tekrar sen
+    // Kart etkisine göre yön ve kaç adım ilerleneceğini hesapla.
+    let newDir = dir;
+    let steps = 1; // sayı / joker
+    if (card.type === "skip") {
+      steps = 2; // sıradaki atlanır
+    } else if (card.type === "reverse") {
+      newDir = -dir;
+      steps = n === 2 ? 2 : 1; // 2 kişilikte reverse = skip
     } else if (card.type === "drawTwo") {
-      drawInto(hands, opponent, draw, discard, 2);
-      nextTurn = playerId;
+      const target = players[nextIndex(curIdx, dir, n, 1)];
+      drawInto(hands, target, draw, discard, 2);
+      steps = 2; // kart çeken oyuncu atlanır
     } else if (card.type === "wildDrawFour") {
-      drawInto(hands, opponent, draw, discard, 4);
-      nextTurn = playerId;
-    } else {
-      nextTurn = opponent;
+      const target = players[nextIndex(curIdx, dir, n, 1)];
+      drawInto(hands, target, draw, discard, 4);
+      steps = 2;
     }
+
+    const nextTurn = players[nextIndex(curIdx, newDir, n, steps)];
 
     let status = g.status;
     let winner = g.winner;
@@ -236,7 +269,8 @@ async function playCard(cardId, chosenColor) {
 
     tx.update(ref, {
       hands, drawPile: draw, discardPile: discard,
-      currentColor: newColor, currentTurn: nextTurn, status, winner,
+      currentColor: newColor, currentTurn: nextTurn, direction: newDir,
+      status, winner,
     });
   });
 }
@@ -253,9 +287,14 @@ async function drawCard() {
     const discard = [...g.discardPile];
     const hands = { ...g.hands };
     drawInto(hands, playerId, draw, discard, 1);
-    const opponent = g.players.find((p) => p !== playerId);
 
-    tx.update(ref, { hands, drawPile: draw, discardPile: discard, currentTurn: opponent });
+    const players = g.players;
+    const n = players.length;
+    const curIdx = players.indexOf(playerId);
+    const dir = g.direction || 1;
+    const nextTurn = players[nextIndex(curIdx, dir, n, 1)];
+
+    tx.update(ref, { hands, drawPile: draw, discardPile: discard, currentTurn: nextTurn });
   });
 }
 
@@ -281,18 +320,20 @@ function leave() {
 // ------------------------------------------------------------------
 // Görünüm (render)
 // ------------------------------------------------------------------
-function cardHtml(card, { faceDown = false, small = false, big = false, playable = false, clickable = false } = {}) {
+function cardHtml(card, opts = {}) {
+  const { faceDown = false, small = false, big = false, playable = false, clickable = false, colorOverride = null } = opts;
   const size = small ? " small" : big ? " big" : "";
   if (!card || faceDown) return `<div class="card back${size}">UNO</div>`;
+  const color = colorOverride || card.color;
   const click = clickable ? ` data-card="${card.id}"` : "";
   const pl = playable ? " playable" : "";
-  return `<div class="card ${card.color}${size}${pl}"${click}>${label(card)}</div>`;
+  return `<div class="card ${color}${size}${pl}"${click}>${label(card)}</div>`;
 }
 
 function render() {
   if (!gameId) return renderHome();
   if (!state) return renderLoading();
-  if (state.status === "waiting") return renderWaiting();
+  if (state.status === "waiting") return renderLobby();
   if (state.status === "finished") return renderResult();
   return renderBoard();
 }
@@ -309,6 +350,7 @@ function renderHome() {
       <div class="divider"></div>
       <input id="code" placeholder="Oda Kodu (örn. K7P2M)" style="text-transform:uppercase" />
       <button class="btn-outline" id="join">Oyuna Katıl</button>
+      <div class="muted">2-4 kişi oynayabilir</div>
       ${lastError ? `<div class="error">${escapeHtml(lastError)}</div>` : ""}
     </div>`;
 
@@ -340,45 +382,79 @@ function renderLoading() {
   document.getElementById("back").onclick = leave;
 }
 
-function renderWaiting() {
+function renderLobby() {
+  const players = state.players || [];
+  const isHost = players[0] === playerId;
+  const rows = players.map((p, i) => {
+    const tags = [i === 0 ? "kurucu" : "", p === playerId ? "sen" : ""].filter(Boolean).join(" · ");
+    return `
+    <div class="lobby-row">
+      <span>${escapeHtml(state.playerNames[p] || "Oyuncu")}</span>
+      <span class="muted">${tags}</span>
+    </div>`;
+  }).join("");
+
   app.innerHTML = `
     <div class="center">
-      <div style="font-size:20px">Rakip bekleniyor...</div>
-      <div class="muted">Bu kodu arkadaşınla paylaş:</div>
+      <div style="font-size:20px;font-weight:700">Bekleme Odası</div>
+      <div class="muted">Bu kodu paylaş:</div>
       <div class="code-box" id="codebox">${gameId} <span style="font-size:22px">📋</span></div>
       <div class="muted" id="copied"></div>
-      <div class="spinner"></div>
-      <button class="btn-outline" id="back" style="max-width:200px">İptal</button>
+
+      <div class="lobby-list">${rows}</div>
+      <div class="muted">${players.length}/${MAX_PLAYERS} oyuncu</div>
+
+      ${isHost
+        ? `<button class="btn-primary" id="start" ${players.length < 2 ? "disabled style='opacity:.5'" : ""}>
+             Oyunu Başlat
+           </button>
+           ${players.length < 2 ? `<div class="muted">En az 2 oyuncu gerekiyor</div>` : ""}`
+        : `<div class="muted">Kurucu başlatınca oyun başlayacak...</div><div class="spinner"></div>`}
+
+      <button class="btn-outline" id="back" style="max-width:200px">Çık</button>
     </div>`;
+
   document.getElementById("codebox").onclick = () => {
     navigator.clipboard && navigator.clipboard.writeText(gameId);
     document.getElementById("copied").textContent = "Kopyalandı ✓";
   };
   document.getElementById("back").onclick = leave;
+  const startBtn = document.getElementById("start");
+  if (startBtn) startBtn.onclick = () => { if (state.players.length >= 2) startGame(); };
 }
 
 function renderBoard() {
+  const players = state.players;
   const isMyTurn = state.currentTurn === playerId;
   const myHand = state.hands[playerId] || [];
-  const oppId = state.players.find((p) => p !== playerId) || "";
-  const oppCount = (state.hands[oppId] || []).length;
-  const oppName = state.playerNames[oppId] || "Rakip";
   const top = state.discardPile[state.discardPile.length - 1];
+  const dir = state.direction || 1;
 
-  const oppBacks = Array.from({ length: Math.min(oppCount, 12) },
-    () => cardHtml(null, { faceDown: true, small: true })).join("");
+  // Diğer oyuncular (sıra bende olandan sonra saat yönünde diz).
+  const others = players.filter((p) => p !== playerId);
+  const oppHtml = others.map((p) => {
+    const count = (state.hands[p] || []).length;
+    const isTurn = state.currentTurn === p;
+    return `
+      <div class="opp ${isTurn ? "opp-turn" : ""}">
+        <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}</div>
+        <div class="opp-cards">${
+          Array.from({ length: Math.min(count, 8) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
+        }</div>
+        <div class="muted">${count} kart</div>
+      </div>`;
+  }).join("");
 
   const handHtml = myHand.map((c) =>
     cardHtml(c, { clickable: true, playable: isMyTurn && canPlay(c, top, state.currentColor) })
   ).join("");
 
+  // Joker açık karttaysa, seçilen rengi herkes görsün diye o renkte göster.
+  const topColorOverride = top && isWild(top) ? state.currentColor : null;
+
   app.innerHTML = `
     <div class="screen">
-      <div class="opponent">
-        <div><b>${escapeHtml(oppName)}</b></div>
-        <div class="opp-cards">${oppBacks}</div>
-        <div class="muted">${oppCount} kart</div>
-      </div>
+      <div class="opps">${oppHtml}</div>
 
       <div class="middle" style="background:${colorTint(state.currentColor)}">
         <div class="pile">
@@ -388,22 +464,24 @@ function renderBoard() {
         </div>
         <div class="pile">
           <small>Açık kart</small>
-          ${cardHtml(top, { big: true })}
+          ${cardHtml(top, { big: true, colorOverride: topColorOverride })}
+          <div class="color-badge">
+            <span class="dot" style="background:${cssColor(state.currentColor)}"></span>
+            ${COLOR_TR[state.currentColor] || ""} ${dir === 1 ? "↻" : "↺"}
+          </div>
         </div>
       </div>
 
       <div class="turn ${isMyTurn ? "mine" : "theirs"}">
-        ${isMyTurn ? "● Sıra sende" : "○ Rakibin sırası"}
+        ${isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu")}
       </div>
 
       <div class="hand">${handHtml}</div>
     </div>`;
 
-  // Desteye tıkla → kart çek
   const deckEl = app.querySelector(".middle .pile .card.back");
   if (deckEl && isMyTurn) deckEl.onclick = drawCard;
 
-  // Eldeki kartlara tıkla → oyna
   app.querySelectorAll(".hand .card[data-card]").forEach((el) => {
     el.onclick = () => tryPlay(el.getAttribute("data-card"));
   });
@@ -493,7 +571,6 @@ function showConfigHelp() {
           <li>Sana verdiği <code>apiKey</code>, <code>projectId</code> ... değerlerini
               <code>firebase-config.js</code> dosyasına yapıştır.</li>
         </ol>
-        Bu dosyayı GitHub'da telefondan düzenleyebilirsin (kalem simgesi).
       </div>
     </div>`;
 }
