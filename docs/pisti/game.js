@@ -232,14 +232,13 @@ function scoreGame(players, won, pistiCount) {
   for (const p of players) {
     const cards = won[p] || [];
     const jackCount = cards.filter((c) => c.rank === "J").length;
-    // 2'den fazla oyuncuda iki deste kullanıldığından bu özel kartlar birden
-    // fazla olabilir (ör. 2 tane Maça Ası) — bu yüzden sayıya göre puanlanır.
-    const aceSpadesCount = cards.filter((c) => c.suit === "S" && c.rank === "A").length;
-    const twoHeartsCount = cards.filter((c) => c.suit === "H" && c.rank === "2").length;
+    const aceCount = cards.filter((c) => c.rank === "A").length;
+    const clubTwoCount = cards.filter((c) => c.suit === "C" && c.rank === "2").length;
+    const diamondTenCount = cards.filter((c) => c.suit === "D" && c.rank === "10").length;
     const mostCards = cardCounts[p] === maxCards && maxCards > 0;
     const pisti = pistiCount[p] || 0;
-    const total = pisti * 10 + jackCount * 1 + aceSpadesCount * 1 + twoHeartsCount * 2 + (mostCards ? 3 : 0);
-    detail[p] = { cardCount: cardCounts[p], jackCount, aceSpadesCount, twoHeartsCount, mostCards, pisti, total };
+    const total = pisti * 10 + jackCount * 1 + aceCount * 1 + clubTwoCount * 2 + diamondTenCount * 3 + (mostCards ? 3 : 0);
+    detail[p] = { cardCount: cardCounts[p], jackCount, aceCount, clubTwoCount, diamondTenCount, mostCards, pisti, total };
     scores[p] = total;
   }
   let best = -1;
@@ -653,8 +652,9 @@ function renderResult() {
           ${d.mostCards ? " · en çok kart +3" : ""}
           ${d.pisti ? ` · ${d.pisti} pişti +${d.pisti * 10}` : ""}
           ${d.jackCount ? ` · ${d.jackCount} vale +${d.jackCount}` : ""}
-          ${d.aceSpadesCount ? ` · ${d.aceSpadesCount > 1 ? d.aceSpadesCount + " " : ""}maça ası +${d.aceSpadesCount}` : ""}
-          ${d.twoHeartsCount ? ` · ${d.twoHeartsCount > 1 ? d.twoHeartsCount + " " : ""}kupa 2 +${d.twoHeartsCount * 2}` : ""}
+          ${d.aceCount ? ` · ${d.aceCount} as +${d.aceCount}` : ""}
+          ${d.clubTwoCount ? ` · sinek 2 +${d.clubTwoCount * 2}` : ""}
+          ${d.diamondTenCount ? ` · karo 10 +${d.diamondTenCount * 3}` : ""}
         </div>
       </div>`;
   }).join("");

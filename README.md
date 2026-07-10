@@ -83,9 +83,10 @@ bölünmediği için).
 - Bir turdaki 4'er kart bitince, deste hâlâ doluysa herkese yeniden 4'er kart
   dağıtılır; deste de biterse oyun sona erer ve masada kalan kartlar son
   yakalayan oyuncuya yazılır.
-- **Puanlama:** En çok kart toplayan +3 · her Pişti +10 · yakalanan her vale
-  +1 · yakalanan her Maça Ası +1 · yakalanan her Kupa 2 +2 (iki desteli
-  oyunlarda bu özel kartlardan ikişer tane olabilir). En yüksek puan kazanır.
+- **Puanlama:** Her Pişti +10 · yakalanan her As +1 · Sinek 2'li +2 ·
+  Karo 10'lu +3 · yakalanan her Vale +1 · en çok kart toplayan +3 (4 kişilik
+  oyunda bu özel kartlardan ikişer tane olabilir, her biri ayrı puan getirir).
+  En yüksek puan kazanır.
 
 ---
 
