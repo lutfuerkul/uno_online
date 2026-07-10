@@ -2,6 +2,7 @@
   "name": "Pişti Online",
   "short_name": "Pişti",
   "description": "2-4 kişilik gerçek zamanlı online Pişti oyunu.",
+  "id": "/uno_online/pisti/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
