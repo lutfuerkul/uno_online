@@ -1,19 +1,23 @@
-# UNO Online + Pişti Online
+# Kart Oyunları: UNO + Pişti
 
-Bu depoda iki gerçek zamanlı çok oyunculu kart oyunu var. Oyuncular kendi
-telefonlarından bir oda kodu üzerinden buluşup oynar.
+Bu depo, **tek bir yüklenebilir web uygulaması** (PWA) olarak paketlenmiş iki
+gerçek zamanlı çok oyunculu kart oyunu içerir. Siteyi telefonun ana ekranına
+bir kez eklersin; açılışta **UNO** ya da **Pişti**'yi seçersin. Oyuncular
+kendi telefonlarından bir oda kodu üzerinden buluşup oynar.
 
-| Oyun | Klasör | Kimin için? |
-|------|--------|-------------|
-| 🌐 **UNO** (2-4 kişi) | `docs/` | Sadece telefonu olanlar. Tarayıcıda linkle oynanır, kurulum/derleme yok. |
-| 🃏 **Pişti** (2 ya da 4 kişi, takım yok) | `docs/pisti/` | Sadece telefonu olanlar. Klasik iskambil kağıtlarıyla oynanır. |
-| 📱 **Flutter** (UNO uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler. |
+| Bölüm | Klasör | Ne işe yarar? |
+|-------|--------|---------------|
+| 🎴 Seçim ekranı | `docs/` | Siteyi açınca gördüğün ilk ekran — UNO ya da Pişti'yi seçersin. Ana ekrana eklenebilen tek uygulama burası. |
+| 🌐 **UNO** (2-4 kişi) | `docs/uno/` | Klasik UNO, oda koduyla online. |
+| 🃏 **Pişti** (2 ya da 4 kişi, takım yok) | `docs/pisti/` | Klasik iskambil kağıtlarıyla Pişti, oda koduyla online. |
+| 📱 **Flutter** (UNO uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler için ayrı bir UNO sürümü. |
 
 ---
 
 ## 🌐 Web sürümü — sadece telefonla (bilgisayar gerekmez)
 
-Tamamen tarayıcıda çalışır; GitHub Pages'te ücretsiz barınır. Yapman gerekenler:
+Tamamen tarayıcıda çalışır; GitHub Pages'te ücretsiz barınır. Tek bir
+uygulama olarak yüklenir, içinde iki oyun olur. Yapman gerekenler:
 
 ### 1. Firebase projesi aç (telefon tarayıcısından)
 1. **console.firebase.google.com** → yeni proje oluştur.
@@ -22,52 +26,39 @@ Tamamen tarayıcıda çalışır; GitHub Pages'te ücretsiz barınır. Yapman ge
    Sana `apiKey`, `projectId`... içeren bir "config" verecek.
 
 ### 2. Ayarları yapıştır (GitHub'da telefondan)
-1. Bu depoda `docs/firebase-config.js` dosyasını aç → **kalem** (düzenle) simgesi.
-2. `BURAYA_YAPISTIR` yazan yerleri Firebase'in verdiği değerlerle değiştir.
-3. **Commit changes** ile kaydet.
+1. `docs/uno/firebase-config.js` dosyasını aç → **kalem** (düzenle) simgesi →
+   `BURAYA_YAPISTIR` yazan yerleri Firebase'in verdiği değerlerle değiştir →
+   **Commit changes**.
+2. `docs/pisti/firebase-config.js` dosyası varsayılan olarak UNO ile **aynı
+   Firebase projesini** kullanacak şekilde zaten dolduruldu (Pişti kendi
+   `pisti_games` koleksiyonunu kullanır). Farklı bir proje kullanmak
+   istersen buradaki değerleri de kendi projeninkiyle değiştir.
+3. Firebase Console → **Firestore Database → Rules** bölümüne bu depodaki
+   `firestore.rules` dosyasının içeriğini yapıştır (hem `games` hem
+   `pisti_games` koleksiyonlarına izin verir).
 
 ### 3. GitHub Pages'i aç
 1. Depoda **Settings → Pages**.
 2. Source: **Deploy from a branch** → Branch: bu dal, klasör: **/docs** → Save.
 3. 1-2 dakika sonra bir link çıkar (örn. `https://KULLANICI.github.io/uno_online/`).
 
-### 4. Oyna
-Linki aç, "Yeni Oyun Kur" de, çıkan kodu arkadaşına gönder; o da linki açıp
-"Oyuna Katıl" ile kodu girsin. Herkes kendi telefonundan oynar. 🎉
+### 4. Yükle ve oyna
+1. Linki telefonda aç, tarayıcı menüsünden **"Ana ekrana ekle"** de — tek bir
+   "Kart Oyunları" ikonu eklenir.
+2. Uygulamayı açınca **UNO** ya da **Pişti**'yi seç.
+3. "Yeni Oyun Kur" de, çıkan kodu arkadaşına gönder; o da aynı ekrandan aynı
+   oyunu seçip "Oyuna Katıl" ile kodu girsin. Herkes kendi telefonundan
+   oynar. 🎉
 
 ---
 
-## 🃏 Pişti Online — sadece telefonla
+## 🃏 Pişti kuralları
 
 Klasik 52 kartlık iskambil destesiyle oynanan, 2 ya da 4 kişilik (takım yok,
-herkes kendi başına) gerçek zamanlı Pişti. `docs/` ile aynı GitHub Pages
-sitesinde, `pisti/` alt klasöründe barınır — ayrı bir site kurmana gerek yok.
-
-### 1. Firebase ayarlarını gir
-UNO ile **aynı Firebase projesini** kullanabilirsin:
-1. `docs/firebase-config.js` dosyasındaki değerleri kopyala.
-2. `docs/pisti/firebase-config.js` dosyasını aç → aynı değerleri yapıştır
-   (zaten UNO'daki projeyle aynı proje bilgileriyle önceden dolduruldu; farklı
-   bir Firebase projesi kullanmak istersen buradaki değerleri kendi projeninkiyle
-   değiştir).
-3. Firebase Console → **Firestore Database → Rules** bölümüne bu depodaki
-   `firestore.rules` dosyasının **güncel halini** yapıştır (Pişti artık ayrı
-   bir `pisti_games` koleksiyonu kullandığı için kurallara eklendi).
-
-### 2. GitHub Pages
-UNO için Pages'i zaten açtıysan ek bir şey yapmana gerek yok; Pişti otomatik
-olarak şurada yayında olur:
-
-```
-https://KULLANICI-ADIN.github.io/uno_online/pisti/
-```
-
-### 3. Oyna
-Linki aç, isim gir, "Yeni Oyun Kur" de, oda kodunu arkadaşlarına gönder
-(en fazla 4 kişi). Oyun **sadece 2 ya da 4 kişiyle** başlatılabilir — 3 kişi
-bekleme odasında kalabilir ama "Oyunu Başlat" butonu 4. kişi katılana (ya da
-biri ayrılıp 2 kişi kalana) kadar devre dışı olur (104 kart 3 kişiye tam
-bölünmediği için).
+herkes kendi başına) Pişti. Oyun **sadece 2 ya da 4 kişiyle** başlatılabilir
+— 3 kişi bekleme odasında kalabilir ama "Oyunu Başlat" butonu 4. kişi
+katılana (ya da biri ayrılıp 2 kişi kalana) kadar devre dışı olur (104 kart
+3 kişiye tam bölünmediği için).
 
 ### Kurallar (özet)
 - 2 oyuncuda tek 52 kartlık standart deste, 4 oyuncuda iki deste birleştirilip

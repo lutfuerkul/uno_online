@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>UNO Online</title>
+
+  <!-- Bu sayfa artık ayrı yüklenebilir bir uygulama değil; "Kart Oyunları"
+       adlı tek PWA'nın (bkz. ../index.html) içindeki bir oyun sayfası. -->
+  <meta name="theme-color" content="#1b2430" />
+  <link rel="icon" href="icons/icon-192.png" />
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #1b2430; color: #fff; overflow: hidden;
+    }
+    #app { height: 100%; display: flex; flex-direction: column; }
+
+    /* --- Ortak --- */
+    .screen { flex: 1; display: flex; flex-direction: column; }
+    .center { flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
+    button { font: inherit; border: none; border-radius: 12px; padding: 14px 20px;
+      font-weight: 700; cursor: pointer; }
+    .btn-primary { background: #d32f2f; color: #fff; width: 100%; }
+    .btn-outline { background: transparent; color: #fff; border: 2px solid #ffffff55; width: 100%; }
+    input {
+      font: inherit; width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #ffffff33;
+      background: #ffffff11; color: #fff; text-align: center; text-transform: none;
+    }
+    input::placeholder { color: #ffffff66; }
+    .logo { font-weight: 900; font-size: 72px; color: #d32f2f; letter-spacing: 4px; line-height: 1; }
+    .logo-sub { letter-spacing: 10px; font-size: 18px; color: #ffffffcc; margin-top: 4px; }
+    .divider { width: 100%; height: 1px; background: #ffffff22; margin: 8px 0; }
+    .error { color: #ff8a80; font-size: 14px; }
+    .muted { color: #ffffff99; font-size: 14px; }
+
+    /* --- Kart (klasik UNO görünümü) --- */
+    .card {
+      --w: 62px;
+      width: var(--w); height: calc(var(--w) * 1.5);
+      position: relative; flex: 0 0 auto; overflow: hidden;
+      border-radius: calc(var(--w) * 0.14);
+      border: calc(var(--w) * 0.07) solid #fff;
+      background: #d32f2f;
+      box-shadow: 0 2px 5px #0006; user-select: none;
+    }
+    .card.red { background: #d32f2f; }
+    .card.yellow { background: #f9a825; }
+    .card.green { background: #388e3c; }
+    .card.blue { background: #1976d2; }
+    .card.wild { background: #161616; }
+    .card.back { background: #c62828; }
+
+    /* merkezdeki eğik beyaz oval */
+    .oval {
+      position: absolute; left: 50%; top: 50%;
+      width: 80%; height: 98%;
+      background: #fff; border-radius: 50%;
+      transform: translate(-50%, -50%) rotate(24deg);
+    }
+    /* ortadaki büyük sembol */
+    .pip {
+      position: absolute; inset: 0; z-index: 2;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .pip.num {
+      font-weight: 900; line-height: 1;
+      font-size: calc(var(--w) * 0.56);
+      -webkit-text-stroke: calc(var(--w) * 0.014) rgba(0,0,0,.25);
+    }
+    .pip svg { width: 66%; height: 66%; display: block; overflow: visible; }
+    .pip-red { color: #d32f2f; }
+    .pip-yellow { color: #f9a825; }
+    .pip-green { color: #388e3c; }
+    .pip-blue { color: #1976d2; }
+    .pip.dark { color: #fff; -webkit-text-stroke: 0; }
+    /* köşe rakamları */
+    .corner {
+      position: absolute; z-index: 3; color: #fff; font-weight: 800; line-height: 1;
+      font-size: calc(var(--w) * 0.22);
+      text-shadow: 0 1px 1px #0006;
+    }
+    .corner.tl { top: calc(var(--w) * 0.07); left: calc(var(--w) * 0.09); }
+    .corner.br { bottom: calc(var(--w) * 0.07); right: calc(var(--w) * 0.09); transform: rotate(180deg); }
+
+    /* joker: oval 4 dilimli pasta (kırmızı/sarı/yeşil/mavi) */
+    .oval.wildoval {
+      background: conic-gradient(from 0deg,
+        #d32f2f 0deg 90deg, #f9a825 90deg 180deg,
+        #388e3c 180deg 270deg, #1976d2 270deg 360deg);
+    }
+
+    /* arka yüz: kırmızı kart, siyah oval, UNO logosu */
+    .card.back .oval { background: #111; }
+    .back-logo {
+      position: absolute; left: 0; right: 0; top: 50%; z-index: 2;
+      transform: translateY(-50%) rotate(-20deg);
+      text-align: center; font-style: italic; font-weight: 900;
+      font-size: calc(var(--w) * 0.34); color: #f9a825;
+      -webkit-text-stroke: calc(var(--w) * 0.022) #c62828;
+    }
+    .card.playable { box-shadow: 0 0 0 calc(var(--w) * 0.06) #ffffffdd, 0 2px 6px #0007; }
+
+    /* --- Tahta --- */
+    .topbar { display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: #131a24; }
+    .leave-btn { background: #ffffff1a; color: #fff; padding: 8px 16px; font-size: 14px; }
+    .opps { display: flex; gap: 8px; overflow-x: auto; padding: 10px; justify-content: center; }
+    .opp { flex: 0 0 auto; text-align: center; padding: 6px 8px; border-radius: 10px;
+      border: 2px solid transparent; min-width: 78px; }
+    .opp-turn { border-color: #66bb6a; background: #66bb6a22; }
+    .opp-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+    .opp-cards { display: flex; justify-content: center; margin: 2px 0; }
+    .opp-cards .card { margin-left: -18px; }
+    .opp-cards .card:first-child { margin-left: 0; }
+    .color-badge { margin-top: 8px; font-size: 13px; display: flex; align-items: center;
+      justify-content: center; gap: 6px; font-weight: 700; }
+    .color-badge .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block;
+      border: 1px solid #fff5; }
+    .actions { display: flex; gap: 10px; justify-content: center; padding: 4px 12px; flex-wrap: wrap; }
+    .btn-pass { background: #455a64; color: #fff; padding: 10px 22px; }
+    .btn-uno { background: #f9a825; color: #1b2430; padding: 10px 22px; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    .uno-tag { margin-top: 4px; font-size: 12px; font-weight: 800; color: #66bb6a; }
+    .uno-warn { margin-top: 4px; font-size: 11px; font-weight: 700; color: #ffb74d; }
+    .lobby-list { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 6px; }
+    .lobby-row { display: flex; justify-content: space-between; padding: 10px 14px;
+      background: #ffffff11; border-radius: 10px; }
+    button:disabled { cursor: default; }
+    .middle { flex: 1; display: flex; align-items: center; justify-content: center; gap: 20px; }
+    .pile { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .pile small { color: #ffffffaa; }
+    .turn { padding: 12px; text-align: center; font-weight: 800; }
+    .turn.mine { background: #2e7d32; }
+    .turn.theirs { background: #33414f; color: #ffffffbb; }
+    .turn .hint { font-weight: 600; font-size: 13px; margin-top: 4px; color: #fff; }
+    .hand { display: flex; gap: 6px; overflow-x: auto; padding: 12px; background: #131a24; }
+    .hand .card { cursor: pointer; }
+
+    .code-box {
+      background: #d32f2f22; border: 2px solid #d32f2f; border-radius: 14px;
+      padding: 14px 26px; font-size: 40px; font-weight: 900; letter-spacing: 6px;
+      display: inline-flex; align-items: center; gap: 12px;
+    }
+    .spinner { width: 34px; height: 34px; border: 4px solid #ffffff33;
+      border-top-color: #d32f2f; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Renk seçici --- */
+    .overlay { position: fixed; inset: 0; background: #000a; display: flex;
+      align-items: center; justify-content: center; z-index: 10; }
+    .picker { background: #222c38; padding: 24px; border-radius: 16px; text-align: center; }
+    .picker-row { display: flex; gap: 14px; margin-top: 16px; }
+    .swatch { width: 60px; height: 60px; border-radius: 12px; border: 2px solid #fff3; }
+    .picker-col { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; min-width: 200px; }
+    .target-btn { background: #37474f; color: #fff; padding: 12px; }
+    .target-cancel { background: transparent; color: #ffffff99; padding: 8px; }
+
+    .config-help { text-align: left; font-size: 14px; line-height: 1.6; max-width: 420px; }
+    .config-help code { background: #0004; padding: 2px 6px; border-radius: 6px; }
+    .emoji { font-size: 64px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="center"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Firebase ayarların (bunu sen dolduracaksın) -->
+  <script src="firebase-config.js"></script>
+  <!-- Oyun kodu -->
+  <script type="module" src="game.js"></script>
+
+  <!-- Ortak service worker (../sw.js), tüm siteyi (kök + uno/ + pisti/) kapsar. -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("../sw.js").then((reg) => {
+          reg.update();
+        }).catch((err) => {
+          console.warn("Service worker kaydı başarısız:", err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

@@ -5,7 +5,7 @@
 // değildir; herkese açık olması normaldir. Güvenlik Firestore
 // kurallarıyla sağlanır.
 //
-// UNO ile aynı Firebase projesi kullanılıyor (bkz. docs/firebase-config.js).
+// UNO ile aynı Firebase projesi kullanılıyor (bkz. docs/uno/firebase-config.js).
 // Pişti "pisti_games" adında ayrı bir koleksiyon kullanır; bu yüzden
 // Firestore kurallarına o koleksiyonu da eklemen gerekir — bkz. README'deki
 // "Pişti" bölümü ve depo kökündeki firestore.rules dosyası.
