@@ -6,7 +6,7 @@ telefonlarından bir oda kodu üzerinden buluşup oynar.
 | Oyun | Klasör | Kimin için? |
 |------|--------|-------------|
 | 🌐 **UNO** (2-4 kişi) | `docs/` | Sadece telefonu olanlar. Tarayıcıda linkle oynanır, kurulum/derleme yok. |
-| 🃏 **Pişti** (2-4 kişi, takım yok) | `docs/pisti/` | Sadece telefonu olanlar. Klasik iskambil kağıtlarıyla oynanır. |
+| 🃏 **Pişti** (2 ya da 4 kişi, takım yok) | `docs/pisti/` | Sadece telefonu olanlar. Klasik iskambil kağıtlarıyla oynanır. |
 | 📱 **Flutter** (UNO uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler. |
 
 ---
@@ -39,9 +39,9 @@ Linki aç, "Yeni Oyun Kur" de, çıkan kodu arkadaşına gönder; o da linki aç
 
 ## 🃏 Pişti Online — sadece telefonla
 
-Klasik 52 kartlık iskambil destesiyle oynanan, 2-4 kişilik (takım yok, herkes
-kendi başına) gerçek zamanlı Pişti. `docs/` ile aynı GitHub Pages sitesinde,
-`pisti/` alt klasöründe barınır — ayrı bir site kurmana gerek yok.
+Klasik 52 kartlık iskambil destesiyle oynanan, 2 ya da 4 kişilik (takım yok,
+herkes kendi başına) gerçek zamanlı Pişti. `docs/` ile aynı GitHub Pages
+sitesinde, `pisti/` alt klasöründe barınır — ayrı bir site kurmana gerek yok.
 
 ### 1. Firebase ayarlarını gir
 UNO ile **aynı Firebase projesini** kullanabilirsin:
@@ -64,13 +64,15 @@ https://KULLANICI-ADIN.github.io/uno_online/pisti/
 
 ### 3. Oyna
 Linki aç, isim gir, "Yeni Oyun Kur" de, oda kodunu arkadaşlarına gönder
-(en fazla 4 kişi). Kurucu en az 2 kişi katılınca oyunu başlatır.
+(en fazla 4 kişi). Oyun **sadece 2 ya da 4 kişiyle** başlatılabilir — 3 kişi
+bekleme odasında kalabilir ama "Oyunu Başlat" butonu 4. kişi katılana (ya da
+biri ayrılıp 2 kişi kalana) kadar devre dışı olur (104 kart 3 kişiye tam
+bölünmediği için).
 
 ### Kurallar (özet)
-- 2 oyuncuda tek 52 kartlık standart deste, 2'den fazla oyuncuda (3-4 kişi)
-  iki deste birleştirilip 104 kartla oynanır. Her oyuncuya 4'er kart dağıtılır,
-  masaya 4 kart açılır (açılan kartlar arasında vale çıkarsa deste yeniden
-  karılır).
+- 2 oyuncuda tek 52 kartlık standart deste, 4 oyuncuda iki deste birleştirilip
+  104 kartla oynanır. Her oyuncuya 4'er kart dağıtılır, masaya 4 kart açılır
+  (açılan kartlar arasında vale çıkarsa deste yeniden karılır).
 - Sırası gelen elinden bir kart oynar:
   - Masadaki üst kartla **aynı sayıdaysa** → masadaki bütün kartları alır.
   - **Vale** oynarsa → masa boş değilse bütün kartları alır (masa boşken vale

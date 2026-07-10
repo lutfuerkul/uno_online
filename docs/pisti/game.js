@@ -24,6 +24,9 @@ const db = getFirestore(fb);
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
+// 3 kişiyle 2 deste (104 kart) tam bölünmüyor; bu yüzden sadece 2 ya da 4
+// kişilik oyuna izin verilir (3 kişi bekleme odasında kalabilir ama başlatılamaz).
+const ALLOWED_PLAYER_COUNTS = [2, 4];
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).
 let playerId = localStorage.getItem("pisti_player");
@@ -187,7 +190,7 @@ async function joinGame(code, name) {
   }
 }
 
-// Sadece kurucu, 2-4 oyuncu varken oyunu başlatır.
+// Sadece kurucu, 2 ya da 4 oyuncu varken oyunu başlatır (3 kişi desteklenmez).
 async function startGame() {
   const ref = doc(db, "pisti_games", gameId);
   await runTransaction(db, async (tx) => {
@@ -197,7 +200,7 @@ async function startGame() {
     if (g.status !== "waiting") return;
     const players = g.players || [];
     if (players[0] !== playerId) return; // sadece kurucu
-    if (players.length < MIN_PLAYERS) return;
+    if (!ALLOWED_PLAYER_COUNTS.includes(players.length)) return;
 
     const numDecks = players.length > 2 ? 2 : 1;
     const deck = shuffle(buildDeck(numDecks));
@@ -536,10 +539,11 @@ function renderLobby() {
       <div class="muted">${players.length}/${MAX_PLAYERS} oyuncu</div>
 
       ${isHost
-        ? `<button class="btn-primary" id="start" ${players.length < MIN_PLAYERS ? "disabled style='opacity:.5'" : ""}>
+        ? `<button class="btn-primary" id="start" ${!ALLOWED_PLAYER_COUNTS.includes(players.length) ? "disabled style='opacity:.5'" : ""}>
              Oyunu Başlat
            </button>
-           ${players.length < MIN_PLAYERS ? `<div class="muted">En az 2 oyuncu gerekiyor</div>` : ""}`
+           ${players.length < MIN_PLAYERS ? `<div class="muted">En az 2 oyuncu gerekiyor</div>` : ""}
+           ${players.length === 3 ? `<div class="muted">3 kişiyle oynanamaz — 2 kişiyle ya da 4. kişiyi bekleyerek 4 kişiyle başlat</div>` : ""}`
         : `<div class="muted">Kurucu başlatınca oyun başlayacak...</div><div class="spinner"></div>`}
 
       <button class="btn-outline" id="back" style="max-width:200px">Çık</button>
@@ -551,7 +555,7 @@ function renderLobby() {
   };
   document.getElementById("back").onclick = leaveRoom;
   const startBtn = document.getElementById("start");
-  if (startBtn) startBtn.onclick = () => { if (state.players.length >= MIN_PLAYERS) startGame(); };
+  if (startBtn) startBtn.onclick = () => { if (ALLOWED_PLAYER_COUNTS.includes(state.players.length)) startGame(); };
 }
 
 function renderBoard() {
