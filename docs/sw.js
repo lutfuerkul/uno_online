@@ -4,7 +4,7 @@
 // çevrimdışıyken önbellekten). Firebase/gstatic gibi dış istekler dokunulmadan
 // doğrudan ağa gider.
 
-const CACHE = "uno-cache-v1";
+const CACHE = "uno-cache-v2";
 const ASSETS = [
   "./",
   "./index.html",

@@ -183,8 +183,17 @@
   <!-- PWA: service worker kaydı (yükleme + çevrimdışı) -->
   <script>
     if ("serviceWorker" in navigator) {
+      let reloaded = false;
+      // Yeni service worker devralınca sayfayı bir kez yenile (güncel sürüm gelsin).
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js").catch((err) => {
+        navigator.serviceWorker.register("sw.js").then((reg) => {
+          reg.update();
+        }).catch((err) => {
           console.warn("Service worker kaydı başarısız:", err);
         });
       });

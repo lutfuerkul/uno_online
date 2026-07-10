@@ -37,6 +37,7 @@ let gameId = null;
 let state = null;
 let unsub = null;
 let lastError = null;
+let connecting = false; // oda kuruluyor/katılınıyor (spinner göster)
 
 // ------------------------------------------------------------------
 // Kart mantığı
@@ -122,27 +123,48 @@ function genCode() {
 // ------------------------------------------------------------------
 // Firestore işlemleri
 // ------------------------------------------------------------------
+// Bir sözü zaman aşımına karşı sarmalar (bağlantı takılırsa kullanıcıya haber ver).
+function withTimeout(promise, ms, msg) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms)),
+  ]);
+}
+
 async function createGame(name) {
   lastError = null;
-  const code = genCode();
-  await setDoc(doc(db, "games", code), {
-    status: "waiting", // waiting -> playing -> finished
-    players: [playerId], // players[0] = kurucu (host)
-    playerNames: { [playerId]: name },
-    hands: {},
-    drawPile: [],
-    discardPile: [],
-    currentColor: "red",
-    currentTurn: "",
-    direction: 1,
-    hasDrawn: false, // sırası olan oyuncu bu turda kart çekti mi?
-    unoSafe: [], // "UNO" demiş ve 1 kartı olan oyuncular
-    reverseColor: null, // reverse sonrası aktif renk kilidi
-    blockedPlayer: null, // sıra atlaması bekleyen (bloklanan) oyuncu
-    winner: null,
-    createdAt: Date.now(),
-  });
-  subscribe(code);
+  connecting = true;
+  render();
+  try {
+    const code = genCode();
+    await withTimeout(
+      setDoc(doc(db, "games", code), {
+        status: "waiting", // waiting -> playing -> finished
+        players: [playerId], // players[0] = kurucu (host)
+        playerNames: { [playerId]: name },
+        hands: {},
+        drawPile: [],
+        discardPile: [],
+        currentColor: "red",
+        currentTurn: "",
+        direction: 1,
+        hasDrawn: false,
+        unoSafe: [],
+        reverseColor: null,
+        blockedPlayer: null,
+        winner: null,
+        createdAt: Date.now(),
+      }),
+      12000,
+      "Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene."
+    );
+    connecting = false;
+    subscribe(code);
+  } catch (e) {
+    connecting = false;
+    lastError = _friendlyError(e);
+    render();
+  }
 }
 
 // unoSafe listesini yalnızca gerçekten 1 kartı olan oyuncularla sınırla.
@@ -150,11 +172,18 @@ function pruneUno(unoSafe, hands) {
   return (unoSafe || []).filter((p) => (hands[p] || []).length === 1);
 }
 
+// Hata mesajını kullanıcı dostu hale getirir.
+function _friendlyError(e) {
+  return (e && e.message ? e.message : String(e)).replace(/^Error:\s*/, "");
+}
+
 async function joinGame(code, name) {
   lastError = null;
+  connecting = true;
+  render();
   const ref = doc(db, "games", code);
   try {
-    await runTransaction(db, async (tx) => {
+    await withTimeout(runTransaction(db, async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists()) throw new Error("Oda bulunamadı.");
       const g = snap.data();
@@ -166,10 +195,12 @@ async function joinGame(code, name) {
       const names = g.playerNames || {};
       names[playerId] = name;
       tx.update(ref, { players, playerNames: names });
-    });
+    }), 12000, "Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.");
+    connecting = false;
     subscribe(code);
   } catch (e) {
-    lastError = e.message || String(e);
+    connecting = false;
+    lastError = _friendlyError(e);
     render();
   }
 }
@@ -551,11 +582,17 @@ function cardHtml(card, opts = {}) {
 }
 
 function render() {
+  if (connecting) return renderConnecting();
   if (!gameId) return renderHome();
   if (!state) return renderLoading();
   if (state.status === "waiting") return renderLobby();
   if (state.status === "finished") return renderResult();
   return renderBoard();
+}
+
+function renderConnecting() {
+  app.innerHTML = `<div class="center"><div class="spinner"></div>
+    <div class="muted">Bağlanılıyor...</div></div>`;
 }
 
 function renderHome() {
@@ -878,6 +915,16 @@ function showConfigHelp() {
       </div>
     </div>`;
 }
+
+// Sessiz hataları görünür kıl (özellikle kurulu uygulamada tanı için yardımcı).
+window.addEventListener("unhandledrejection", (e) => {
+  if (connecting) {
+    connecting = false;
+    lastError = _friendlyError(e.reason || new Error("Beklenmeyen hata"));
+    render();
+  }
+  toast("Hata: " + _friendlyError(e.reason || new Error("bilinmiyor")));
+});
 
 // İlk çizim
 render();
