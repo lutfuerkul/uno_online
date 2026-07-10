@@ -417,7 +417,6 @@ function cardHtml(card, opts = {}) {
   return `<div class="card face ${cls}${dimCls}" style="${sv}"${click}>
       <span class="corner tl">${card.rank}<br/>${sym}</span>
       <span class="center-pip">
-        <span class="rank-big">${card.rank}</span>
         <span class="suit-big">${sym}</span>
       </span>
       <span class="corner br">${card.rank}<br/>${sym}</span>
