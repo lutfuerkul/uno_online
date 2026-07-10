@@ -5,15 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Pişti Online</title>
 
-  <!-- PWA: yüklenebilir uygulama -->
-  <link rel="manifest" href="manifest.webmanifest" />
+  <!-- Bu sayfa artık ayrı yüklenebilir bir uygulama değil; "Kart Oyunları"
+       adlı tek PWA'nın (bkz. ../index.html) içindeki bir oyun sayfası. -->
   <meta name="theme-color" content="#0d3b26" />
   <link rel="icon" href="icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Pişti" />
 
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -157,7 +152,7 @@
   <!-- Oyun kodu -->
   <script type="module" src="game.js"></script>
 
-  <!-- PWA: service worker kaydı (yükleme + çevrimdışı) -->
+  <!-- Ortak service worker (../sw.js), tüm siteyi (kök + uno/ + pisti/) kapsar. -->
   <script>
     if ("serviceWorker" in navigator) {
       let reloaded = false;
@@ -167,7 +162,7 @@
         window.location.reload();
       });
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("sw.js").then((reg) => {
+        navigator.serviceWorker.register("../sw.js").then((reg) => {
           reg.update();
         }).catch((err) => {
           console.warn("Service worker kaydı başarısız:", err);
