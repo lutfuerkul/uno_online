@@ -530,6 +530,14 @@ function svgTwoCards(c) {
     `<rect x="20" y="24" width="40" height="56" rx="7" fill="${c}" transform="rotate(-16 40 52)"/>` +
     `<rect x="40" y="20" width="40" height="56" rx="7" fill="${c}" transform="rotate(-16 60 48)"/></g></svg>`;
 }
+function svgWild() {
+  // Joker: 4 renkli çember (renk seçilse de kartın joker olduğu belli olsun).
+  return `<svg viewBox="0 0 100 100" stroke="#fff" stroke-width="2">` +
+    `<path d="M50 50 L50 15 A35 35 0 0 1 85 50 Z" fill="#d32f2f"/>` +
+    `<path d="M50 50 L85 50 A35 35 0 0 1 50 85 Z" fill="#f9a825"/>` +
+    `<path d="M50 50 L50 85 A35 35 0 0 1 15 50 Z" fill="#388e3c"/>` +
+    `<path d="M50 50 L15 50 A35 35 0 0 1 50 15 Z" fill="#1976d2"/></svg>`;
+}
 function svgFourCards() {
   return `<svg viewBox="0 0 100 100"><g stroke="#fff" stroke-width="4" stroke-linejoin="round">` +
     `<rect x="26" y="26" width="30" height="46" rx="5" fill="#1976d2" transform="rotate(-26 50 52)"/>` +
@@ -573,7 +581,8 @@ function cardHtml(card, opts = {}) {
   else if (card.type === "skip") center = `<span class="pip">${svgSkip(hex)}</span>`;
   else if (card.type === "reverse") center = `<span class="pip">${svgReverse(hex)}</span>`;
   else if (card.type === "drawTwo") center = `<span class="pip">${svgTwoCards(hex)}</span>`;
-  else center = `<span class="pip num pip-${color}">+4</span>`; // seçili renkli +4
+  else if (card.type === "wildDrawFour") center = `<span class="pip num pip-${color}">+4</span>`; // seçili renkli +4
+  else center = `<span class="pip">${svgWild()}</span>`; // seçili renkli joker
 
   return `<div class="card ${color}${pl}" style="${sv}"${click}>` +
     `<span class="corner tl">${cornerSym(card)}</span>` +
