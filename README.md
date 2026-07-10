@@ -1,8 +1,46 @@
 # UNO Online
 
-Çok oyunculu (şimdilik 2 kişilik) online UNO mobil oyunu. Flutter + Firebase
-Firestore ile yapılmıştır. İki oyuncu kendi telefonlarından bir oda kodu
-üzerinden buluşup gerçek zamanlı olarak oynar.
+Çok oyunculu (şimdilik 2 kişilik) online UNO oyunu. İki oyuncu kendi
+telefonlarından bir oda kodu üzerinden buluşup gerçek zamanlı oynar.
+
+İki sürüm var:
+
+| Sürüm | Klasör | Kimin için? |
+|-------|--------|-------------|
+| 🌐 **Web** (önerilen) | `docs/` | Sadece telefonu olanlar. Tarayıcıda linkle oynanır, kurulum/derleme yok. |
+| 📱 **Flutter** (uygulama) | `lib/` | Bilgisayarı olup APK derleyebilenler. |
+
+---
+
+## 🌐 Web sürümü — sadece telefonla (bilgisayar gerekmez)
+
+Tamamen tarayıcıda çalışır; GitHub Pages'te ücretsiz barınır. Yapman gerekenler:
+
+### 1. Firebase projesi aç (telefon tarayıcısından)
+1. **console.firebase.google.com** → yeni proje oluştur.
+2. **Firestore Database → Create database** (test modunda başlat).
+3. Proje Ayarları (dişli) → aşağı in → **Web uygulaması ekle** (`</>` simgesi).
+   Sana `apiKey`, `projectId`... içeren bir "config" verecek.
+
+### 2. Ayarları yapıştır (GitHub'da telefondan)
+1. Bu depoda `docs/firebase-config.js` dosyasını aç → **kalem** (düzenle) simgesi.
+2. `BURAYA_YAPISTIR` yazan yerleri Firebase'in verdiği değerlerle değiştir.
+3. **Commit changes** ile kaydet.
+
+### 3. GitHub Pages'i aç
+1. Depoda **Settings → Pages**.
+2. Source: **Deploy from a branch** → Branch: bu dal, klasör: **/docs** → Save.
+3. 1-2 dakika sonra bir link çıkar (örn. `https://KULLANICI.github.io/uno_online/`).
+
+### 4. Oyna
+Linki aç, "Yeni Oyun Kur" de, çıkan kodu arkadaşına gönder; o da linki açıp
+"Oyuna Katıl" ile kodu girsin. Herkes kendi telefonundan oynar. 🎉
+
+---
+
+## 📱 Flutter sürümü (uygulama)
+
+Aşağısı, bir bilgisayarda APK/iOS uygulaması olarak derlemek içindir.
 
 ## Nasıl çalışır?
 

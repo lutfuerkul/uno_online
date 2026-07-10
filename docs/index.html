@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>UNO Online</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #1b2430; color: #fff; overflow: hidden;
+    }
+    #app { height: 100%; display: flex; flex-direction: column; }
+
+    /* --- Ortak --- */
+    .screen { flex: 1; display: flex; flex-direction: column; }
+    .center { flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
+    button { font: inherit; border: none; border-radius: 12px; padding: 14px 20px;
+      font-weight: 700; cursor: pointer; }
+    .btn-primary { background: #d32f2f; color: #fff; width: 100%; }
+    .btn-outline { background: transparent; color: #fff; border: 2px solid #ffffff55; width: 100%; }
+    input {
+      font: inherit; width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #ffffff33;
+      background: #ffffff11; color: #fff; text-align: center; text-transform: none;
+    }
+    input::placeholder { color: #ffffff66; }
+    .logo { font-weight: 900; font-size: 72px; color: #d32f2f; letter-spacing: 4px; line-height: 1; }
+    .logo-sub { letter-spacing: 10px; font-size: 18px; color: #ffffffcc; margin-top: 4px; }
+    .divider { width: 100%; height: 1px; background: #ffffff22; margin: 8px 0; }
+    .error { color: #ff8a80; font-size: 14px; }
+    .muted { color: #ffffff99; font-size: 14px; }
+
+    /* --- Kart --- */
+    .card {
+      width: 62px; height: 92px; border-radius: 10px; flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 26px; color: #fff;
+      border: 2px solid #ffffff55; box-shadow: 0 2px 5px #0006; user-select: none;
+    }
+    .card.small { width: 34px; height: 50px; font-size: 14px; }
+    .card.big { width: 84px; height: 124px; font-size: 34px; }
+    .card.red { background: #d32f2f; }
+    .card.yellow { background: #f9a825; }
+    .card.green { background: #388e3c; }
+    .card.blue { background: #1976d2; }
+    .card.wild { background: #212121; font-size: 16px; }
+    .card.back { background: #37474f; color: #ffffff99; font-size: 13px; letter-spacing: 1px; }
+    .card.action, .card.wildDrawFour, .card.wild { font-size: 18px; }
+    .card.playable { border-color: #fff; box-shadow: 0 0 0 3px #ffffffaa, 0 2px 5px #0006; }
+
+    /* --- Tahta --- */
+    .opponent { padding: 12px; text-align: center; }
+    .opp-cards { display: flex; justify-content: center; margin: 6px 0; }
+    .opp-cards .card { margin-left: -14px; }
+    .middle { flex: 1; display: flex; align-items: center; justify-content: center; gap: 20px; }
+    .pile { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .pile small { color: #ffffffaa; }
+    .turn { padding: 12px; text-align: center; font-weight: 800; }
+    .turn.mine { background: #2e7d32; }
+    .turn.theirs { background: #33414f; color: #ffffffbb; }
+    .hand { display: flex; gap: 6px; overflow-x: auto; padding: 12px; background: #131a24; }
+    .hand .card { cursor: pointer; }
+
+    .code-box {
+      background: #d32f2f22; border: 2px solid #d32f2f; border-radius: 14px;
+      padding: 14px 26px; font-size: 40px; font-weight: 900; letter-spacing: 6px;
+      display: inline-flex; align-items: center; gap: 12px;
+    }
+    .spinner { width: 34px; height: 34px; border: 4px solid #ffffff33;
+      border-top-color: #d32f2f; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Renk seçici --- */
+    .overlay { position: fixed; inset: 0; background: #000a; display: flex;
+      align-items: center; justify-content: center; z-index: 10; }
+    .picker { background: #222c38; padding: 24px; border-radius: 16px; text-align: center; }
+    .picker-row { display: flex; gap: 14px; margin-top: 16px; }
+    .swatch { width: 60px; height: 60px; border-radius: 12px; border: 2px solid #fff3; }
+
+    .config-help { text-align: left; font-size: 14px; line-height: 1.6; max-width: 420px; }
+    .config-help code { background: #0004; padding: 2px 6px; border-radius: 6px; }
+    .emoji { font-size: 64px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="center"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Firebase ayarların (bunu sen dolduracaksın) -->
+  <script src="firebase-config.js"></script>
+  <!-- Oyun kodu -->
+  <script type="module" src="game.js"></script>
+</body>
+</html>
