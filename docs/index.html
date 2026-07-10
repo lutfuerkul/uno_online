@@ -4,6 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>UNO Online</title>
+
+  <!-- PWA: yüklenebilir uygulama -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#1b2430" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="UNO" />
+
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body {
@@ -119,5 +130,16 @@
   <script src="firebase-config.js"></script>
   <!-- Oyun kodu -->
   <script type="module" src="game.js"></script>
+
+  <!-- PWA: service worker kaydı (yükleme + çevrimdışı) -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch((err) => {
+          console.warn("Service worker kaydı başarısız:", err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
