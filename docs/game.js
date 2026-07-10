@@ -223,7 +223,7 @@ async function startGame() {
   });
 }
 
-async function playCard(cardId, chosenColor) {
+async function playCard(cardId, chosenColor, targetId) {
   const ref = doc(db, "games", gameId);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
@@ -270,13 +270,16 @@ async function playCard(cardId, chosenColor) {
       keepTurn = true;
       nextReverseColor = card.color; // sonraki hamle bu renge/reverse'e kilitli
     } else if (card.type === "drawTwo") {
-      const target = players[nextIndex(curIdx, dir, n, 1)];
+      // Hedef, atan oyuncu tarafından seçilir; atlanmaz (steps=1).
+      const target = targetId && players.includes(targetId) && targetId !== playerId
+        ? targetId : players[nextIndex(curIdx, dir, n, 1)];
       drawInto(hands, target, draw, discard, 2);
-      steps = 2; // kart çeken oyuncu atlanır
+      steps = 1;
     } else if (card.type === "wildDrawFour") {
-      const target = players[nextIndex(curIdx, dir, n, 1)];
+      const target = targetId && players.includes(targetId) && targetId !== playerId
+        ? targetId : players[nextIndex(curIdx, dir, n, 1)];
       drawInto(hands, target, draw, discard, 4);
-      steps = 2;
+      steps = 1;
     }
 
     const nextTurn = keepTurn ? playerId : players[nextIndex(curIdx, newDir, n, steps)];
@@ -286,6 +289,14 @@ async function playCard(cardId, chosenColor) {
     if (hand.length === 0) {
       status = "finished";
       winner = playerId;
+    }
+
+    // UNO cezası: sıra, 1 kartı olup "UNO" dememiş bir oyuncuya (kendisi hariç)
+    // dönüyorsa +2 kart. (kendi reverse zincirinde ceza yok)
+    if (nextTurn !== playerId &&
+        (hands[nextTurn] || []).length === 1 &&
+        !(g.unoSafe || []).includes(nextTurn)) {
+      drawInto(hands, nextTurn, draw, discard, 2);
     }
 
     // Kart oynandı → yeni oyuncunun turu, çekim sıfırlanır.
@@ -334,9 +345,22 @@ async function pass() {
     const curIdx = players.indexOf(playerId);
     const dir = g.direction || 1;
     const nextTurn = players[nextIndex(curIdx, dir, players.length, 1)];
-    const unoSafe = pruneUno(g.unoSafe, g.hands);
 
-    tx.update(ref, { currentTurn: nextTurn, hasDrawn: false, unoSafe, reverseColor: null });
+    // UNO cezası: sıra 1 kartlı, UNO dememiş oyuncuya dönüyorsa +2.
+    const draw = [...g.drawPile];
+    const discard = [...g.discardPile];
+    const hands = { ...g.hands };
+    if (nextTurn !== playerId &&
+        (hands[nextTurn] || []).length === 1 &&
+        !(g.unoSafe || []).includes(nextTurn)) {
+      drawInto(hands, nextTurn, draw, discard, 2);
+    }
+    const unoSafe = pruneUno(g.unoSafe, hands);
+
+    tx.update(ref, {
+      currentTurn: nextTurn, hasDrawn: false, unoSafe, reverseColor: null,
+      hands, drawPile: draw, discardPile: discard,
+    });
   });
 }
 
@@ -350,27 +374,6 @@ async function callUno() {
     if ((g.hands[playerId] || []).length !== 1) return;
     const unoSafe = pruneUno([...(g.unoSafe || []), playerId], g.hands);
     tx.update(ref, { unoSafe });
-  });
-}
-
-// "UNO" demeyi unutan bir oyuncuyu yakalar → o oyuncu 2 kart çeker.
-async function catchUno(targetId) {
-  const ref = doc(db, "games", gameId);
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists()) return;
-    const g = snap.data();
-    if (g.status !== "playing") return;
-    if ((g.hands[targetId] || []).length !== 1) return;
-    if ((g.unoSafe || []).includes(targetId)) return; // zaten UNO demiş
-
-    const draw = [...g.drawPile];
-    const discard = [...g.discardPile];
-    const hands = { ...g.hands };
-    drawInto(hands, targetId, draw, discard, 2);
-    const unoSafe = pruneUno(g.unoSafe, hands);
-
-    tx.update(ref, { hands, drawPile: draw, discardPile: discard, unoSafe });
   });
 }
 
@@ -587,7 +590,7 @@ function renderBoard() {
     const isTurn = state.currentTurn === p;
     const safe = unoSafe.includes(p);
     const unoBit = count === 1
-      ? (safe ? `<div class="uno-tag">UNO ✓</div>` : `<button class="catch-btn" data-catch="${p}">Yakala!</button>`)
+      ? (safe ? `<div class="uno-tag">UNO ✓</div>` : `<div class="uno-warn">1 kart! (UNO demedi)</div>`)
       : "";
     return `
       <div class="opp ${isTurn ? "opp-turn" : ""}">
@@ -659,10 +662,6 @@ function renderBoard() {
   const unoBtn = document.getElementById("uno");
   if (unoBtn) unoBtn.onclick = callUno;
 
-  app.querySelectorAll("[data-catch]").forEach((el) => {
-    el.onclick = () => catchUno(el.getAttribute("data-catch"));
-  });
-
   app.querySelectorAll(".hand .card[data-card]").forEach((el) => {
     el.onclick = () => tryPlay(el.getAttribute("data-card"));
   });
@@ -684,7 +683,7 @@ function renderResult() {
   document.getElementById("leave").onclick = leaveRoom;
 }
 
-// Kart oynama denemesi (joker ise renk sorar)
+// Kart oynama denemesi (joker ise renk, +2/+4 ise hedef sorar)
 async function tryPlay(cardId) {
   const isMyTurn = state.currentTurn === playerId;
   const myHand = state.hands[playerId] || [];
@@ -695,23 +694,31 @@ async function tryPlay(cardId) {
 
   if (!isMyTurn) return toast("Sıra sende değil.");
 
-  if (reverseColor != null) {
-    // Reverse sonrası: sadece aynı renk ya da başka reverse.
-    const ok = card.type === "reverse" || card.color === reverseColor;
-    if (!ok) return toast(`Reverse sonrası sadece ${COLOR_TR[reverseColor] || ""} ya da Reverse oynayabilirsin.`);
-    playCard(cardId, null);
-    return;
+  // Oynanabilirlik (reverse kilidi varsa ona göre).
+  const ok = reverseColor != null
+    ? (card.type === "reverse" || card.color === reverseColor)
+    : canPlay(card, top, state.currentColor);
+  if (!ok) {
+    return toast(reverseColor != null
+      ? `Reverse sonrası sadece ${COLOR_TR[reverseColor] || ""} ya da Reverse oynayabilirsin.`
+      : "Bu kart oynanamaz.");
   }
 
-  if (!canPlay(card, top, state.currentColor)) return toast("Bu kart oynanamaz.");
-
-  if (isWild(card)) {
-    const color = await pickColor();
-    if (!color) return;
-    playCard(cardId, color);
-  } else {
-    playCard(cardId, null);
+  // Joker / +4 → renk seç.
+  let chosenColor = null;
+  if (card.type === "wild" || card.type === "wildDrawFour") {
+    chosenColor = await pickColor();
+    if (!chosenColor) return;
   }
+
+  // +2 / +4 → kartların ekleneceği oyuncuyu seç.
+  let targetId = null;
+  if (card.type === "drawTwo" || card.type === "wildDrawFour") {
+    targetId = await pickPlayer();
+    if (!targetId) return;
+  }
+
+  playCard(cardId, chosenColor, targetId);
 }
 
 function pickColor() {
@@ -725,6 +732,27 @@ function pickColor() {
     ov.querySelectorAll(".swatch").forEach((s) => {
       s.onclick = () => { document.body.removeChild(ov); resolve(s.getAttribute("data-c")); };
     });
+    document.body.appendChild(ov);
+  });
+}
+
+// +2/+4 kartının kime ekleneceğini seçtiren diyalog (kendisi hariç oyuncular).
+function pickPlayer() {
+  return new Promise((resolve) => {
+    const targets = (state.players || []).filter((p) => p !== playerId);
+    if (targets.length === 1) return resolve(targets[0]); // tek rakip → otomatik
+    const ov = document.createElement("div");
+    ov.className = "overlay";
+    ov.innerHTML = `<div class="picker"><div style="font-weight:700">Kime eklensin?</div>
+      <div class="picker-col">
+        ${targets.map((p) => `<button class="target-btn" data-p="${p}">${escapeHtml(state.playerNames[p] || "Oyuncu")}
+          <span class="muted">(${(state.hands[p] || []).length} kart)</span></button>`).join("")}
+        <button class="target-cancel">İptal</button>
+      </div></div>`;
+    ov.querySelectorAll(".target-btn").forEach((b) => {
+      b.onclick = () => { document.body.removeChild(ov); resolve(b.getAttribute("data-p")); };
+    });
+    ov.querySelector(".target-cancel").onclick = () => { document.body.removeChild(ov); resolve(null); };
     document.body.appendChild(ov);
   });
 }
