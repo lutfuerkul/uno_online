@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Pişti Online</title>
+
+  <!-- PWA: yüklenebilir uygulama -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0d3b26" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pişti" />
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #0d3b26; color: #fff; overflow: hidden;
+    }
+    #app { height: 100%; display: flex; flex-direction: column; }
+
+    /* --- Ortak --- */
+    .screen { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+    .center { flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center;
+      overflow-y: auto; }
+    button { font: inherit; border: none; border-radius: 12px; padding: 14px 20px;
+      font-weight: 700; cursor: pointer; }
+    .btn-primary { background: #c62828; color: #fff; width: 100%; }
+    .btn-outline { background: transparent; color: #fff; border: 2px solid #ffffff55; width: 100%; }
+    input {
+      font: inherit; width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #ffffff33;
+      background: #ffffff11; color: #fff; text-align: center; text-transform: none;
+    }
+    input::placeholder { color: #ffffff66; }
+    .logo { font-weight: 900; font-size: 56px; color: #c62828; letter-spacing: 2px; line-height: 1;
+      text-shadow: 0 2px 0 #0d47a1; }
+    .logo-sub { letter-spacing: 10px; font-size: 18px; color: #ffffffcc; margin-top: 8px; }
+    .divider { width: 100%; height: 1px; background: #ffffff22; margin: 8px 0; }
+    .error { color: #ff8a80; font-size: 14px; }
+    .muted { color: #ffffff99; font-size: 14px; }
+
+    /* --- Klasik iskambil kağıdı --- */
+    .card {
+      --w: 62px;
+      width: var(--w); height: calc(var(--w) * 1.45);
+      position: relative; flex: 0 0 auto; overflow: hidden;
+      border-radius: calc(var(--w) * 0.12);
+      box-shadow: 0 2px 5px #0007; user-select: none;
+    }
+    .card.face {
+      background: #fdfdfa; border: 1px solid #00000022;
+    }
+    .card.face.red { color: #c62828; }
+    .card.face.black { color: #1a1a1a; }
+    .card.face.dim { opacity: .55; }
+    .card.face[data-card] { cursor: pointer; }
+    .card.face[data-card]:active { transform: translateY(2px); }
+
+    .corner {
+      position: absolute; z-index: 2; font-weight: 800; line-height: 1.05;
+      font-size: calc(var(--w) * 0.19); text-align: center;
+    }
+    .corner.tl { top: calc(var(--w) * 0.06); left: calc(var(--w) * 0.08); }
+    .corner.br { bottom: calc(var(--w) * 0.06); right: calc(var(--w) * 0.08); transform: rotate(180deg); }
+
+    .center-pip {
+      position: absolute; inset: 0; z-index: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    }
+    .rank-big { font-weight: 900; font-size: calc(var(--w) * 0.34); line-height: 1; }
+    .suit-big { font-size: calc(var(--w) * 0.4); line-height: 1; }
+
+    /* arka yüz: mavi zemin + kırmızı baklava desen, klasik kağıt kutusu gibi */
+    .card.back {
+      background: #1565c0;
+      border: calc(var(--w) * 0.055) solid #c62828;
+    }
+    .back-pattern {
+      position: absolute; inset: calc(var(--w) * 0.07);
+      border: 1px solid #ffffff77; border-radius: calc(var(--w) * 0.06);
+      background-image:
+        repeating-linear-gradient(45deg, #0d47a1 0 6px, #1976d2 6px 12px),
+        repeating-linear-gradient(-45deg, transparent 0 5px, #c6282855 5px 6px);
+      background-size: calc(var(--w) * 0.2) calc(var(--w) * 0.2);
+    }
+
+    /* --- Tahta --- */
+    .topbar { display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: #08281a; flex: 0 0 auto; }
+    .leave-btn { background: #ffffff1a; color: #fff; padding: 8px 16px; font-size: 14px; }
+    .opps { display: flex; gap: 8px; overflow-x: auto; padding: 8px; justify-content: center; flex: 0 0 auto; }
+    .opp { flex: 0 0 auto; text-align: center; padding: 6px 10px; border-radius: 10px;
+      border: 2px solid transparent; min-width: 84px; }
+    .opp-turn { border-color: #ffca28; background: #ffca2822; }
+    .opp-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+    .opp-cards { display: flex; justify-content: center; margin: 2px 0; }
+    .opp-cards .card { margin-left: -18px; }
+    .opp-cards .card:first-child { margin-left: 0; }
+
+    .middle { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+      gap: 22px; background: #0f4a2e; }
+    .pile { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .pile small { color: #ffffffaa; }
+    .empty-slot { width: 84px; height: calc(84px * 1.45); border: 2px dashed #ffffff33;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      color: #ffffff66; font-size: 13px; }
+    .mini-stat { font-size: 30px; }
+
+    .last-action { text-align: center; font-size: 13px; padding: 4px 8px; color: #ffe082; flex: 0 0 auto; }
+
+    .turn { padding: 10px; text-align: center; font-weight: 800; flex: 0 0 auto; }
+    .turn.mine { background: #2e7d32; }
+    .turn.theirs { background: #124020; color: #ffffffbb; }
+
+    .hand { display: flex; gap: 6px; overflow-x: auto; padding: 12px; background: #08281a; flex: 0 0 auto; }
+
+    .code-box {
+      background: #c6282822; border: 2px solid #c62828; border-radius: 14px;
+      padding: 14px 26px; font-size: 40px; font-weight: 900; letter-spacing: 6px;
+      display: inline-flex; align-items: center; gap: 12px;
+    }
+    .spinner { width: 34px; height: 34px; border: 4px solid #ffffff33;
+      border-top-color: #c62828; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .lobby-list { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 6px; }
+    .lobby-row { display: flex; justify-content: space-between; padding: 10px 14px;
+      background: #ffffff11; border-radius: 10px; }
+    button:disabled { cursor: default; }
+
+    /* --- Skor tablosu --- */
+    .score-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 8px; }
+    .score-row { background: #ffffff11; border-radius: 12px; padding: 10px 14px; text-align: left;
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 10px; }
+    .score-row.score-win { background: #ffca2822; border: 1px solid #ffca28; }
+    .score-name { font-weight: 800; }
+    .score-total { font-weight: 800; }
+    .score-breakdown { font-size: 12px; margin-top: 2px; width: 100%; }
+    .emoji { font-size: 64px; }
+
+    .config-help { text-align: left; font-size: 14px; line-height: 1.6; max-width: 420px; }
+    .config-help code { background: #0004; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="center"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Firebase ayarların (bunu sen dolduracaksın) -->
+  <script src="firebase-config.js"></script>
+  <!-- Oyun kodu -->
+  <script type="module" src="game.js"></script>
+
+  <!-- PWA: service worker kaydı (yükleme + çevrimdışı) -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").then((reg) => {
+          reg.update();
+        }).catch((err) => {
+          console.warn("Service worker kaydı başarısız:", err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

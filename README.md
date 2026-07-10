@@ -1,14 +1,13 @@
-# UNO Online
+# UNO Online + Pişti Online
 
-Çok oyunculu (şimdilik 2 kişilik) online UNO oyunu. İki oyuncu kendi
-telefonlarından bir oda kodu üzerinden buluşup gerçek zamanlı oynar.
+Bu depoda iki gerçek zamanlı çok oyunculu kart oyunu var. Oyuncular kendi
+telefonlarından bir oda kodu üzerinden buluşup oynar.
 
-İki sürüm var:
-
-| Sürüm | Klasör | Kimin için? |
-|-------|--------|-------------|
-| 🌐 **Web** (önerilen) | `docs/` | Sadece telefonu olanlar. Tarayıcıda linkle oynanır, kurulum/derleme yok. |
-| 📱 **Flutter** (uygulama) | `lib/` | Bilgisayarı olup APK derleyebilenler. |
+| Oyun | Klasör | Kimin için? |
+|------|--------|-------------|
+| 🌐 **UNO** (2-4 kişi) | `docs/` | Sadece telefonu olanlar. Tarayıcıda linkle oynanır, kurulum/derleme yok. |
+| 🃏 **Pişti** (2-4 kişi, takım yok) | `docs/pisti/` | Sadece telefonu olanlar. Klasik iskambil kağıtlarıyla oynanır. |
+| 📱 **Flutter** (UNO uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler. |
 
 ---
 
@@ -35,6 +34,53 @@ Tamamen tarayıcıda çalışır; GitHub Pages'te ücretsiz barınır. Yapman ge
 ### 4. Oyna
 Linki aç, "Yeni Oyun Kur" de, çıkan kodu arkadaşına gönder; o da linki açıp
 "Oyuna Katıl" ile kodu girsin. Herkes kendi telefonundan oynar. 🎉
+
+---
+
+## 🃏 Pişti Online — sadece telefonla
+
+Klasik 52 kartlık iskambil destesiyle oynanan, 2-4 kişilik (takım yok, herkes
+kendi başına) gerçek zamanlı Pişti. `docs/` ile aynı GitHub Pages sitesinde,
+`pisti/` alt klasöründe barınır — ayrı bir site kurmana gerek yok.
+
+### 1. Firebase ayarlarını gir
+UNO ile **aynı Firebase projesini** kullanabilirsin:
+1. `docs/firebase-config.js` dosyasındaki değerleri kopyala.
+2. `docs/pisti/firebase-config.js` dosyasını aç → aynı değerleri yapıştır
+   (zaten UNO'daki projeyle aynı proje bilgileriyle önceden dolduruldu; farklı
+   bir Firebase projesi kullanmak istersen buradaki değerleri kendi projeninkiyle
+   değiştir).
+3. Firebase Console → **Firestore Database → Rules** bölümüne bu depodaki
+   `firestore.rules` dosyasının **güncel halini** yapıştır (Pişti artık ayrı
+   bir `pisti_games` koleksiyonu kullandığı için kurallara eklendi).
+
+### 2. GitHub Pages
+UNO için Pages'i zaten açtıysan ek bir şey yapmana gerek yok; Pişti otomatik
+olarak şurada yayında olur:
+
+```
+https://KULLANICI-ADIN.github.io/uno_online/pisti/
+```
+
+### 3. Oyna
+Linki aç, isim gir, "Yeni Oyun Kur" de, oda kodunu arkadaşlarına gönder
+(en fazla 4 kişi). Kurucu en az 2 kişi katılınca oyunu başlatır.
+
+### Kurallar (özet)
+- 52 kartlık standart deste; her oyuncuya 4'er kart dağıtılır, masaya 4 kart
+  açılır (açılan kartlar arasında vale çıkarsa deste yeniden karılır).
+- Sırası gelen elinden bir kart oynar:
+  - Masadaki üst kartla **aynı sayıdaysa** → masadaki bütün kartları alır.
+  - **Vale** oynarsa → masa boş değilse bütün kartları alır (masa boşken vale
+    sadece masaya konur, yakalama olmaz).
+  - Eşleşme yoksa kart masaya konur, sıra rakibe geçer.
+  - Masada **tek kart** varken eşleştirip yakalarsan bu bir **Pişti**'dir
+    (bonus puan).
+- Bir turdaki 4'er kart bitince, deste hâlâ doluysa herkese yeniden 4'er kart
+  dağıtılır; deste de biterse oyun sona erer ve masada kalan kartlar son
+  yakalayan oyuncuya yazılır.
+- **Puanlama:** En çok kart toplayan +3 · her Pişti +10 · yakalanan her vale
+  +1 · Maça Ası +1 · Kupa 2 +2. En yüksek puan kazanır.
 
 ---
 
