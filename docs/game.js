@@ -147,10 +147,17 @@ async function createGame(name) {
     currentColor: "red",
     currentTurn: "",
     direction: 1,
+    hasDrawn: false, // sırası olan oyuncu bu turda kart çekti mi?
+    unoSafe: [], // "UNO" demiş ve 1 kartı olan oyuncular
     winner: null,
     createdAt: Date.now(),
   });
   subscribe(code);
+}
+
+// unoSafe listesini yalnızca gerçekten 1 kartı olan oyuncularla sınırla.
+function pruneUno(unoSafe, hands) {
+  return (unoSafe || []).filter((p) => (hands[p] || []).length === 1);
 }
 
 async function joinGame(code, name) {
@@ -207,6 +214,8 @@ async function startGame() {
       currentColor: first.color,
       currentTurn: players[0],
       direction: 1,
+      hasDrawn: false,
+      unoSafe: [],
       status: "playing",
     });
   });
@@ -267,14 +276,19 @@ async function playCard(cardId, chosenColor) {
       winner = playerId;
     }
 
+    // Kart oynandı → yeni oyuncunun turu, çekim sıfırlanır.
+    const unoSafe = pruneUno(g.unoSafe, hands);
+
     tx.update(ref, {
       hands, drawPile: draw, discardPile: discard,
       currentColor: newColor, currentTurn: nextTurn, direction: newDir,
+      hasDrawn: false, unoSafe,
       status, winner,
     });
   });
 }
 
+// Desteden 1 kart çeker. Sıra geçmez; oyuncu çektiği kartı oynayabilir ya da pas geçer.
 async function drawCard() {
   const ref = doc(db, "games", gameId);
   await runTransaction(db, async (tx) => {
@@ -282,19 +296,69 @@ async function drawCard() {
     if (!snap.exists()) return;
     const g = snap.data();
     if (g.status !== "playing" || g.currentTurn !== playerId) return;
+    if (g.hasDrawn) return; // bu turda zaten çekti
 
     const draw = [...g.drawPile];
     const discard = [...g.discardPile];
     const hands = { ...g.hands };
     drawInto(hands, playerId, draw, discard, 1);
+    const unoSafe = pruneUno(g.unoSafe, hands);
+
+    tx.update(ref, { hands, drawPile: draw, discardPile: discard, hasDrawn: true, unoSafe });
+  });
+}
+
+// Kart çektikten sonra oynamak istemezse sırayı sonraki oyuncuya geçirir.
+async function pass() {
+  const ref = doc(db, "games", gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const g = snap.data();
+    if (g.status !== "playing" || g.currentTurn !== playerId) return;
+    if (!g.hasDrawn) return; // önce kart çekmen gerekir
 
     const players = g.players;
-    const n = players.length;
     const curIdx = players.indexOf(playerId);
     const dir = g.direction || 1;
-    const nextTurn = players[nextIndex(curIdx, dir, n, 1)];
+    const nextTurn = players[nextIndex(curIdx, dir, players.length, 1)];
+    const unoSafe = pruneUno(g.unoSafe, g.hands);
 
-    tx.update(ref, { hands, drawPile: draw, discardPile: discard, currentTurn: nextTurn });
+    tx.update(ref, { currentTurn: nextTurn, hasDrawn: false, unoSafe });
+  });
+}
+
+// Tek kartı kalan oyuncu "UNO" der (yakalanmaktan kurtulur).
+async function callUno() {
+  const ref = doc(db, "games", gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const g = snap.data();
+    if ((g.hands[playerId] || []).length !== 1) return;
+    const unoSafe = pruneUno([...(g.unoSafe || []), playerId], g.hands);
+    tx.update(ref, { unoSafe });
+  });
+}
+
+// "UNO" demeyi unutan bir oyuncuyu yakalar → o oyuncu 2 kart çeker.
+async function catchUno(targetId) {
+  const ref = doc(db, "games", gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const g = snap.data();
+    if (g.status !== "playing") return;
+    if ((g.hands[targetId] || []).length !== 1) return;
+    if ((g.unoSafe || []).includes(targetId)) return; // zaten UNO demiş
+
+    const draw = [...g.drawPile];
+    const discard = [...g.discardPile];
+    const hands = { ...g.hands };
+    drawInto(hands, targetId, draw, discard, 2);
+    const unoSafe = pruneUno(g.unoSafe, hands);
+
+    tx.update(ref, { hands, drawPile: draw, discardPile: discard, unoSafe });
   });
 }
 
@@ -333,6 +397,8 @@ async function rematch() {
       currentColor: "red",
       currentTurn: "",
       direction: 1,
+      hasDrawn: false,
+      unoSafe: [],
       winner: null,
     });
   });
@@ -353,7 +419,7 @@ async function leaveRoom() {
       const players = g.players.filter((p) => p !== playerId);
       const names = { ...g.playerNames }; delete names[playerId];
       const hands = { ...(g.hands || {}) }; delete hands[playerId];
-      const updates = { players, playerNames: names, hands };
+      const updates = { players, playerNames: names, hands, unoSafe: pruneUno(g.unoSafe, hands) };
 
       if (players.length > 0 && g.status === "playing") {
         if (players.length < 2) {
@@ -366,6 +432,7 @@ async function leaveRoom() {
           const curIdx = old.indexOf(playerId);
           const dir = g.direction || 1;
           updates.currentTurn = old[nextIndex(curIdx, dir, old.length, 1)];
+          updates.hasDrawn = false;
         }
       }
       tx.update(ref, updates);
@@ -488,12 +555,18 @@ function renderBoard() {
   const myHand = state.hands[playerId] || [];
   const top = state.discardPile[state.discardPile.length - 1];
   const dir = state.direction || 1;
+  const hasDrawn = !!state.hasDrawn;
+  const unoSafe = state.unoSafe || [];
 
   // Diğer oyuncular (sıra bende olandan sonra saat yönünde diz).
   const others = players.filter((p) => p !== playerId);
   const oppHtml = others.map((p) => {
     const count = (state.hands[p] || []).length;
     const isTurn = state.currentTurn === p;
+    const safe = unoSafe.includes(p);
+    const unoBit = count === 1
+      ? (safe ? `<div class="uno-tag">UNO ✓</div>` : `<button class="catch-btn" data-catch="${p}">Yakala!</button>`)
+      : "";
     return `
       <div class="opp ${isTurn ? "opp-turn" : ""}">
         <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}</div>
@@ -501,8 +574,12 @@ function renderBoard() {
           Array.from({ length: Math.min(count, 8) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
         <div class="muted">${count} kart</div>
+        ${unoBit}
       </div>`;
   }).join("");
+
+  // Kendi durumum: tek kartım varsa ve "UNO" demediysem uyarı butonu.
+  const iNeedUno = myHand.length === 1 && !unoSafe.includes(playerId);
 
   const handHtml = myHand.map((c) =>
     cardHtml(c, { clickable: true, playable: isMyTurn && canPlay(c, top, state.currentColor) })
@@ -523,7 +600,7 @@ function renderBoard() {
         <div class="pile">
           <small>Deste</small>
           ${cardHtml(null, { faceDown: true, big: true })}
-          <small>${isMyTurn ? "çekmek için dokun" : ""}</small>
+          <small>${isMyTurn ? (hasDrawn ? "çektin" : "çekmek için dokun") : ""}</small>
         </div>
         <div class="pile">
           <small>Açık kart</small>
@@ -539,13 +616,27 @@ function renderBoard() {
         ${isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu")}
       </div>
 
+      <div class="actions">
+        ${isMyTurn && hasDrawn ? `<button class="btn-pass" id="pass">Pas Geç ▶</button>` : ""}
+        ${iNeedUno ? `<button class="btn-uno" id="uno">📢 UNO! de</button>` : ""}
+      </div>
+
       <div class="hand">${handHtml}</div>
     </div>`;
 
   document.getElementById("leave").onclick = leaveRoom;
 
   const deckEl = app.querySelector(".middle .pile .card.back");
-  if (deckEl && isMyTurn) deckEl.onclick = drawCard;
+  if (deckEl && isMyTurn && !hasDrawn) deckEl.onclick = drawCard;
+
+  const passBtn = document.getElementById("pass");
+  if (passBtn) passBtn.onclick = pass;
+  const unoBtn = document.getElementById("uno");
+  if (unoBtn) unoBtn.onclick = callUno;
+
+  app.querySelectorAll("[data-catch]").forEach((el) => {
+    el.onclick = () => catchUno(el.getAttribute("data-catch"));
+  });
 
   app.querySelectorAll(".hand .card[data-card]").forEach((el) => {
     el.onclick = () => tryPlay(el.getAttribute("data-card"));
