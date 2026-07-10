@@ -2,6 +2,7 @@
   "name": "UNO Online",
   "short_name": "UNO",
   "description": "2-4 kişilik gerçek zamanlı online UNO oyunu.",
+  "id": "/uno_online/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
