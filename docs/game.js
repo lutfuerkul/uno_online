@@ -470,17 +470,41 @@ async function leaveRoom() {
 // ------------------------------------------------------------------
 // Görünüm (render)
 // ------------------------------------------------------------------
-// Kartın köşe/merkez sembolü.
-function cardSymbol(c) {
+// Köşe rakamı/sembolü (küçük).
+function cornerSym(c) {
   switch (c.type) {
     case "number": return String(c.value);
-    case "skip": return "⊘";
-    case "reverse": return "⇄";
+    case "skip": return "Ø";
+    case "reverse": return "⮁";
     case "drawTwo": return "+2";
-    case "wild": return "★";
+    case "wild": return "";
     case "wildDrawFour": return "+4";
-    default: return "?";
+    default: return "";
   }
+}
+
+// --- Kart sembolleri (SVG çizimleri) ---
+function svgSkip(c) {
+  return `<svg viewBox="0 0 100 100" fill="none" stroke="${c}" stroke-width="13">` +
+    `<circle cx="50" cy="50" r="33"/><line x1="27" y1="73" x2="73" y2="27"/></svg>`;
+}
+function svgReverse(c) {
+  return `<svg viewBox="0 0 100 100" fill="none" stroke="${c}" stroke-width="10" ` +
+    `stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(35 50 50)">` +
+    `<path d="M38 26 V72 M38 26 l-10 13 M38 26 l10 13"/>` +
+    `<path d="M62 74 V28 M62 74 l-10 -13 M62 74 l10 -13"/></g></svg>`;
+}
+function svgTwoCards(c) {
+  return `<svg viewBox="0 0 100 100"><g stroke="#fff" stroke-width="4">` +
+    `<rect x="28" y="30" width="30" height="46" rx="5" fill="${c}" transform="rotate(-14 43 53)"/>` +
+    `<rect x="42" y="26" width="30" height="46" rx="5" fill="${c}" transform="rotate(-14 57 49)"/></g></svg>`;
+}
+function svgFourCards() {
+  return `<svg viewBox="0 0 100 100"><g stroke="#fff" stroke-width="3">` +
+    `<rect x="35" y="34" width="20" height="33" rx="3" fill="#1976d2" transform="rotate(-24 50 52)"/>` +
+    `<rect x="39" y="34" width="20" height="33" rx="3" fill="#d32f2f" transform="rotate(-8 50 52)"/>` +
+    `<rect x="43" y="34" width="20" height="33" rx="3" fill="#388e3c" transform="rotate(8 50 52)"/>` +
+    `<rect x="47" y="34" width="20" height="33" rx="3" fill="#f9a825" transform="rotate(24 50 52)"/></g></svg>`;
 }
 
 function cardHtml(card, opts = {}) {
@@ -495,26 +519,35 @@ function cardHtml(card, opts = {}) {
   }
 
   const click = clickable ? ` data-card="${card.id}"` : "";
-  const sym = cardSymbol(card);
   const isWildCard = card.color === "wild";
 
-  // Joker / +4 (renk seçilmemiş): ovalde 4 renk.
+  // Joker (renk seçilmemiş): ovalde 4 renk.
   if (isWildCard && !colorOverride) {
-    const center = card.type === "wildDrawFour" ? "+4" : "";
+    if (card.type === "wild") {
+      return `<div class="card wild${pl}" style="${sv}"${click}>` +
+        `<span class="oval wildoval"><i></i><i></i><i></i><i></i></span></div>`;
+    }
+    // +4: beyaz oval + dört renkli mini kart
     return `<div class="card wild${pl}" style="${sv}"${click}>` +
-      `<span class="corner tl">${sym}</span>` +
-      `<span class="oval wildoval"><i></i><i></i><i></i><i></i></span>` +
-      `<span class="pip dark">${center}</span>` +
-      `<span class="corner br">${sym}</span></div>`;
+      `<span class="corner tl">+4</span>` +
+      `<span class="oval"></span><span class="pip">${svgFourCards()}</span>` +
+      `<span class="corner br">+4</span></div>`;
   }
 
   // Renkli kart (joker ise seçilen renkle gösterilir).
   const color = isWildCard ? colorOverride : card.color;
+  const hex = cssColor(color);
+  let center;
+  if (card.type === "number") center = `<span class="pip num pip-${color}">${card.value}</span>`;
+  else if (card.type === "skip") center = `<span class="pip">${svgSkip(hex)}</span>`;
+  else if (card.type === "reverse") center = `<span class="pip">${svgReverse(hex)}</span>`;
+  else if (card.type === "drawTwo") center = `<span class="pip">${svgTwoCards(hex)}</span>`;
+  else center = `<span class="pip num pip-${color}">+4</span>`; // seçili renkli +4
+
   return `<div class="card ${color}${pl}" style="${sv}"${click}>` +
-    `<span class="corner tl">${sym}</span>` +
-    `<span class="oval"></span>` +
-    `<span class="pip pip-${color}">${sym}</span>` +
-    `<span class="corner br">${sym}</span></div>`;
+    `<span class="corner tl">${cornerSym(card)}</span>` +
+    `<span class="oval"></span>${center}` +
+    `<span class="corner br">${cornerSym(card)}</span></div>`;
 }
 
 function render() {
