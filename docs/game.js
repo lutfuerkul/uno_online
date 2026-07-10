@@ -150,6 +150,7 @@ async function createGame(name) {
     hasDrawn: false, // sırası olan oyuncu bu turda kart çekti mi?
     unoSafe: [], // "UNO" demiş ve 1 kartı olan oyuncular
     reverseColor: null, // reverse sonrası aktif renk kilidi
+    blockedPlayer: null, // sıra atlaması bekleyen (bloklanan) oyuncu
     winner: null,
     createdAt: Date.now(),
   });
@@ -218,6 +219,7 @@ async function startGame() {
       hasDrawn: false,
       unoSafe: [],
       reverseColor: null,
+      blockedPlayer: null,
       status: "playing",
     });
   });
@@ -261,28 +263,36 @@ async function playCard(cardId, chosenColor, targetId) {
 
     // Kart etkisine göre sırayı hesapla.
     const newDir = dir; // (bu varyantta reverse yön çevirmiyor)
-    let steps = 1; // sayı / joker
+    const pickTarget = () => (targetId && players.includes(targetId) && targetId !== playerId)
+      ? targetId : players[nextIndex(curIdx, dir, n, 1)];
     let keepTurn = false; // reverse: atan tekrar oynar
     let nextReverseColor = null; // reverse comboyu sürdürür/başlatır
+    let newBlocked = g.blockedPlayer || null; // bekleyen blok (varsa taşınır)
     if (card.type === "skip") {
-      steps = 2; // sıradaki atlanır
+      // Bloklanacak oyuncu seçilir → o oyuncu bir kez sıra atlar.
+      newBlocked = pickTarget();
     } else if (card.type === "reverse") {
       keepTurn = true;
       nextReverseColor = card.color; // sonraki hamle bu renge/reverse'e kilitli
     } else if (card.type === "drawTwo") {
-      // Hedef, atan oyuncu tarafından seçilir; atlanmaz (steps=1).
-      const target = targetId && players.includes(targetId) && targetId !== playerId
-        ? targetId : players[nextIndex(curIdx, dir, n, 1)];
-      drawInto(hands, target, draw, discard, 2);
-      steps = 1;
+      drawInto(hands, pickTarget(), draw, discard, 2);
     } else if (card.type === "wildDrawFour") {
-      const target = targetId && players.includes(targetId) && targetId !== playerId
-        ? targetId : players[nextIndex(curIdx, dir, n, 1)];
-      drawInto(hands, target, draw, discard, 4);
-      steps = 1;
+      drawInto(hands, pickTarget(), draw, discard, 4);
     }
 
-    const nextTurn = keepTurn ? playerId : players[nextIndex(curIdx, newDir, n, steps)];
+    // Sırayı ilerlet; bloklu oyuncu sıraya denk gelirse bir kez atlanır.
+    let nextTurn;
+    let finalBlocked = newBlocked;
+    if (keepTurn) {
+      nextTurn = playerId;
+    } else {
+      let idx = nextIndex(curIdx, newDir, n, 1);
+      if (newBlocked && n > 1 && players[idx] === newBlocked) {
+        idx = nextIndex(idx, newDir, n, 1);
+        finalBlocked = null; // blok tüketildi
+      }
+      nextTurn = players[idx];
+    }
 
     let status = g.status;
     let winner = g.winner;
@@ -305,7 +315,7 @@ async function playCard(cardId, chosenColor, targetId) {
     tx.update(ref, {
       hands, drawPile: draw, discardPile: discard,
       currentColor: newColor, currentTurn: nextTurn, direction: newDir,
-      hasDrawn: false, unoSafe, reverseColor: nextReverseColor,
+      hasDrawn: false, unoSafe, reverseColor: nextReverseColor, blockedPlayer: finalBlocked,
       status, winner,
     });
   });
@@ -344,7 +354,15 @@ async function pass() {
     const players = g.players;
     const curIdx = players.indexOf(playerId);
     const dir = g.direction || 1;
-    const nextTurn = players[nextIndex(curIdx, dir, players.length, 1)];
+
+    // Sırayı ilerlet; bloklu oyuncu denk gelirse bir kez atlanır.
+    let blocked = g.blockedPlayer || null;
+    let idx = nextIndex(curIdx, dir, players.length, 1);
+    if (blocked && players.length > 1 && players[idx] === blocked) {
+      idx = nextIndex(idx, dir, players.length, 1);
+      blocked = null;
+    }
+    const nextTurn = players[idx];
 
     // UNO cezası: sıra 1 kartlı, UNO dememiş oyuncuya dönüyorsa +2.
     const draw = [...g.drawPile];
@@ -359,7 +377,7 @@ async function pass() {
 
     tx.update(ref, {
       currentTurn: nextTurn, hasDrawn: false, unoSafe, reverseColor: null,
-      hands, drawPile: draw, discardPile: discard,
+      blockedPlayer: blocked, hands, drawPile: draw, discardPile: discard,
     });
   });
 }
@@ -415,6 +433,7 @@ async function rematch() {
       hasDrawn: false,
       unoSafe: [],
       reverseColor: null,
+      blockedPlayer: null,
       winner: null,
     });
   });
@@ -589,12 +608,13 @@ function renderBoard() {
     const count = (state.hands[p] || []).length;
     const isTurn = state.currentTurn === p;
     const safe = unoSafe.includes(p);
+    const blocked = state.blockedPlayer === p;
     const unoBit = count === 1
       ? (safe ? `<div class="uno-tag">UNO ✓</div>` : `<div class="uno-warn">1 kart! (UNO demedi)</div>`)
       : "";
     return `
       <div class="opp ${isTurn ? "opp-turn" : ""}">
-        <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}</div>
+        <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}${blocked ? " 🚫" : ""}</div>
         <div class="opp-cards">${
           Array.from({ length: Math.min(count, 8) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
@@ -711,10 +731,13 @@ async function tryPlay(cardId) {
     if (!chosenColor) return;
   }
 
-  // +2 / +4 → kartların ekleneceği oyuncuyu seç.
+  // +2 / +4 → kartların ekleneceği oyuncu; Skip → bloklanacak oyuncu.
   let targetId = null;
   if (card.type === "drawTwo" || card.type === "wildDrawFour") {
-    targetId = await pickPlayer();
+    targetId = await pickPlayer("Kime eklensin?");
+    if (!targetId) return;
+  } else if (card.type === "skip") {
+    targetId = await pickPlayer("Kimi blokla?");
     if (!targetId) return;
   }
 
@@ -736,14 +759,15 @@ function pickColor() {
   });
 }
 
-// +2/+4 kartının kime ekleneceğini seçtiren diyalog (kendisi hariç oyuncular).
-function pickPlayer() {
+// Bir hedef oyuncu seçtiren diyalog (kendisi hariç). +2/+4 için "kime eklensin",
+// Skip için "kimi blokla" gibi bir başlıkla kullanılır.
+function pickPlayer(title) {
   return new Promise((resolve) => {
     const targets = (state.players || []).filter((p) => p !== playerId);
     if (targets.length === 1) return resolve(targets[0]); // tek rakip → otomatik
     const ov = document.createElement("div");
     ov.className = "overlay";
-    ov.innerHTML = `<div class="picker"><div style="font-weight:700">Kime eklensin?</div>
+    ov.innerHTML = `<div class="picker"><div style="font-weight:700">${escapeHtml(title || "Kime?")}</div>
       <div class="picker-col">
         ${targets.map((p) => `<button class="target-btn" data-p="${p}">${escapeHtml(state.playerNames[p] || "Oyuncu")}
           <span class="muted">(${(state.hands[p] || []).length} kart)</span></button>`).join("")}
