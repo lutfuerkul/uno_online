@@ -979,9 +979,6 @@ function renderBoard() {
       </div>
       <div class="opps">${oppHtml}</div>
 
-      ${state.lastAction ? `<div class="last-action">${lastActionText()}</div>` : ""}
-      ${iAmBlocked ? `<div class="last-action" style="color:#ff8a80">🚫 Bloklandın — sıran bir kez atlanacak.</div>` : ""}
-
       <div class="middle" style="background:${colorTint(state.currentColor)}">
         <div class="pile">
           <small>Deste</small>
@@ -997,6 +994,9 @@ function renderBoard() {
           </div>
         </div>
       </div>
+
+      ${state.lastAction ? `<div class="last-action">${lastActionText()}</div>` : ""}
+      ${iAmBlocked ? `<div class="last-action" style="color:#ff8a80">🚫 Bloklandın — sıran bir kez atlanacak.</div>` : ""}
 
       <div class="turn ${isMyTurn ? "mine" : "theirs"}">
         ${isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu")}
