@@ -87,9 +87,12 @@ katılana (ya da biri ayrılıp 2 kişi kalana) kadar devre dışı olur (104 ka
   - Eşleşme yoksa kart masaya konur, sıra rakibe geçer.
   - Masada **tek kart** varken eşleştirip yakalarsan bu bir **Pişti**'dir
     (bonus puan).
-- Bir turdaki 4'er kart bitince, deste hâlâ doluysa herkese yeniden 4'er kart
-  dağıtılır; deste de biterse oyun sona erer ve masada kalan kartlar son
-  yakalayan oyuncuya yazılır.
+  - Yakalarken atılan kart **önce masada görünür**, kısa bir an sonra tüm
+    deste yakalayan oyuncuya toplanır (herkes atılan kartı rahatça görsün).
+- Bir turdaki 4'er kart bitince, deste hâlâ doluysa yeniden dağıtılır. Kartlar
+  oyunculara **eşit** dağıtılır: 2 kişide her el 4'er, 4 kişide **son el 5'er**
+  kart olur (böylece 104 kart 4 oyuncuya tam bölünür — herkes 25 kart oynar).
+  Deste bitince oyun sona erer ve masada kalan kartlar son yakalayana yazılır.
 - **Puanlama:** Her Pişti +10 · yakalanan her As +1 · Sinek 2'li +2 ·
   Karo 10'lu +3 · yakalanan her Vale +1 · en çok kart toplayan +3 (4 kişilik
   oyunda bu özel kartlardan ikişer tane olabilir, her biri ayrı puan getirir).
