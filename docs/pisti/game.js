@@ -606,7 +606,7 @@ function scheduleBot() {
   if (LOCAL.pendingCapture) return; // masa toplanana kadar bot beklesin
   const cur = LOCAL.currentTurn;
   if (!isBot(cur)) return;
-  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 1400);
+  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 2000);
 }
 
 async function runBotMove(botId) {
@@ -1002,6 +1002,25 @@ window.addEventListener("unhandledrejection", (e) => {
     render();
   }
   toast("Hata: " + _friendlyError(e.reason || new Error("bilinmiyor")));
+});
+
+// ------------------------------------------------------------------
+// Telefon "geri" tuşu: oyundayken direkt çıkmasın, onay sorsun.
+// Ana ekrandaysan normal geri (uygulamadan çıkış) çalışır.
+// ------------------------------------------------------------------
+history.pushState({ app: true }, "");
+window.addEventListener("popstate", () => {
+  if (gameId) {
+    history.pushState({ app: true }, ""); // onaylanmadıkça kal
+    if (confirm("Oyundan çıkmak istediğinize emin misiniz?")) leaveRoom();
+    return;
+  }
+  if (showLocalSetup) {
+    history.pushState({ app: true }, "");
+    showLocalSetup = false; render();
+    return;
+  }
+  // Ana ekran: geri tuşu normal çalışsın.
 });
 
 // İlk çizim
