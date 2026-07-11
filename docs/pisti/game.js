@@ -754,6 +754,10 @@ function renderLobby() {
   if (startBtn) startBtn.onclick = () => { if (ALLOWED_PLAYER_COUNTS.includes(state.players.length)) startGame(); };
 }
 
+// Kart adını Türkçe yaz: "Karo 7", "Maça Vale", "Kupa As" ...
+function rankName(r) { return ({ A: "As", J: "Vale", Q: "Kız", K: "Papaz" })[r] || r; }
+function cardName(c) { return `${SUIT_NAME[c.suit]} ${rankName(c.rank)}`; }
+
 // Masadaki desteyi göster: en üstteki kart açık, altındakiler kapalı yığın.
 function tableStackHtml(pile) {
   const top = pile[pile.length - 1];
@@ -774,10 +778,12 @@ function renderBoard() {
   const top = pile[pile.length - 1];
   const deckCount = (state.drawPile || []).length;
 
+  const pistiCount = state.pistiCount || {};
   const others = players.filter((p) => p !== playerId);
   const oppHtml = others.map((p) => {
     const count = (state.hands[p] || []).length;
     const wonCount = (state.won[p] || []).length;
+    const pisti = pistiCount[p] || 0;
     const isTurn = state.currentTurn === p;
     return `
       <div class="opp ${isTurn ? "opp-turn" : ""}">
@@ -786,15 +792,18 @@ function renderBoard() {
           Array.from({ length: Math.min(count, 4) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
         <div class="muted">${count} elde · ${wonCount} kazandı</div>
+        ${pisti > 0 ? `<div class="pisti-tag">🔥 ${pisti} pişti</div>` : ""}
       </div>`;
   }).join("");
 
   const myWon = (state.won[playerId] || []).length;
+  const myPisti = pistiCount[playerId] || 0;
   const lastAction = state.lastAction;
   const lastActionHtml = lastAction
-    ? `<div class="last-action">${escapeHtml(state.playerNames[lastAction.player] || "Oyuncu")}
-        ${lastAction.card.rank}${SUIT_SYMBOL[lastAction.card.suit]} oynadı
-        ${lastAction.isPisti ? " — <b>PİŞTİ! 🎉</b>" : lastAction.captured ? " — yaktı! 🔥" : ""}</div>`
+    ? (lastAction.isPisti
+        ? `<div class="last-action pisti-banner">🎉 ${escapeHtml(state.playerNames[lastAction.player] || "Oyuncu")} PİŞTİ yaptı! (${cardName(lastAction.card)})</div>`
+        : `<div class="last-action">${escapeHtml(state.playerNames[lastAction.player] || "Oyuncu")}
+            <b>${cardName(lastAction.card)}</b> oynadı${lastAction.captured ? " — yaktı! 🔥" : ""}</div>`)
     : "";
 
   const handHtml = myHand.map((c) =>
@@ -815,12 +824,14 @@ function renderBoard() {
           ${deckCount > 0 ? cardHtml(null, { faceDown: true, big: true }) : `<div class="empty-slot">boş</div>`}
         </div>
         <div class="pile">
-          <small>Masa (${pile.length})</small>
+          <small>Yerdeki kartlar</small>
           ${top ? tableStackHtml(pile) : `<div class="empty-slot">boş</div>`}
+          <div class="pile-count">${pile.length} kart</div>
         </div>
         <div class="pile">
           <small>Sende</small>
           <div class="mini-stat">${myWon} 🂠</div>
+          ${myPisti > 0 ? `<div class="pisti-tag">🔥 ${myPisti} pişti</div>` : ""}
         </div>
       </div>
 
