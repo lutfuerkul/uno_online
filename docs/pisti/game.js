@@ -135,9 +135,12 @@ function nextIndex(idx, n, steps = 1) {
 }
 
 // ------------------------------------------------------------------
-// El (round) kurulumu: 4'er kart dağıt + masaya 4 kart aç.
-// Vale masaya açılan ilk kartlar arasındaysa, o kartlar destenin dibine
-// konup yeniden 4 kart açılır (baştan bedava yakalama olmasın diye).
+// El (round) kurulumu: 4'er kart dağıt + masaya kart aç.
+// İlk açılışta masaya tableSize kart konur; en üstteki (yüzü açık) kart
+// dışında hepsi kapalıdır. 2 kişide 4 kart (3 kapalı + 1 açık), 4 kişide
+// 6 kart (5 kapalı + 1 açık) — kartların daha dengeli dağılması için.
+// Sadece yüzü açık (en üst) kartın vale olmaması sağlanır; kapalı kartlar
+// vale/puanlı olabilir ve yakalanınca puanları oyuncuya yazılır.
 // ------------------------------------------------------------------
 function dealHands(deck, players) {
   const hands = {};
@@ -145,16 +148,16 @@ function dealHands(deck, players) {
   return hands;
 }
 
-function dealTable(deck) {
+function dealTable(deck, tableSize) {
+  const table = deck.splice(deck.length - tableSize, tableSize);
+  // Yüzü açık (en üstteki) kart vale olmasın: valeyse desteyle değiştir.
   let guard = 0;
-  while (guard++ < 30) {
-    const table = deck.splice(deck.length - 4, 4);
-    if (!table.some((c) => c.rank === "J")) return table;
-    // vale çıktıysa dibe göm, yeniden karıştır, tekrar dene
-    deck.unshift(...table);
-    shuffle(deck);
+  while (table.length && table[table.length - 1].rank === "J" && deck.length > 0 && guard++ < 100) {
+    const jack = table.pop();
+    deck.unshift(jack);       // valeyi destenin dibine göm
+    table.push(deck.pop());   // yeni yüzü açık kart al
   }
-  return deck.splice(deck.length - 4, 4); // pes edip devam (aşırı uç durum)
+  return table;
 }
 
 // ------------------------------------------------------------------
@@ -249,9 +252,10 @@ async function startGame() {
     if (!ALLOWED_PLAYER_COUNTS.includes(players.length)) return;
 
     const numDecks = players.length > 2 ? 2 : 1;
+    const tableSize = players.length > 2 ? 6 : 4; // 4 kişi: 5 kapalı+1 açık, 2 kişi: 3 kapalı+1 açık
     const deck = shuffle(buildDeck(numDecks));
     const hands = dealHands(deck, players);
-    const pile = dealTable(deck);
+    const pile = dealTable(deck, tableSize);
 
     const won = {}, pistiCount = {};
     for (const p of players) { won[p] = []; pistiCount[p] = 0; }
@@ -494,9 +498,10 @@ function startLocalGame(numPlayers) {
   for (let i = 1; i < numPlayers; i++) names["bot" + i] = "🤖 Oyuncu " + i;
 
   const numDecks = numPlayers > 2 ? 2 : 1;
+  const tableSize = numPlayers > 2 ? 6 : 4; // 4 kişi: 5 kapalı+1 açık, 2 kişi: 3 kapalı+1 açık
   const deck = shuffle(buildDeck(numDecks));
   const hands = dealHands(deck, players);
-  const pile = dealTable(deck);
+  const pile = dealTable(deck, tableSize);
   const won = {}, pistiCount = {};
   for (const p of players) { won[p] = []; pistiCount[p] = 0; }
 
@@ -750,6 +755,18 @@ function renderLobby() {
   if (startBtn) startBtn.onclick = () => { if (ALLOWED_PLAYER_COUNTS.includes(state.players.length)) startGame(); };
 }
 
+// Masadaki desteyi göster: en üstteki kart açık, altındakiler kapalı yığın.
+function tableStackHtml(pile) {
+  const top = pile[pile.length - 1];
+  const hidden = pile.length - 1;
+  if (hidden <= 0) return cardHtml(top, { big: true });
+  return `<div class="table-stack">
+    <span class="stack-behind s2">${cardHtml(null, { faceDown: true, big: true })}</span>
+    <span class="stack-behind s1">${cardHtml(null, { faceDown: true, big: true })}</span>
+    <span class="stack-top">${cardHtml(top, { big: true })}</span>
+  </div>`;
+}
+
 function renderBoard() {
   const players = state.players;
   const isMyTurn = state.currentTurn === playerId;
@@ -800,7 +817,7 @@ function renderBoard() {
         </div>
         <div class="pile">
           <small>Masa (${pile.length})</small>
-          ${top ? cardHtml(top, { big: true }) : `<div class="empty-slot">boş</div>`}
+          ${top ? tableStackHtml(pile) : `<div class="empty-slot">boş</div>`}
         </div>
         <div class="pile">
           <small>Sende</small>
