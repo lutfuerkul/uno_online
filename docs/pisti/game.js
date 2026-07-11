@@ -135,10 +135,9 @@ function nextIndex(idx, n, steps = 1) {
 }
 
 // ------------------------------------------------------------------
-// El (round) kurulumu: 4'er kart dağıt + masaya kart aç.
-// İlk açılışta masaya tableSize kart konur; en üstteki (yüzü açık) kart
-// dışında hepsi kapalıdır. 2 kişide 4 kart (3 kapalı + 1 açık), 4 kişide
-// 6 kart (5 kapalı + 1 açık) — kartların daha dengeli dağılması için.
+// El (round) kurulumu: 4'er kart dağıt + masaya 4 kart aç.
+// İlk açılışta masaya 4 kart konur; en üstteki (yüzü açık) kart dışında
+// hepsi kapalıdır (3 kapalı + 1 açık) — hem 2 hem 4 kişilik oyunda.
 // Sadece yüzü açık (en üst) kartın vale olmaması sağlanır; kapalı kartlar
 // vale/puanlı olabilir ve yakalanınca puanları oyuncuya yazılır.
 // ------------------------------------------------------------------
@@ -252,7 +251,7 @@ async function startGame() {
     if (!ALLOWED_PLAYER_COUNTS.includes(players.length)) return;
 
     const numDecks = players.length > 2 ? 2 : 1;
-    const tableSize = players.length > 2 ? 6 : 4; // 4 kişi: 5 kapalı+1 açık, 2 kişi: 3 kapalı+1 açık
+    const tableSize = 4; // her durumda masada 4 kart: 3 kapalı + 1 açık
     const deck = shuffle(buildDeck(numDecks));
     const hands = dealHands(deck, players);
     const pile = dealTable(deck, tableSize);
@@ -498,7 +497,7 @@ function startLocalGame(numPlayers) {
   for (let i = 1; i < numPlayers; i++) names["bot" + i] = "🤖 Oyuncu " + i;
 
   const numDecks = numPlayers > 2 ? 2 : 1;
-  const tableSize = numPlayers > 2 ? 6 : 4; // 4 kişi: 5 kapalı+1 açık, 2 kişi: 3 kapalı+1 açık
+  const tableSize = 4; // her durumda masada 4 kart: 3 kapalı + 1 açık
   const deck = shuffle(buildDeck(numDecks));
   const hands = dealHands(deck, players);
   const pile = dealTable(deck, tableSize);
