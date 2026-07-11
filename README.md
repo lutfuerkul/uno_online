@@ -73,11 +73,10 @@ katılana (ya da biri ayrılıp 2 kişi kalana) kadar devre dışı olur (104 ka
 ### Kurallar (özet)
 - 2 oyuncuda tek 52 kartlık standart deste, 4 oyuncuda iki deste birleştirilip
   104 kartla oynanır. Her oyuncuya 4'er kart dağıtılır.
-- **İlk açılışta masaya kart konur:** 2 kişide **3 kapalı + 1 açık** (toplam 4),
-  4 kişide **5 kapalı + 1 açık** (toplam 6). Bu, kartların oyunculara daha
-  dengeli dağılması içindir. Yüzü açık kart hiçbir zaman vale olmaz; kapalı
-  kartlar vale/puanlı olabilir ve o desteyi **kim yakalarsa** kapalı kartların
-  puanları da onun puanına eklenir.
+- **İlk açılışta masaya 4 kart konur: 3 kapalı + 1 açık** (hem 2 hem 4 kişilik
+  oyunda). Yüzü açık kart hiçbir zaman vale olmaz; kapalı kartlar vale/puanlı
+  olabilir ve o desteyi **kim yakalarsa** kapalı kartların puanları da onun
+  puanına eklenir.
 - İlk açılışta yüzü açık kartla oyuncunun elindeki kart eşleşirse **pişti
   sayılmaz** (masada birden fazla kart olduğu için); sadece yakalanan kartların
   puanları hesaplanır.
