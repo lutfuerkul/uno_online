@@ -55,6 +55,7 @@ let LOCAL = null;
 let localCb = null;
 let suppressLocalRender = false;
 let botTimer = null;
+let collectTimer = null;
 
 function isLocal() { return LOCAL !== null; }
 function isBot(id) { return typeof id === "string" && id.startsWith("bot"); }
@@ -187,6 +188,7 @@ async function createGame(name) {
         pistiCount: {},
         lastCapturer: null,
         lastAction: null,
+        pendingCapture: null,
         currentTurn: "",
         winner: null,
         winners: [],
@@ -261,7 +263,7 @@ async function startGame() {
 
     tx.update(ref, {
       hands, drawPile: deck, pile, won, pistiCount,
-      lastCapturer: null, lastAction: null,
+      lastCapturer: null, lastAction: null, pendingCapture: null,
       currentTurn: players[0],
       winner: null, winners: [], scores: {}, scoreDetail: {},
       status: "playing",
@@ -304,6 +306,7 @@ async function playCard(cardId) {
     if (!snap.exists()) return;
     const g = snap.data();
     if (g.status !== "playing" || g.currentTurn !== playerId) return;
+    if (g.pendingCapture) return; // masa toplanıyor, yeni hamle yok
 
     const hand = [...(g.hands[playerId] || [])];
     const idx = hand.findIndex((c) => c.id === cardId);
@@ -324,67 +327,109 @@ async function playCard(cardId) {
     }
 
     const hands = { ...g.hands, [playerId]: hand };
-    const won = { ...g.won };
-    const pistiCount = { ...g.pistiCount };
-    let pile;
-    let lastCapturer = g.lastCapturer;
-    let lastAction = { player: playerId, card, captured, isPisti };
+    const pile = [...pileBefore, card]; // kart her durumda önce masaya konur (görünür)
+    const lastAction = { player: playerId, card, captured, isPisti };
 
     if (captured) {
-      won[playerId] = [...(won[playerId] || []), ...pileBefore, card];
-      pile = [];
-      lastCapturer = playerId;
-      if (isPisti) pistiCount[playerId] = (pistiCount[playerId] || 0) + 1;
-    } else {
-      pile = [...pileBefore, card];
+      // Faz A: kart masada görünür kalır; toplama biraz sonra collectPile ile
+      // yapılır (oyuncu attığı kartı masada görsün, sonra topluyor).
+      tx.update(ref, { hands, pile, lastAction, pendingCapture: { by: playerId, isPisti } });
+      return;
     }
 
+    // Yakalama yok: sıra ilerler; gerekiyorsa yeni el dağıtılır / oyun biter.
+    const won = { ...g.won };
+    const pistiCount = { ...g.pistiCount };
     const players = g.players;
     const curIdx = players.indexOf(playerId);
-
-    const allHandsEmpty = players.every((p) => (hands[p] || []).length === 0);
+    let finalPile = pile;
+    let lastCapturer = g.lastCapturer;
     let drawPile = [...(g.drawPile || [])];
     let status = g.status;
     let winner = null, winners = [], scores = {}, scoreDetail = {};
 
+    const allHandsEmpty = players.every((p) => (hands[p] || []).length === 0);
     if (allHandsEmpty) {
       if (drawPile.length > 0) {
-        // Yeni el: herkese 4'er kart daha dağıt (masa aynen kalır). 2 desteli
-        // (3-4 kişilik) oyunlarda kalan kart sayısı oyuncu*4'e tam
-        // bölünmeyebilir; bu yüzden mümkün olduğunca 4'er dağıtılır, deste
-        // biterse sıradaki oyuncu(lar) bu turda kart alamayabilir.
         dealRound(hands, players, drawPile);
       } else {
-        // deste bitti, kimsenin eli kalmadı → oyun bitti
-        if (pile.length > 0 && lastCapturer) {
-          won[lastCapturer] = [...(won[lastCapturer] || []), ...pile];
-          pile = [];
+        // deste bitti, kimsenin eli kalmadı → masada kalanlar son yakalayana
+        if (finalPile.length > 0 && lastCapturer) {
+          won[lastCapturer] = [...(won[lastCapturer] || []), ...finalPile];
+          finalPile = [];
         }
         const result = scoreGame(players, won, pistiCount);
-        scores = result.scores;
-        scoreDetail = result.detail;
-        winners = result.winners;
+        scores = result.scores; scoreDetail = result.detail; winners = result.winners;
         winner = winners.length === 1 ? winners[0] : null;
         status = "finished";
       }
     }
 
-    // Sıra, eli boş olmayan bir sonraki oyuncuya geçer (eşit olmayan
-    // dağıtım durumunda eli hâlâ boş olan oyuncular atlanır).
     const nextTurn = status === "finished" ? g.currentTurn : nextPlayerWithCards(players, hands, curIdx);
-
     tx.update(ref, {
-      hands, pile, drawPile, won, pistiCount, lastCapturer, lastAction,
-      currentTurn: nextTurn,
+      hands, pile: finalPile, drawPile, won, pistiCount, lastCapturer, lastAction,
+      currentTurn: nextTurn, pendingCapture: null,
       status, winner, winners, scores, scoreDetail,
     });
   });
 }
 
+// Faz B: masadaki kartları (attığı kart dahil) yakalayan oyuncuya toplar,
+// sırayı ilerletir, gerekiyorsa yeni el dağıtır / oyunu bitirir.
+async function collectPile() {
+  const ref = doc(db, "pisti_games", gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const g = snap.data();
+    if (!g.pendingCapture) return;
+    const by = g.pendingCapture.by;
+
+    const won = { ...g.won };
+    won[by] = [...(won[by] || []), ...(g.pile || [])];
+    const pistiCount = { ...g.pistiCount };
+    if (g.pendingCapture.isPisti) pistiCount[by] = (pistiCount[by] || 0) + 1;
+
+    const players = g.players;
+    const hands = { ...g.hands };
+    const curIdx = players.indexOf(by);
+    let pile = [];
+    let drawPile = [...(g.drawPile || [])];
+    let status = g.status;
+    let winner = null, winners = [], scores = {}, scoreDetail = {};
+
+    const allHandsEmpty = players.every((p) => (hands[p] || []).length === 0);
+    if (allHandsEmpty) {
+      if (drawPile.length > 0) {
+        dealRound(hands, players, drawPile);
+      } else {
+        const result = scoreGame(players, won, pistiCount);
+        scores = result.scores; scoreDetail = result.detail; winners = result.winners;
+        winner = winners.length === 1 ? winners[0] : null;
+        status = "finished";
+      }
+    }
+
+    const nextTurn = status === "finished" ? g.currentTurn : nextPlayerWithCards(players, hands, curIdx);
+    tx.update(ref, {
+      won, pistiCount, pile, hands, drawPile, lastCapturer: by,
+      currentTurn: nextTurn, pendingCapture: null,
+      status, winner, winners, scores, scoreDetail,
+    });
+  });
+}
+
+// Bir el için kart dağıtımı. Normalde herkese 4'er kart. Ama kalan kartlar
+// bu eli son yapacaksa ve oyunculara tam bölünüyorsa herkese eşit dağıtılır
+// (4 kişilik oyunda son el 5'er kart olur; böylece kimse eksik/fazla almaz).
 function dealRound(hands, players, drawPile) {
+  const n = players.length;
+  const remaining = drawPile.length;
+  let per = 4;
+  if (remaining <= n * 5 && remaining % n === 0) per = remaining / n;
   for (const p of players) {
     if (drawPile.length === 0) break;
-    const take = Math.min(4, drawPile.length);
+    const take = Math.min(per, drawPile.length);
     hands[p] = drawPile.splice(drawPile.length - take, take);
   }
 }
@@ -404,15 +449,27 @@ function subscribe(code) {
   unsub = onSnapshot(doc(db, "pisti_games", code), (snap) => {
     state = snap.exists() ? snap.data() : null;
     render();
+    maybeScheduleCollect();
     scheduleBot();
   });
   render();
+}
+
+// Masayı yakalayan varsa (pendingCapture), kısa bir gecikmeyle toplar —
+// önce atılan kart masada görünür, sonra toplanır. Yerelde her zaman;
+// online'da yakalayan oyuncunun cihazı tetikler.
+function maybeScheduleCollect() {
+  if (collectTimer) return;
+  if (!state || state.status !== "playing" || !state.pendingCapture) return;
+  if (!(isLocal() || state.pendingCapture.by === humanId)) return;
+  collectTimer = setTimeout(() => { collectTimer = null; collectPile(); }, 1200);
 }
 
 function leave() {
   if (unsub) unsub();
   unsub = null;
   if (botTimer) { clearTimeout(botTimer); botTimer = null; }
+  if (collectTimer) { clearTimeout(collectTimer); collectTimer = null; }
   LOCAL = null; localCb = null; suppressLocalRender = false;
   playerId = DEVICE_ID; humanId = DEVICE_ID;
   gameId = null;
@@ -432,7 +489,7 @@ async function rematch() {
     tx.update(ref, {
       status: "waiting",
       hands: {}, pile: [], drawPile: [], won: {}, pistiCount: {},
-      lastCapturer: null, lastAction: null, currentTurn: "",
+      lastCapturer: null, lastAction: null, pendingCapture: null, currentTurn: "",
       winner: null, winners: [], scores: {}, scoreDetail: {},
     });
   });
@@ -506,7 +563,8 @@ function startLocalGame(numPlayers) {
 
   LOCAL = {
     status: "playing", players, playerNames: names, hands, pile, drawPile: deck,
-    won, pistiCount, lastCapturer: null, lastAction: null, currentTurn: players[0],
+    won, pistiCount, lastCapturer: null, lastAction: null, pendingCapture: null,
+    currentTurn: players[0],
     winner: null, winners: [], scores: {}, scoreDetail: {}, local: true, createdAt: Date.now(),
   };
   showLocalSetup = false;
@@ -545,9 +603,10 @@ function pistiBotChoose(g, botId) {
 function scheduleBot() {
   if (botTimer) { clearTimeout(botTimer); botTimer = null; }
   if (!isLocal() || !LOCAL || LOCAL.status !== "playing") return;
+  if (LOCAL.pendingCapture) return; // masa toplanana kadar bot beklesin
   const cur = LOCAL.currentTurn;
   if (!isBot(cur)) return;
-  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 850);
+  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 1400);
 }
 
 async function runBotMove(botId) {
@@ -772,7 +831,8 @@ function tableStackHtml(pile) {
 
 function renderBoard() {
   const players = state.players;
-  const isMyTurn = state.currentTurn === playerId;
+  const collecting = !!state.pendingCapture; // masa toplanıyor (kısa bekleme)
+  const isMyTurn = state.currentTurn === playerId && !collecting;
   const myHand = state.hands[playerId] || [];
   const pile = state.pile || [];
   const top = pile[pile.length - 1];
@@ -838,7 +898,9 @@ function renderBoard() {
       ${lastActionHtml}
 
       <div class="turn ${isMyTurn ? "mine" : "theirs"}">
-        ${isMyTurn ? "● Sıra sende — bir kart oyna" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu")}
+        ${collecting
+          ? "🧹 " + escapeHtml(state.playerNames[state.pendingCapture.by] || "Oyuncu") + " masayı topluyor..."
+          : (isMyTurn ? "● Sıra sende — bir kart oyna" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu"))}
       </div>
 
       <div class="hand">${handHtml}</div>
@@ -893,6 +955,7 @@ function renderResult() {
 }
 
 async function tryPlay(cardId) {
+  if (state.pendingCapture) return; // masa toplanıyor, kısa bir an bekle
   const isMyTurn = state.currentTurn === playerId;
   if (!isMyTurn) return toast("Sıra sende değil.");
   playCard(cardId);

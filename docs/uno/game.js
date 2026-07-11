@@ -631,7 +631,7 @@ function scheduleBot() {
   if (!isLocal() || !LOCAL || LOCAL.status !== "playing") return;
   const cur = LOCAL.currentTurn;
   if (!isBot(cur)) return;
-  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 850);
+  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 1400);
 }
 
 async function runBotMove(botId) {
