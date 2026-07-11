@@ -124,7 +124,17 @@
     .table-stack .stack-behind.s1 { transform: translate(-5px, -4px) rotate(-3.5deg); }
     .table-stack .stack-top { position: relative; z-index: 2; display: block; }
 
-    .last-action { text-align: center; font-size: 13px; padding: 4px 8px; color: #ffe082; flex: 0 0 auto; }
+    .last-action { text-align: center; font-size: 14px; padding: 6px 8px; color: #ffe082; flex: 0 0 auto; }
+    .pisti-banner { font-size: 17px; font-weight: 900; color: #1b2b1f;
+      background: #ffca28; border-radius: 10px; margin: 4px 12px; padding: 8px 10px;
+      animation: pistipulse 0.8s ease-in-out 2; }
+    @keyframes pistipulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+    /* Yerdeki kart sayısı rozeti */
+    .pile-count { margin-top: 4px; font-size: 14px; font-weight: 800; color: #1b2b1f;
+      background: #ffffffdd; border-radius: 12px; padding: 2px 12px; }
+    /* Oyuncu pişti sayısı etiketi */
+    .pisti-tag { margin-top: 3px; font-size: 12px; font-weight: 800; color: #ffca28; }
 
     .turn { padding: 10px; text-align: center; font-weight: 800; flex: 0 0 auto; }
     .turn.mine { background: #2e7d32; }
