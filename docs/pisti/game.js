@@ -491,7 +491,7 @@ function startLocalGame(numPlayers) {
   const players = ["you"];
   for (let i = 1; i < numPlayers; i++) players.push("bot" + i);
   const names = { you: playerName || "Sen" };
-  for (let i = 1; i < numPlayers; i++) names["bot" + i] = "🤖 Bilgisayar " + i;
+  for (let i = 1; i < numPlayers; i++) names["bot" + i] = "🤖 Oyuncu " + i;
 
   const numDecks = numPlayers > 2 ? 2 : 1;
   const deck = shuffle(buildDeck(numDecks));
