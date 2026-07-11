@@ -3,7 +3,8 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, doc, setDoc, onSnapshot, runTransaction,
+  getFirestore, doc as fbDoc, setDoc as fbSetDoc,
+  onSnapshot as fbOnSnapshot, runTransaction as fbRunTransaction,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ------------------------------------------------------------------
@@ -11,24 +12,77 @@ import {
 // ------------------------------------------------------------------
 const app = document.getElementById("app");
 
+// Firebase yalnızca online mod için gerekli. Config yoksa online butonları
+// devre dışı olur ama "Bilgisayara Karşı" (yerel) mod yine de çalışır.
 const cfg = window.FIREBASE_CONFIG;
-if (!cfg || !cfg.projectId || cfg.projectId === "BURAYA_YAPISTIR") {
-  showConfigHelp();
-  throw new Error("Firebase config eksik");
+const FB_READY = !!(cfg && cfg.projectId && cfg.projectId !== "BURAYA_YAPISTIR");
+let db = null;
+if (FB_READY) {
+  const fb = initializeApp(cfg);
+  db = getFirestore(fb);
 }
-
-const fb = initializeApp(cfg);
-const db = getFirestore(fb);
 
 const MAX_PLAYERS = 4;
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).
-let playerId = localStorage.getItem("uno_player");
-if (!playerId) {
-  playerId = (crypto.randomUUID && crypto.randomUUID()) || "p" + Date.now() + Math.random();
-  localStorage.setItem("uno_player", playerId);
-}
+const DEVICE_ID = localStorage.getItem("uno_player") ||
+  ((crypto.randomUUID && crypto.randomUUID()) || "p" + Date.now() + Math.random());
+localStorage.setItem("uno_player", DEVICE_ID);
+let playerId = DEVICE_ID;   // aktif oynayan kimlik (bot hamlelerinde geçici değişir)
+let humanId = DEVICE_ID;    // ekranı gören insan oyuncunun kimliği
 let playerName = localStorage.getItem("uno_name") || "";
+
+// ------------------------------------------------------------------
+// Yerel (bilgisayara karşı) mod — Firebase yerine bellek-içi durum
+// ------------------------------------------------------------------
+const LOCAL_COLLECTION = "games";
+let LOCAL = null;              // yerel oyun durumu (Firestore belgesinin karşılığı) ya da null
+let localCb = null;           // yerel "onSnapshot" dinleyicisi
+let suppressLocalRender = false; // bot hamlesi sırasında ara render'ları bastır
+let botTimer = null;
+
+function isLocal() { return LOCAL !== null; }
+function isBot(id) { return typeof id === "string" && id.startsWith("bot"); }
+function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+function localSnap() { return { exists: () => LOCAL != null, data: () => deepClone(LOCAL) }; }
+
+// --- Firebase / yerel dağıtıcılar: mevcut aksiyon fonksiyonları ikisiyle de çalışır ---
+function doc(_db, _col, id) { return isLocal() ? { __local: true, id } : fbDoc(_db, _col, id); }
+
+function setDoc(ref, data) {
+  if (isLocal()) { LOCAL = deepClone(data); afterLocalWrite(); return Promise.resolve(); }
+  return fbSetDoc(ref, data);
+}
+
+function onSnapshot(ref, cb) {
+  if (isLocal()) { localCb = cb; cb(localSnap()); return () => { localCb = null; }; }
+  return fbOnSnapshot(ref, cb);
+}
+
+async function runTransaction(_db, fn) {
+  if (isLocal()) {
+    const tx = {
+      get: async () => localSnap(),
+      update: (ref, patch) => { LOCAL = Object.assign({}, LOCAL, deepClone(patch)); },
+    };
+    const r = await fn(tx);
+    afterLocalWrite();
+    return r;
+  }
+  return fbRunTransaction(_db, fn);
+}
+
+// Her yerel yazımdan sonra: otomatik UNO (yerel modda tek kart kalınca kendiliğinden
+// "UNO" denir) uygulanır, dinleyici (bastırılmadıysa) tetiklenir.
+function afterLocalWrite() {
+  if (!LOCAL) return;
+  if (Array.isArray(LOCAL.players) && LOCAL.hands && "unoSafe" in LOCAL) {
+    const safe = new Set(LOCAL.unoSafe || []);
+    for (const p of LOCAL.players) if ((LOCAL.hands[p] || []).length === 1) safe.add(p);
+    LOCAL.unoSafe = [...safe].filter((p) => (LOCAL.hands[p] || []).length === 1);
+  }
+  if (!suppressLocalRender && localCb) localCb(localSnap());
+}
 
 // ------------------------------------------------------------------
 // Oyun durumu (yerel)
@@ -38,6 +92,7 @@ let state = null;
 let unsub = null;
 let lastError = null;
 let connecting = false; // oda kuruluyor/katılınıyor (spinner göster)
+let showLocalSetup = false; // "Bilgisayara Karşı" oyuncu sayısı seçim ekranı
 
 // ------------------------------------------------------------------
 // Kart mantığı
@@ -420,6 +475,7 @@ function subscribe(code) {
   unsub = onSnapshot(doc(db, "games", code), (snap) => {
     state = snap.exists() ? snap.data() : null;
     render();
+    scheduleBot();
   });
   render();
 }
@@ -427,6 +483,9 @@ function subscribe(code) {
 function leave() {
   if (unsub) unsub();
   unsub = null;
+  if (botTimer) { clearTimeout(botTimer); botTimer = null; }
+  LOCAL = null; localCb = null; suppressLocalRender = false;
+  playerId = DEVICE_ID; humanId = DEVICE_ID;
   gameId = null;
   state = null;
   lastError = null;
@@ -435,6 +494,7 @@ function leave() {
 
 // Oyunu aynı oyuncularla yeniden başlatmak için bekleme odasına döndürür.
 async function rematch() {
+  if (isLocal()) { const n = (state.players || []).length; return startLocalGame(n); }
   const ref = doc(db, "games", gameId);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
@@ -462,6 +522,7 @@ async function rematch() {
 async function leaveRoom() {
   const id = gameId;
   if (!id) return leave();
+  if (isLocal()) return leave(); // yerel modda sadece ana ekrana dön
   try {
     await runTransaction(db, async (tx) => {
       const ref = doc(db, "games", id);
@@ -496,6 +557,112 @@ async function leaveRoom() {
     // hata olsa da yerelden çık
   }
   leave();
+}
+
+// ------------------------------------------------------------------
+// Bilgisayara karşı (yerel) mod
+// ------------------------------------------------------------------
+function startLocalGame(numPlayers) {
+  if (botTimer) { clearTimeout(botTimer); botTimer = null; }
+  humanId = "you"; playerId = "you";
+  const players = ["you"];
+  for (let i = 1; i < numPlayers; i++) players.push("bot" + i);
+  const names = { you: playerName || "Sen" };
+  for (let i = 1; i < numPlayers; i++) names["bot" + i] = "🤖 Bilgisayar " + i;
+
+  const deck = shuffle(buildDeck());
+  const hands = {};
+  for (const p of players) hands[p] = Array.from({ length: 7 }, () => deck.pop());
+  let first = deck.pop();
+  while (first.type !== "number") { deck.unshift(first); first = deck.pop(); }
+
+  LOCAL = {
+    status: "playing", players, playerNames: names,
+    hands, drawPile: deck, discardPile: [first],
+    currentColor: first.color, currentTurn: players[0], direction: 1,
+    hasDrawn: false, unoSafe: [], reverseColor: null, blockedPlayer: null,
+    winner: null, local: true, createdAt: Date.now(),
+  };
+  showLocalSetup = false;
+  gameId = "🤖 Bilgisayara Karşı";
+  connecting = false;
+  subscribe(gameId);
+}
+
+// Oynanabilir kartlar (reverse kilidi dikkate alınır).
+function unoPlayable(hand, g) {
+  const top = g.discardPile[g.discardPile.length - 1];
+  const reverseColor = g.reverseColor || null;
+  return hand.filter((c) => reverseColor != null
+    ? (c.type === "reverse" || c.color === reverseColor)
+    : canPlay(c, top, g.currentColor));
+}
+
+function botPickCard(cands, g, botId) {
+  const opps = g.players.filter((p) => p !== botId);
+  const threat = Math.min(...opps.map((p) => (g.hands[p] || []).length));
+  const score = (c) => {
+    if (c.type === "number") return 1;
+    if (c.type === "reverse") return 2;
+    if (c.type === "skip" || c.type === "drawTwo") return threat <= 2 ? 5 : 2;
+    if (c.type === "wildDrawFour") return threat <= 2 ? 4 : 0; // +4'ü baskı yokken sakla
+    if (c.type === "wild") return 0; // jokeri sakla
+    return 1;
+  };
+  return [...cands].sort((a, b) => score(b) - score(a))[0];
+}
+
+function botPickColor(hand) {
+  const counts = { red: 0, yellow: 0, green: 0, blue: 0 };
+  for (const c of hand) if (c.color && c.color !== "wild") counts[c.color]++;
+  let best = "red", bestN = -1;
+  for (const c of COLORS) if (counts[c] > bestN) { bestN = counts[c]; best = c; }
+  return best;
+}
+
+function botPickTarget(g, botId) {
+  const opps = g.players.filter((p) => p !== botId);
+  opps.sort((a, b) => (g.hands[a] || []).length - (g.hands[b] || []).length);
+  return opps[0]; // kazanmaya en yakın (en az kartlı) rakibi hedefle
+}
+
+function scheduleBot() {
+  if (botTimer) { clearTimeout(botTimer); botTimer = null; }
+  if (!isLocal() || !LOCAL || LOCAL.status !== "playing") return;
+  const cur = LOCAL.currentTurn;
+  if (!isBot(cur)) return;
+  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 850);
+}
+
+async function runBotMove(botId) {
+  if (!isLocal() || !LOCAL || LOCAL.status !== "playing" || LOCAL.currentTurn !== botId) return;
+  suppressLocalRender = true;
+  playerId = botId;
+  try {
+    let g = LOCAL;
+    let hand = g.hands[botId] || [];
+    let playable = unoPlayable(hand, g);
+    if (playable.length === 0) {
+      await drawCard();
+      g = LOCAL; hand = g.hands[botId] || [];
+      playable = unoPlayable(hand, g);
+    }
+    if (playable.length > 0) {
+      const card = botPickCard(playable, g, botId);
+      const chosenColor = isWild(card) ? botPickColor(hand) : null;
+      let targetId = null;
+      if (card.type === "drawTwo" || card.type === "wildDrawFour" || card.type === "skip") {
+        targetId = botPickTarget(g, botId);
+      }
+      await playCard(card.id, chosenColor, targetId);
+    } else {
+      await pass();
+    }
+  } finally {
+    playerId = humanId;
+    suppressLocalRender = false;
+  }
+  if (localCb) localCb(localSnap()); // render + sonraki sıra
 }
 
 // ------------------------------------------------------------------
@@ -592,7 +759,7 @@ function cardHtml(card, opts = {}) {
 
 function render() {
   if (connecting) return renderConnecting();
-  if (!gameId) return renderHome();
+  if (!gameId) return showLocalSetup ? renderLocalSetup() : renderHome();
   if (!state) return renderLoading();
   if (state.status === "waiting") return renderLobby();
   if (state.status === "finished") return renderResult();
@@ -612,11 +779,12 @@ function renderHome() {
         <div class="logo-sub">ONLINE</div>
       </div>
       <input id="name" placeholder="İsmin" value="${escapeHtml(playerName)}" />
-      <button class="btn-primary" id="create">Yeni Oyun Kur</button>
+      <button class="btn-uno" id="vscpu" style="width:100%;animation:none">🤖 Bilgisayara Karşı Oyna</button>
       <div class="divider"></div>
+      <button class="btn-primary" id="create" ${FB_READY ? "" : "disabled style='opacity:.5'"}>Yeni Oyun Kur</button>
       <input id="code" placeholder="Oda Kodu (örn. K7P2M)" style="text-transform:uppercase" />
-      <button class="btn-outline" id="join">Oyuna Katıl</button>
-      <div class="muted">2-4 kişi oynayabilir</div>
+      <button class="btn-outline" id="join" ${FB_READY ? "" : "disabled style='opacity:.5'"}>Oyuna Katıl</button>
+      <div class="muted">${FB_READY ? "Online: 2-4 kişi · Bilgisayara karşı: 2-4 kişi" : "Online oyun için Firebase ayarı gerekli (README). Bilgisayara karşı yine oynanır."}</div>
       ${lastError ? `<div class="error">${escapeHtml(lastError)}</div>` : ""}
     </div>`;
 
@@ -627,18 +795,47 @@ function renderHome() {
     localStorage.setItem("uno_name", playerName);
   };
 
+  document.getElementById("vscpu").onclick = () => {
+    saveName();
+    showLocalSetup = true;
+    render();
+  };
   document.getElementById("create").onclick = () => {
     saveName();
+    if (!FB_READY) return toast("Online oyun için Firebase ayarı gerekli.");
     if (!playerName) return toast("Önce bir isim gir.");
     createGame(playerName);
   };
   document.getElementById("join").onclick = () => {
     saveName();
+    if (!FB_READY) return toast("Online oyun için Firebase ayarı gerekli.");
     if (!playerName) return toast("Önce bir isim gir.");
     const code = codeEl.value.trim().toUpperCase();
     if (!code) return toast("Oda kodunu gir.");
     joinGame(code, playerName);
   };
+}
+
+// "Bilgisayara Karşı" — kaç oyuncu (1 insan + botlar) seçim ekranı.
+function renderLocalSetup() {
+  app.innerHTML = `
+    <div class="center">
+      <div>
+        <div class="logo" style="font-size:44px">🤖</div>
+        <div style="font-size:20px;font-weight:800;margin-top:8px">Bilgisayara Karşı</div>
+      </div>
+      <div class="muted">Kaç kişi olsun? (sen + bilgisayarlar)</div>
+      <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:260px">
+        <button class="btn-primary" data-n="2">2 Oyuncu (sen + 1 bot)</button>
+        <button class="btn-primary" data-n="3">3 Oyuncu (sen + 2 bot)</button>
+        <button class="btn-primary" data-n="4">4 Oyuncu (sen + 3 bot)</button>
+      </div>
+      <button class="btn-outline" id="back" style="max-width:200px">Geri</button>
+    </div>`;
+  app.querySelectorAll("button[data-n]").forEach((b) => {
+    b.onclick = () => startLocalGame(parseInt(b.getAttribute("data-n"), 10));
+  });
+  document.getElementById("back").onclick = () => { showLocalSetup = false; render(); };
 }
 
 function renderLoading() {
