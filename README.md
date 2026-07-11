@@ -46,9 +46,19 @@ uygulama olarak yüklenir, içinde iki oyun olur. Yapman gerekenler:
 1. Linki telefonda aç, tarayıcı menüsünden **"Ana ekrana ekle"** de — tek bir
    "Kart Oyunları" ikonu eklenir.
 2. Uygulamayı açınca **UNO** ya da **Pişti**'yi seç.
-3. "Yeni Oyun Kur" de, çıkan kodu arkadaşına gönder; o da aynı ekrandan aynı
-   oyunu seçip "Oyuna Katıl" ile kodu girsin. Herkes kendi telefonundan
-   oynar. 🎉
+3. **Online:** "Yeni Oyun Kur" de, çıkan kodu arkadaşına gönder; o da aynı
+   ekrandan aynı oyunu seçip "Oyuna Katıl" ile kodu girsin. Herkes kendi
+   telefonundan oynar. 🎉
+
+### 🤖 Bilgisayara karşı (tek başına, internet/Firebase gerekmez)
+Her iki oyunda da ana ekranda **"🤖 Bilgisayara Karşı Oyna"** butonu var:
+- Açılışta kaç kişi olacağını seçersin — **UNO: 2/3/4**, **Pişti: 2/4** (sen +
+  botlar).
+- Oyun tamamen telefonda yerel çalışır; Firebase/oda kodu gerekmez, çevrimdışı
+  bile oynanır.
+- Botların zorluğu iki oyunda da benzer (orta seviye, mantıklı hamleler).
+- **UNO'da** bilgisayara karşı oynarken tek kart kalınca **"UNO" otomatik**
+  denir; ceza yemezsin.
 
 ---
 
