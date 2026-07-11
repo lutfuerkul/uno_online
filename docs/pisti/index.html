@@ -117,6 +117,13 @@
       color: #ffffff66; font-size: 13px; }
     .mini-stat { font-size: 30px; }
 
+    /* Masadaki deste: açık kartın altında kapalı kart yığını görünür */
+    .table-stack { position: relative; display: inline-block; }
+    .table-stack .stack-behind { position: absolute; top: 0; left: 0; }
+    .table-stack .stack-behind.s2 { transform: translate(-10px, -8px) rotate(-7deg); }
+    .table-stack .stack-behind.s1 { transform: translate(-5px, -4px) rotate(-3.5deg); }
+    .table-stack .stack-top { position: relative; z-index: 2; display: block; }
+
     .last-action { text-align: center; font-size: 13px; padding: 4px 8px; color: #ffe082; flex: 0 0 auto; }
 
     .turn { padding: 10px; text-align: center; font-weight: 800; flex: 0 0 auto; }
