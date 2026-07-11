@@ -147,6 +147,24 @@ function nextIndex(idx, dir, n, steps = 1) {
   return (((idx + dir * steps) % n) + n) % n;
 }
 
+// Sırayı, bloklu oyuncuları atlayarak ilerletir. Birden fazla bağımsız blok
+// olabilir; her bloklu oyuncu sırası gelince bir blok tüketilerek atlanır.
+// (Örn. ben Veli'yi, Ali de beni bloklarsa; Ali'den sonra hem Veli hem ben
+//  atlanır, bloklarımız ayrı ayrı tüketilir.)
+function advanceTurn(players, curIdx, dir, blocked) {
+  const n = players.length;
+  const blk = [...(blocked || [])];
+  let idx = nextIndex(curIdx, dir, n, 1);
+  let guard = 0;
+  while (guard++ < n * 4) {
+    const bi = blk.indexOf(players[idx]);
+    if (bi === -1) break;          // bloklu değil → sıradaki oyuncu bu
+    blk.splice(bi, 1);             // bir blok tüket
+    idx = nextIndex(idx, dir, n, 1);
+  }
+  return { nextTurn: players[idx], blocked: blk };
+}
+
 // Desteden [player] eline [count] kart çeker; deste biterse yeniden karılır.
 function drawInto(hands, player, draw, discard, count) {
   const hand = [...(hands[player] || [])];
@@ -206,7 +224,7 @@ async function createGame(name) {
         hasDrawn: false,
         unoSafe: [],
         reverseColor: null,
-        blockedPlayer: null,
+        blockedPlayers: [],
         winner: null,
         createdAt: Date.now(),
       }),
@@ -293,7 +311,7 @@ async function startGame() {
       hasDrawn: false,
       unoSafe: [],
       reverseColor: null,
-      blockedPlayer: null,
+      blockedPlayers: [],
       status: "playing",
     });
   });
@@ -341,31 +359,31 @@ async function playCard(cardId, chosenColor, targetId) {
       ? targetId : players[nextIndex(curIdx, dir, n, 1)];
     let keepTurn = false; // reverse: atan tekrar oynar
     let nextReverseColor = null; // reverse comboyu sürdürür/başlatır
-    let newBlocked = g.blockedPlayer || null; // bekleyen blok (varsa taşınır)
+    let blocked = [...(g.blockedPlayers || [])]; // bekleyen bloklar (birikir)
+    let effectTarget = null; // gösterim: kimi blokladı / kime kart çektirdi
     if (card.type === "skip") {
-      // Bloklanacak oyuncu seçilir → o oyuncu bir kez sıra atlar.
-      newBlocked = pickTarget();
+      effectTarget = pickTarget();
+      blocked.push(effectTarget); // o oyuncu bir kez sıra atlar (blok birikir)
     } else if (card.type === "reverse") {
       keepTurn = true;
       nextReverseColor = card.color; // sonraki hamle bu renge/reverse'e kilitli
     } else if (card.type === "drawTwo") {
-      drawInto(hands, pickTarget(), draw, discard, 2);
+      effectTarget = pickTarget();
+      drawInto(hands, effectTarget, draw, discard, 2);
     } else if (card.type === "wildDrawFour") {
-      drawInto(hands, pickTarget(), draw, discard, 4);
+      effectTarget = pickTarget();
+      drawInto(hands, effectTarget, draw, discard, 4);
     }
 
-    // Sırayı ilerlet; bloklu oyuncu sıraya denk gelirse bir kez atlanır.
-    let nextTurn;
-    let finalBlocked = newBlocked;
+    // Sırayı ilerlet; bloklu oyuncular denk geldikçe atlanır (bloklar tükenir).
+    let nextTurn, finalBlocked;
     if (keepTurn) {
       nextTurn = playerId;
+      finalBlocked = blocked;
     } else {
-      let idx = nextIndex(curIdx, newDir, n, 1);
-      if (newBlocked && n > 1 && players[idx] === newBlocked) {
-        idx = nextIndex(idx, newDir, n, 1);
-        finalBlocked = null; // blok tüketildi
-      }
-      nextTurn = players[idx];
+      const adv = advanceTurn(players, curIdx, newDir, blocked);
+      nextTurn = adv.nextTurn;
+      finalBlocked = adv.blocked;
     }
 
     let status = g.status;
@@ -385,12 +403,14 @@ async function playCard(cardId, chosenColor, targetId) {
 
     // Kart oynandı → yeni oyuncunun turu, çekim sıfırlanır.
     const unoSafe = pruneUno(g.unoSafe, hands);
+    const lastAction = { player: playerId, cardType: card.type, cardColor: newColor,
+      cardValue: card.value, target: effectTarget };
 
     tx.update(ref, {
       hands, drawPile: draw, discardPile: discard,
       currentColor: newColor, currentTurn: nextTurn, direction: newDir,
-      hasDrawn: false, unoSafe, reverseColor: nextReverseColor, blockedPlayer: finalBlocked,
-      status, winner,
+      hasDrawn: false, unoSafe, reverseColor: nextReverseColor, blockedPlayers: finalBlocked,
+      lastAction, status, winner,
     });
   });
 }
@@ -429,14 +449,9 @@ async function pass() {
     const curIdx = players.indexOf(playerId);
     const dir = g.direction || 1;
 
-    // Sırayı ilerlet; bloklu oyuncu denk gelirse bir kez atlanır.
-    let blocked = g.blockedPlayer || null;
-    let idx = nextIndex(curIdx, dir, players.length, 1);
-    if (blocked && players.length > 1 && players[idx] === blocked) {
-      idx = nextIndex(idx, dir, players.length, 1);
-      blocked = null;
-    }
-    const nextTurn = players[idx];
+    // Sırayı ilerlet; bloklu oyuncular denk geldikçe atlanır (bloklar tükenir).
+    const adv = advanceTurn(players, curIdx, dir, g.blockedPlayers || []);
+    const nextTurn = adv.nextTurn;
 
     // UNO cezası: sıra 1 kartlı, UNO dememiş oyuncuya dönüyorsa +2.
     const draw = [...g.drawPile];
@@ -451,7 +466,8 @@ async function pass() {
 
     tx.update(ref, {
       currentTurn: nextTurn, hasDrawn: false, unoSafe, reverseColor: null,
-      blockedPlayer: blocked, hands, drawPile: draw, discardPile: discard,
+      blockedPlayers: adv.blocked, hands, drawPile: draw, discardPile: discard,
+      lastAction: { player: playerId, cardType: "pass" },
     });
   });
 }
@@ -512,7 +528,7 @@ async function rematch() {
       hasDrawn: false,
       unoSafe: [],
       reverseColor: null,
-      blockedPlayer: null,
+      blockedPlayers: [],
       winner: null,
     });
   });
@@ -580,7 +596,7 @@ function startLocalGame(numPlayers) {
     status: "playing", players, playerNames: names,
     hands, drawPile: deck, discardPile: [first],
     currentColor: first.color, currentTurn: players[0], direction: 1,
-    hasDrawn: false, unoSafe: [], reverseColor: null, blockedPlayer: null,
+    hasDrawn: false, unoSafe: [], reverseColor: null, blockedPlayers: [],
     winner: null, local: true, createdAt: Date.now(),
   };
   showLocalSetup = false;
@@ -631,7 +647,7 @@ function scheduleBot() {
   if (!isLocal() || !LOCAL || LOCAL.status !== "playing") return;
   const cur = LOCAL.currentTurn;
   if (!isBot(cur)) return;
-  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 1400);
+  botTimer = setTimeout(() => { botTimer = null; runBotMove(cur); }, 2000);
 }
 
 async function runBotMove(botId) {
@@ -886,6 +902,24 @@ function renderLobby() {
   if (startBtn) startBtn.onclick = () => { if (state.players.length >= 2) startGame(); };
 }
 
+// Son hamleyi okunur bir cümleye çevirir (kim kimi blokladı / kime kaç kart çektirdi).
+function lastActionText() {
+  const la = state.lastAction;
+  if (!la) return "";
+  const who = escapeHtml(state.playerNames[la.player] || "Oyuncu");
+  const tgt = la.target ? escapeHtml(state.playerNames[la.target] || "Oyuncu") : "";
+  switch (la.cardType) {
+    case "skip": return `🚫 ${who} → ${tgt} bloklandı (sıra atlayacak)`;
+    case "drawTwo": return `➕2 ${who} → ${tgt}'e 2 kart çektirdi`;
+    case "wildDrawFour": return `➕4 ${who} → ${tgt}'e 4 kart çektirdi (renk seçti)`;
+    case "reverse": return `🔄 ${who} Reverse oynadı (tekrar oynuyor)`;
+    case "wild": return `🎨 ${who} Joker oynadı (renk seçti)`;
+    case "number": return `${who} ${COLOR_TR[la.cardColor] || ""} ${la.cardValue} oynadı`;
+    case "pass": return `⏭️ ${who} pas geçti`;
+    default: return "";
+  }
+}
+
 function renderBoard() {
   const players = state.players;
   const isMyTurn = state.currentTurn === playerId;
@@ -904,25 +938,28 @@ function renderBoard() {
   );
 
   // Diğer oyuncular (sıra bende olandan sonra saat yönünde diz).
+  const blockedList = state.blockedPlayers || [];
   const others = players.filter((p) => p !== playerId);
   const oppHtml = others.map((p) => {
     const count = (state.hands[p] || []).length;
     const isTurn = state.currentTurn === p;
     const safe = unoSafe.includes(p);
-    const blocked = state.blockedPlayer === p;
+    const blk = blockedList.filter((x) => x === p).length;
     const unoBit = count === 1
       ? (safe ? `<div class="uno-tag">UNO ✓</div>` : `<div class="uno-warn">1 kart! (UNO demedi)</div>`)
       : "";
     return `
       <div class="opp ${isTurn ? "opp-turn" : ""}">
-        <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}${blocked ? " 🚫" : ""}</div>
+        <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}${blk > 0 ? " 🚫" + (blk > 1 ? "×" + blk : "") : ""}</div>
         <div class="opp-cards">${
           Array.from({ length: Math.min(count, 8) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
         <div class="muted">${count} kart</div>
+        ${blk > 0 ? `<div class="blocked-tag">🚫 bloklu (sıra atlayacak)</div>` : ""}
         ${unoBit}
       </div>`;
   }).join("");
+  const iAmBlocked = blockedList.includes(playerId);
 
   // Kendi durumum: tek kartım varsa ve "UNO" demediysem uyarı butonu.
   const iNeedUno = myHand.length === 1 && !unoSafe.includes(playerId);
@@ -941,6 +978,9 @@ function renderBoard() {
         <button class="leave-btn" id="leave">Çık</button>
       </div>
       <div class="opps">${oppHtml}</div>
+
+      ${state.lastAction ? `<div class="last-action">${lastActionText()}</div>` : ""}
+      ${iAmBlocked ? `<div class="last-action" style="color:#ff8a80">🚫 Bloklandın — sıran bir kez atlanacak.</div>` : ""}
 
       <div class="middle" style="background:${colorTint(state.currentColor)}">
         <div class="pile">
@@ -1052,10 +1092,14 @@ function pickColor() {
     ov.innerHTML = `<div class="picker"><div style="font-weight:700">Renk seç</div>
       <div class="picker-row">
         ${COLORS.map((c) => `<div class="swatch ${c}" data-c="${c}" style="background:${cssColor(c)}"></div>`).join("")}
-      </div></div>`;
+      </div>
+      <button class="target-cancel" style="margin-top:16px">↩ Oyuna Geri Dön</button>
+    </div>`;
     ov.querySelectorAll(".swatch").forEach((s) => {
       s.onclick = () => { document.body.removeChild(ov); resolve(s.getAttribute("data-c")); };
     });
+    // Renk seçmeden vazgeçme (telefonun geri tuşuna gerek kalmadan).
+    ov.querySelector(".target-cancel").onclick = () => { document.body.removeChild(ov); resolve(null); };
     document.body.appendChild(ov);
   });
 }
@@ -1130,6 +1174,34 @@ window.addEventListener("unhandledrejection", (e) => {
     render();
   }
   toast("Hata: " + _friendlyError(e.reason || new Error("bilinmiyor")));
+});
+
+// ------------------------------------------------------------------
+// Telefon "geri" tuşu: oyundan direkt çıkmasın.
+// - Açık bir seçim penceresi (renk/hedef) varsa onu kapatır.
+// - Oyun içindeysen "çıkmak istediğine emin misin?" diye sorar.
+// - Ana ekrandaysan normal geri (uygulamadan çıkış) çalışır.
+// ------------------------------------------------------------------
+history.pushState({ app: true }, "");
+window.addEventListener("popstate", () => {
+  const ov = document.querySelector(".overlay");
+  if (ov) {
+    history.pushState({ app: true }, ""); // uygulamada kal
+    const cancel = ov.querySelector(".target-cancel");
+    if (cancel) cancel.click(); else ov.remove();
+    return;
+  }
+  if (gameId) {
+    history.pushState({ app: true }, ""); // onaylanmadıkça kal
+    if (confirm("Oyundan çıkmak istediğinize emin misiniz?")) leaveRoom();
+    return;
+  }
+  if (showLocalSetup) {
+    history.pushState({ app: true }, "");
+    showLocalSetup = false; render();
+    return;
+  }
+  // Ana ekran: geri tuşu normal çalışsın (uygulamadan çık).
 });
 
 // İlk çizim
