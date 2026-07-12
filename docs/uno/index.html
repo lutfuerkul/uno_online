@@ -109,19 +109,14 @@
     .topbar { display: flex; align-items: center; justify-content: space-between;
       padding: 8px 12px; background: #131a24; }
     .leave-btn { background: #ffffff1a; color: #fff; padding: 8px 16px; font-size: 14px; }
-    .opps { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: flex-start;
-      justify-content: space-evenly; gap: 2px; overflow: hidden;
-      padding: 6px 2px; width: 100%; flex: 0 0 auto; }
-    .opp { flex: 1 1 0; min-width: 0; max-width: 34%; text-align: center;
-      padding: 4px 2px; border-radius: 8px; border: 2px solid transparent; }
+    .opps { display: flex; gap: 8px; overflow-x: auto; padding: 10px; justify-content: center; }
+    .opp { flex: 0 0 auto; text-align: center; padding: 6px 8px; border-radius: 10px;
+      border: 2px solid transparent; min-width: 78px; }
     .opp-turn { border-color: #66bb6a; background: #66bb6a22; }
-    .opp-name { font-weight: 700; font-size: 11px; margin-bottom: 2px; width: 100%;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .opp-cards { display: flex; justify-content: center; margin: 1px 0; max-width: 100%; }
-    .opp-cards .card.opp-stack { margin-left: -22px; }
-    .opp-cards .card.opp-stack:first-child { margin-left: 0; }
-    .opp-cards .card.back .back-logo { display: none; }
-    .opp .muted { font-size: 11px; }
+    .opp-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+    .opp-cards { display: flex; justify-content: center; margin: 2px 0; }
+    .opp-cards .card { margin-left: -18px; }
+    .opp-cards .card:first-child { margin-left: 0; }
     .color-badge { margin-top: 8px; font-size: 13px; display: flex; align-items: center;
       justify-content: center; gap: 6px; font-weight: 700; }
     .color-badge .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block;

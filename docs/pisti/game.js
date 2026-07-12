@@ -634,13 +634,12 @@ async function runBotMove(botId) {
 // Görünüm (render) — klasik iskambil kağıdı çizimi
 // ------------------------------------------------------------------
 function cardHtml(card, opts = {}) {
-  const { faceDown = false, small = false, big = false, clickable = false, dim = false, opponent = false } = opts;
-  const w = opponent ? 26 : small ? 34 : big ? 84 : 62;
+  const { faceDown = false, small = false, big = false, clickable = false, dim = false } = opts;
+  const w = small ? 34 : big ? 84 : 62;
   const sv = `--w:${w}px`;
-  const oppCls = opponent ? " opp-stack" : "";
 
   if (!card || faceDown) {
-    return `<div class="card back${oppCls}" style="${sv}"><span class="back-pattern"></span></div>`;
+    return `<div class="card back" style="${sv}"><span class="back-pattern"></span></div>`;
   }
 
   const red = RED_SUITS.includes(card.suit);
@@ -858,7 +857,7 @@ function renderBoard() {
       <div class="opp ${isTurn ? "opp-turn" : ""}">
         <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}</div>
         <div class="opp-cards">${
-          Array.from({ length: Math.min(count, 4) }, () => cardHtml(null, { faceDown: true, opponent: true })).join("")
+          Array.from({ length: Math.min(count, 4) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
         <div class="muted">${count} elde · ${wonCount} kazandı</div>
         ${pisti > 0 ? `<div class="pisti-tag">🔥 ${pisti} pişti</div>` : ""}
