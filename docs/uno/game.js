@@ -950,7 +950,7 @@ function lastActionText() {
   const who = escapeHtml(state.playerNames[la.player] || "Oyuncu");
   const tgt = la.target ? escapeHtml(state.playerNames[la.target] || "Oyuncu") : "";
   switch (la.cardType) {
-    case "skip": return `🚫 ${who} → ${tgt} bloklandı (sıra atlayacak)`;
+    case "skip": return `🚫 ${who} → ${tgt} bloklandı`;
     case "drawTwo": return `➕2 ${who} → ${tgt}'e 2 kart çektirdi`;
     case "wildDrawFour": return `➕4 ${who} → ${tgt}'e 4 kart çektirdi (renk seçti)`;
     case "reverse": return `🔄 ${who} Reverse oynadı (tekrar oynuyor)`;
@@ -1037,7 +1037,7 @@ function renderBoard() {
       </div>
 
       ${shouldShowLastAction() ? `<div class="last-action">${lastActionText()}</div>` : ""}
-      ${iAmBlocked ? `<div class="last-action" style="color:#ff8a80">🚫 Bloklandın — sıran bir kez atlanacak.</div>` : ""}
+      ${iAmBlocked ? `<div class="last-action" style="color:#ff8a80">🚫 Bloklandın</div>` : ""}
 
       <div class="turn ${isMyTurn ? "mine" : "theirs"}">
         ${isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu")}
