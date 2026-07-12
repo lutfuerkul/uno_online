@@ -996,7 +996,7 @@ function renderBoard() {
           Array.from({ length: Math.min(count, MAX_OPP_CARD_VISUAL) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
         <div class="muted">${count} kart</div>
-        ${blk > 0 ? `<div class="blocked-tag">🚫 bloklu (sıra atlayacak)</div>` : ""}
+        ${blk > 0 ? `<div class="blocked-tag">🚫 bloklu</div>` : ""}
         ${unoBit}
       </div>`;
   }).join("");
