@@ -741,17 +741,14 @@ function svgFourCards() {
 }
 
 function cardHtml(card, opts = {}) {
-  const { faceDown = false, small = false, big = false, playable = false, clickable = false,
-    colorOverride = null, opponent = false } = opts;
-  const w = opponent ? 26 : small ? 34 : big ? 84 : 62;
+  const { faceDown = false, small = false, big = false, playable = false, clickable = false, colorOverride = null } = opts;
+  const w = small ? 34 : big ? 84 : 62;
   const sv = `--w:${w}px`;
   const pl = playable ? " playable" : "";
-  const oppCls = opponent ? " opp-stack" : "";
 
-  // Arka yüz (kırmızı UNO logolu; rakip elinde logo gösterilmez).
+  // Arka yüz (kırmızı UNO logolu).
   if (!card || faceDown) {
-    const logo = opponent ? "" : `<span class="back-logo">UNO</span>`;
-    return `<div class="card back${oppCls}" style="${sv}"><span class="oval"></span>${logo}</div>`;
+    return `<div class="card back" style="${sv}"><span class="oval"></span><span class="back-logo">UNO</span></div>`;
   }
 
   const click = clickable ? ` data-card="${card.id}"` : "";
@@ -996,7 +993,7 @@ function renderBoard() {
       <div class="opp ${isTurn ? "opp-turn" : ""}">
         <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}${blk > 0 ? " 🚫" + (blk > 1 ? "×" + blk : "") : ""}</div>
         <div class="opp-cards">${
-          Array.from({ length: Math.min(count, MAX_OPP_CARD_VISUAL) }, () => cardHtml(null, { faceDown: true, opponent: true })).join("")
+          Array.from({ length: Math.min(count, MAX_OPP_CARD_VISUAL) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
         <div class="muted">${count} kart</div>
         ${blk > 0 ? `<div class="blocked-tag">🚫 bloklu (sıra atlayacak)</div>` : ""}

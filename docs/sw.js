@@ -7,7 +7,7 @@
 // sürüm, çevrimdışıyken önbellekten). Firebase/gstatic gibi dış istekler
 // dokunulmadan doğrudan ağa gider.
 
-const CACHE = "kartoyunlari-cache-v3";
+const CACHE = "kartoyunlari-cache-v5";
 const ASSETS = [
   "./",
   "./index.html",
