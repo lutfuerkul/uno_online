@@ -991,7 +991,7 @@ function renderBoard() {
       : "";
     return `
       <div class="opp ${isTurn ? "opp-turn" : ""}">
-        <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}</div>
+        <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}</div>
         <div class="opp-cards">${
           Array.from({ length: Math.min(count, MAX_OPP_CARD_VISUAL) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
