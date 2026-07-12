@@ -984,11 +984,7 @@ function renderBoard() {
   const oppHtml = others.map((p) => {
     const count = (state.hands[p] || []).length;
     const isTurn = state.currentTurn === p;
-    const safe = unoSafe.includes(p);
     const blk = blockedList.filter((x) => x === p).length;
-    const unoBit = count === 1
-      ? (safe ? `<div class="uno-tag">UNO ✓</div>` : `<div class="uno-warn">1 kart! (UNO demedi)</div>`)
-      : "";
     return `
       <div class="opp ${isTurn ? "opp-turn" : ""}">
         <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}${blk > 0 ? " 🚫" + (blk > 1 ? "×" + blk : "") : ""}</div>
@@ -997,7 +993,6 @@ function renderBoard() {
         }</div>
         <div class="muted">${count} kart</div>
         ${blk > 0 ? `<div class="blocked-tag">🚫 bloklu (sıra atlayacak)</div>` : ""}
-        ${unoBit}
       </div>`;
   }).join("");
   const iAmBlocked = blockedList.includes(playerId);
