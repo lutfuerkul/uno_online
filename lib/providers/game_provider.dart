@@ -11,6 +11,8 @@ import '../services/game_service.dart';
 /// Uygulama genelinde oyun durumunu tutar ve UI ile [GameService] arasında
 /// köprü kurar.
 class GameProvider extends ChangeNotifier {
+  static const int maxNameLength = 12;
+
   final GameService _service = GameService();
 
   /// Bu cihaz/oyuncu için oturum boyu geçerli benzersiz kimlik.
@@ -47,7 +49,7 @@ class GameProvider extends ChangeNotifier {
 
   Future<void> createGame(String name) async {
     error = null;
-    _playerName = name.trim();
+    _playerName = _normalizeName(name);
     try {
       final id = await _service.createGame(playerId, _playerName!);
       _subscribe(id);
@@ -59,7 +61,7 @@ class GameProvider extends ChangeNotifier {
 
   Future<void> joinGame(String code, String name) async {
     error = null;
-    _playerName = name.trim();
+    _playerName = _normalizeName(name);
     final id = code.toUpperCase().trim();
     try {
       await _service.joinGame(id, playerId, _playerName!);
@@ -105,6 +107,13 @@ class GameProvider extends ChangeNotifier {
       notifyListeners();
     });
     notifyListeners();
+  }
+
+  String _normalizeName(String name) {
+    final trimmed = name.trim();
+    return trimmed.length > maxNameLength
+        ? trimmed.substring(0, maxNameLength)
+        : trimmed;
   }
 
   String _friendlyError(Object e) {

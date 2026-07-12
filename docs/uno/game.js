@@ -23,6 +23,7 @@ if (FB_READY) {
 }
 
 const MAX_PLAYERS = 4;
+const MAX_NAME_LENGTH = 12;
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).
 const DEVICE_ID = localStorage.getItem("uno_player") ||
@@ -30,7 +31,11 @@ const DEVICE_ID = localStorage.getItem("uno_player") ||
 localStorage.setItem("uno_player", DEVICE_ID);
 let playerId = DEVICE_ID;   // aktif oynayan kimlik (bot hamlelerinde geçici değişir)
 let humanId = DEVICE_ID;    // ekranı gören insan oyuncunun kimliği
-let playerName = localStorage.getItem("uno_name") || "";
+let playerName = normalizeName(localStorage.getItem("uno_name") || "");
+
+function normalizeName(name) {
+  return String(name || "").trim().slice(0, MAX_NAME_LENGTH);
+}
 
 // ------------------------------------------------------------------
 // Yerel (bilgisayara karşı) mod — Firebase yerine bellek-içi durum
@@ -205,6 +210,7 @@ function withTimeout(promise, ms, msg) {
 }
 
 async function createGame(name) {
+  name = normalizeName(name);
   lastError = null;
   connecting = true;
   render();
@@ -251,6 +257,7 @@ function _friendlyError(e) {
 }
 
 async function joinGame(code, name) {
+  name = normalizeName(name);
   lastError = null;
   connecting = true;
   render();
@@ -794,7 +801,7 @@ function renderHome() {
         <div class="logo">UNO</div>
         <div class="logo-sub">ONLINE</div>
       </div>
-      <input id="name" placeholder="İsmin" value="${escapeHtml(playerName)}" />
+      <input id="name" placeholder="İsmin" maxlength="${MAX_NAME_LENGTH}" value="${escapeHtml(playerName)}" />
       <button class="btn-uno" id="vscpu" style="width:100%;animation:none">🤖 Bilgisayara Karşı Oyna</button>
       <div class="divider"></div>
       <button class="btn-primary" id="create" ${FB_READY ? "" : "disabled style='opacity:.5'"}>Yeni Oyun Kur</button>
@@ -807,7 +814,8 @@ function renderHome() {
   const nameEl = document.getElementById("name");
   const codeEl = document.getElementById("code");
   const saveName = () => {
-    playerName = nameEl.value.trim();
+    playerName = normalizeName(nameEl.value);
+    nameEl.value = playerName;
     localStorage.setItem("uno_name", playerName);
   };
 
