@@ -23,13 +23,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String? _validateName() {
-    if (_nameController.text.trim().isEmpty) {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Önce bir isim gir.')),
       );
       return null;
     }
-    return _nameController.text.trim();
+    if (name.length > GameProvider.maxNameLength) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('İsim en fazla ${GameProvider.maxNameLength} karakter olabilir.')),
+      );
+      return null;
+    }
+    return name;
   }
 
   @override
@@ -61,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   controller: _nameController,
                   textAlign: TextAlign.center,
+                  maxLength: GameProvider.maxNameLength,
                   decoration: const InputDecoration(
                     labelText: 'İsmin',
                     border: OutlineInputBorder(),
