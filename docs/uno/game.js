@@ -24,6 +24,7 @@ if (FB_READY) {
 
 const MAX_PLAYERS = 4;
 const MAX_NAME_LENGTH = 12;
+const MAX_OPP_CARD_VISUAL = 5; // rakip elinde en fazla bu kadar kart görseli
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).
 const DEVICE_ID = localStorage.getItem("uno_player") ||
@@ -992,7 +993,7 @@ function renderBoard() {
       <div class="opp ${isTurn ? "opp-turn" : ""}">
         <div class="opp-name">${escapeHtml(state.playerNames[p] || "Oyuncu")}${isTurn ? " ⏳" : ""}${blk > 0 ? " 🚫" + (blk > 1 ? "×" + blk : "") : ""}</div>
         <div class="opp-cards">${
-          Array.from({ length: Math.min(count, 8) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
+          Array.from({ length: Math.min(count, MAX_OPP_CARD_VISUAL) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
         <div class="muted">${count} kart</div>
         ${blk > 0 ? `<div class="blocked-tag">🚫 bloklu (sıra atlayacak)</div>` : ""}

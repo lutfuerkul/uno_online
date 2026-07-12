@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -146,7 +148,7 @@ class _Board extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
-                  provider.opponentCardCount.clamp(0, 12),
+                  math.min(provider.opponentCardCount, GameProvider.maxOppCardVisual),
                   (_) => const CardWidget(faceDown: true, width: 34),
                 ),
               ),
