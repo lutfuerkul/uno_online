@@ -232,6 +232,7 @@ async function createGame(name) {
         reverseColor: null,
         blockedPlayers: [],
         winner: null,
+        lastAction: null,
         createdAt: Date.now(),
       }),
       12000,
@@ -319,6 +320,7 @@ async function startGame() {
       unoSafe: [],
       reverseColor: null,
       blockedPlayers: [],
+      lastAction: null,
       status: "playing",
     });
   });
@@ -537,6 +539,7 @@ async function rematch() {
       reverseColor: null,
       blockedPlayers: [],
       winner: null,
+      lastAction: null,
     });
   });
 }
@@ -604,7 +607,7 @@ function startLocalGame(numPlayers) {
     hands, drawPile: deck, discardPile: [first],
     currentColor: first.color, currentTurn: players[0], direction: 1,
     hasDrawn: false, unoSafe: [], reverseColor: null, blockedPlayers: [],
-    winner: null, local: true, createdAt: Date.now(),
+    winner: null, lastAction: null, local: true, createdAt: Date.now(),
   };
   showLocalSetup = false;
   gameId = "🤖 Bilgisayara Karşı";
@@ -910,6 +913,35 @@ function renderLobby() {
   if (startBtn) startBtn.onclick = () => { if (state.players.length >= 2) startGame(); };
 }
 
+// Son hamle mesajı yalnızca gerçekten oynanmış bir hamleyle uyumluysa gösterilir.
+function shouldShowLastAction() {
+  const la = state?.lastAction;
+  if (!la || state.status !== "playing") return false;
+
+  const pile = state.discardPile || [];
+  // Sadece açılış kartı varsa henüz hamle yoktur; önceki oyundan kalan mesajı gizle.
+  if (pile.length <= 1) return false;
+
+  if (la.cardType === "pass") return true;
+
+  const top = pile[pile.length - 1];
+  if (!top) return false;
+
+  switch (la.cardType) {
+    case "number":
+      return top.type === "number" && top.color === la.cardColor && top.value === la.cardValue;
+    case "skip":
+    case "reverse":
+    case "drawTwo":
+      return top.type === la.cardType && top.color === la.cardColor;
+    case "wild":
+    case "wildDrawFour":
+      return top.type === la.cardType;
+    default:
+      return false;
+  }
+}
+
 // Son hamleyi okunur bir cümleye çevirir (kim kimi blokladı / kime kaç kart çektirdi).
 function lastActionText() {
   const la = state.lastAction;
@@ -1003,7 +1035,7 @@ function renderBoard() {
         </div>
       </div>
 
-      ${state.lastAction ? `<div class="last-action">${lastActionText()}</div>` : ""}
+      ${shouldShowLastAction() ? `<div class="last-action">${lastActionText()}</div>` : ""}
       ${iAmBlocked ? `<div class="last-action" style="color:#ff8a80">🚫 Bloklandın — sıran bir kez atlanacak.</div>` : ""}
 
       <div class="turn ${isMyTurn ? "mine" : "theirs"}">
