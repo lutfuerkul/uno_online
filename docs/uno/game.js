@@ -24,7 +24,7 @@ if (FB_READY) {
 
 const MAX_PLAYERS = 4;
 const MAX_NAME_LENGTH = 12;
-const MAX_OPP_CARD_VISUAL = 5; // rakip elinde en fazla bu kadar kart görseli
+const MAX_OPP_CARD_VISUAL = 4; // rakip elinde en fazla bu kadar kart görseli
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).
 const DEVICE_ID = localStorage.getItem("uno_player") ||

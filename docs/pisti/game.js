@@ -30,6 +30,7 @@ const MAX_PLAYERS = 4;
 // kişilik oyuna izin verilir (3 kişi bekleme odasında kalabilir ama başlatılamaz).
 const ALLOWED_PLAYER_COUNTS = [2, 4];
 const MAX_NAME_LENGTH = 12;
+const MAX_OPP_CARD_VISUAL = 4; // rakip elinde en fazla bu kadar kart görseli
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).
 const DEVICE_ID = localStorage.getItem("pisti_player") ||
