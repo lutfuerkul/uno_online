@@ -29,6 +29,7 @@ const MAX_PLAYERS = 4;
 // 3 kişiyle 2 deste (104 kart) tam bölünmüyor; bu yüzden sadece 2 ya da 4
 // kişilik oyuna izin verilir (3 kişi bekleme odasında kalabilir ama başlatılamaz).
 const ALLOWED_PLAYER_COUNTS = [2, 4];
+const MAX_NAME_LENGTH = 12;
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).
 const DEVICE_ID = localStorage.getItem("pisti_player") ||
@@ -36,7 +37,11 @@ const DEVICE_ID = localStorage.getItem("pisti_player") ||
 localStorage.setItem("pisti_player", DEVICE_ID);
 let playerId = DEVICE_ID;   // aktif oynayan kimlik (bot hamlelerinde geçici değişir)
 let humanId = DEVICE_ID;    // ekranı gören insan oyuncunun kimliği
-let playerName = localStorage.getItem("pisti_name") || "";
+let playerName = normalizeName(localStorage.getItem("pisti_name") || "");
+
+function normalizeName(name) {
+  return String(name || "").trim().slice(0, MAX_NAME_LENGTH);
+}
 
 // ------------------------------------------------------------------
 // Oyun durumu (yerel)
@@ -171,6 +176,7 @@ function withTimeout(promise, ms, msg) {
 }
 
 async function createGame(name) {
+  name = normalizeName(name);
   lastError = null;
   connecting = true;
   render();
@@ -213,6 +219,7 @@ function _friendlyError(e) {
 }
 
 async function joinGame(code, name) {
+  name = normalizeName(name);
   lastError = null;
   connecting = true;
   render();
@@ -704,7 +711,7 @@ function renderHome() {
         <div class="logo">PİŞTİ</div>
         <div class="logo-sub">ONLINE</div>
       </div>
-      <input id="name" placeholder="İsmin" value="${escapeHtml(playerName)}" />
+      <input id="name" placeholder="İsmin" maxlength="${MAX_NAME_LENGTH}" value="${escapeHtml(playerName)}" />
       <button class="btn-primary" id="vscpu" style="width:100%;background:#1565c0">🤖 Bilgisayara Karşı Oyna</button>
       <div class="divider"></div>
       <button class="btn-primary" id="create" ${FB_READY ? "" : "disabled style='opacity:.5'"}>Yeni Oyun Kur</button>
@@ -717,7 +724,8 @@ function renderHome() {
   const nameEl = document.getElementById("name");
   const codeEl = document.getElementById("code");
   const saveName = () => {
-    playerName = nameEl.value.trim();
+    playerName = normalizeName(nameEl.value);
+    nameEl.value = playerName;
     localStorage.setItem("pisti_name", playerName);
   };
 

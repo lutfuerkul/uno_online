@@ -257,6 +257,7 @@ function _friendlyError(e) {
 }
 
 async function joinGame(code, name) {
+  name = normalizeName(name);
   lastError = null;
   connecting = true;
   render();
