@@ -12,6 +12,7 @@ import '../services/game_service.dart';
 /// köprü kurar.
 class GameProvider extends ChangeNotifier {
   static const int maxNameLength = 12;
+  static const int maxOppCardVisual = 5;
 
   final GameService _service = GameService();
 
