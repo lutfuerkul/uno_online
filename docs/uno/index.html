@@ -109,13 +109,14 @@
     .topbar { display: flex; align-items: center; justify-content: space-between;
       padding: 8px 12px; background: #131a24; }
     .leave-btn { background: #ffffff1a; color: #fff; padding: 8px 16px; font-size: 14px; }
-    .opps { display: flex; gap: 4px; overflow: hidden; flex-wrap: wrap;
-      padding: 6px 4px; justify-content: center; flex: 0 0 auto; }
-    .opp { flex: 0 1 auto; text-align: center; padding: 4px 4px; border-radius: 8px;
-      border: 2px solid transparent; min-width: 0; }
+    .opps { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: flex-start;
+      justify-content: space-evenly; gap: 2px; overflow: hidden;
+      padding: 6px 2px; width: 100%; flex: 0 0 auto; }
+    .opp { flex: 1 1 0; min-width: 0; max-width: 34%; text-align: center;
+      padding: 4px 2px; border-radius: 8px; border: 2px solid transparent; }
     .opp-turn { border-color: #66bb6a; background: #66bb6a22; }
-    .opp-name { font-weight: 700; font-size: 11px; margin-bottom: 2px; max-width: 76px;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-inline: auto; }
+    .opp-name { font-weight: 700; font-size: 11px; margin-bottom: 2px; width: 100%;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .opp-cards { display: flex; justify-content: center; margin: 1px 0; max-width: 100%; }
     .opp-cards .card.opp-stack { margin-left: -22px; }
     .opp-cards .card.opp-stack:first-child { margin-left: 0; }
