@@ -995,8 +995,8 @@ function renderBoard() {
         <div class="opp-cards">${
           Array.from({ length: Math.min(count, MAX_OPP_CARD_VISUAL) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
-        <div class="muted">${count} kart</div>
         ${blk > 0 ? `<div class="blocked-tag">🚫 bloklu${blk > 1 ? " ×" + blk : ""}</div>` : ""}
+        <div class="muted">${count} kart</div>
         ${unoBit}
       </div>`;
   }).join("");
