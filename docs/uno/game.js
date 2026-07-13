@@ -936,6 +936,7 @@ function renderHome() {
 
   document.getElementById("vscpu").onclick = () => {
     saveName();
+    if (!playerName) return toast("Önce bir isim gir.");
     showLocalSetup = true;
     render();
   };
