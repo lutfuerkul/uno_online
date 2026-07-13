@@ -924,7 +924,12 @@ function renderHome() {
       <button class="btn-outline" id="join" ${FB_READY ? "" : "disabled style='opacity:.5'"}>Oyuna Katıl</button>
       <div class="muted">${FB_READY ? "Online: 2-4 kişi · Bilgisayara karşı: 2-4 kişi" : "Online oyun için Firebase ayarı gerekli (README). Bilgisayara karşı yine oynanır."}</div>
       ${lastError ? `<div class="error">${escapeHtml(lastError)}</div>` : ""}
+      <button class="btn-outline" id="back-to-select">← Oyun Seç</button>
     </div>`;
+
+  document.getElementById("back-to-select").onclick = () => {
+    window.location.href = "../";
+  };
 
   const nameEl = document.getElementById("name");
   const codeEl = document.getElementById("code");
