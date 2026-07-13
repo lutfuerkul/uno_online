@@ -1,6 +1,6 @@
 {
-  "name": "Kart Oyunları",
-  "short_name": "Kartlar",
+  "name": "Uno & Pisti",
+  "short_name": "Uno & Pisti",
   "description": "UNO ve Pişti — gerçek zamanlı çok oyunculu kart oyunları.",
   "id": "/uno_online/",
   "start_url": "./",
