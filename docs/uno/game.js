@@ -190,6 +190,25 @@ function advanceTurn(players, curIdx, dir, blocked) {
   return { nextTurn: players[idx], blocked: blk };
 }
 
+// Ekranda soldan sağa sıra yönünde dizim (rakipler veya tüm koltuklar).
+function opponentsLeftToRight(players, viewerId, dir = 1) {
+  const n = players.length;
+  const myIdx = players.indexOf(viewerId);
+  if (myIdx === -1) return players.filter((p) => p !== viewerId);
+  const out = [];
+  for (let i = 1; i < n; i++) out.push(players[nextIndex(myIdx, dir, n, i)]);
+  return out;
+}
+
+function seatOrderLeftToRight(players, viewerId, dir = 1) {
+  const n = players.length;
+  const myIdx = players.indexOf(viewerId);
+  if (myIdx === -1) return [...players];
+  const out = [];
+  for (let i = 1; i <= n; i++) out.push(players[nextIndex(myIdx, dir, n, i)]);
+  return out;
+}
+
 // Desteden [player] eline [count] kart çeker; deste biterse yeniden karılır.
 function drawInto(hands, player, draw, discard, count) {
   const hand = [...(hands[player] || [])];
@@ -883,10 +902,10 @@ function renderLoading() {
 }
 
 function renderLobby() {
-  const players = state.players || [];
-  const isHost = players[0] === playerId;
-  const rows = players.map((p, i) => {
-    const tags = [i === 0 ? "kurucu" : "", p === playerId ? "sen" : ""].filter(Boolean).join(" · ");
+  const players = seatOrderLeftToRight(state.players || [], playerId, state?.direction || 1);
+  const isHost = (state.players || [])[0] === playerId;
+  const rows = players.map((p) => {
+    const tags = [(state.players || [])[0] === p ? "kurucu" : "", p === playerId ? "sen" : ""].filter(Boolean).join(" · ");
     return `
     <div class="lobby-row">
       <span>${escapeHtml(state.playerNames[p] || "Oyuncu")}</span>
@@ -986,9 +1005,9 @@ function renderBoard() {
       : canPlay(c, top, state.currentColor)
   );
 
-  // Diğer oyuncular (sıra bende olandan sonra saat yönünde diz).
+  // Diğer oyuncular: sıra yönünde soldan sağa.
   const blockedList = state.blockedPlayers || [];
-  const others = players.filter((p) => p !== playerId);
+  const others = opponentsLeftToRight(players, playerId, dir);
   const oppHtml = others.map((p) => {
     const count = (state.hands[p] || []).length;
     const isTurn = state.currentTurn === p;
@@ -1148,7 +1167,7 @@ function pickColor() {
 // Skip için "kimi blokla" gibi bir başlıkla kullanılır.
 function pickPlayer(title) {
   return new Promise((resolve) => {
-    const targets = (state.players || []).filter((p) => p !== playerId);
+    const targets = opponentsLeftToRight(state.players || [], playerId, state.direction || 1);
     if (targets.length === 1) return resolve(targets[0]); // tek rakip → otomatik
     const ov = document.createElement("div");
     ov.className = "overlay";
