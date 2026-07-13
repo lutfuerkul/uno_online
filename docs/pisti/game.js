@@ -831,9 +831,14 @@ function tableStackHtml(pile) {
   const top = pile[pile.length - 1];
   const hidden = pile.length - 1;
   if (hidden <= 0) return cardHtml(top, { big: true });
+
+  const behind = hidden === 1
+    ? `<span class="stack-behind s1">${cardHtml(null, { faceDown: true, big: true })}</span>`
+    : `<span class="stack-behind s2">${cardHtml(null, { faceDown: true, big: true })}</span>
+       <span class="stack-behind s1">${cardHtml(null, { faceDown: true, big: true })}</span>`;
+
   return `<div class="table-stack">
-    <span class="stack-behind s2">${cardHtml(null, { faceDown: true, big: true })}</span>
-    <span class="stack-behind s1">${cardHtml(null, { faceDown: true, big: true })}</span>
+    ${behind}
     <span class="stack-top">${cardHtml(top, { big: true })}</span>
   </div>`;
 }
