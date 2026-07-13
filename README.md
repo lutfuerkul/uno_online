@@ -172,10 +172,12 @@ flutter pub get
    Bu komut, şablon olan `lib/firebase_options.dart` dosyasının üzerine gerçek
    ayarları yazar.
 
-4. Firestore güvenlik kurallarını ayarla. Geliştirme için bu depodaki
-   `firestore.rules` dosyasını Firebase Console → Firestore → Rules bölümüne
-   yapıştırabilirsin. **Uyarı:** bu kurallar sadece geliştirme içindir,
-   yayınlamadan önce sıkılaştır.
+4. Firestore güvenlik kurallarını ayarla: bu depodaki `firestore.rules`
+   dosyasını Firebase Console → Firestore → Rules bölümüne yapıştır. Bu
+   kurallar oda silinmesini engeller ve her yazmanın uygulamanın beklediği
+   alan/tip şekliyle eşleşmesini zorunlu kılar. **Not:** Auth eklenmediği
+   için "sadece sıradaki oyuncu yazabilsin" gibi kimlik bazlı bir kontrol
+   yok — bunun için Firebase Authentication eklemek gerekir.
 
 ### 4. Çalıştır
 

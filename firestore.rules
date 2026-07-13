@@ -1,18 +1,73 @@
 rules_version = '2';
 
-// GELİŞTİRME kuralları — sadece test/geliştirme için uygundur.
-// Herkes 'games' koleksiyonundaki odaları okuyup yazabilir.
-//
-// Uyarı: Bu kurallar güvenli DEĞİLDİR (kimlik doğrulama yok, hile engeli yok).
-// Oyunu yayınlamadan önce Firebase Authentication ekleyip kuralları
-// sıkılaştırın (yalnızca odadaki oyuncular yazabilsin, sıra kontrolü vb.).
+// Auth yok (kimlik doğrulama eklenmedi), bu yüzden "sadece odadaki oyuncu
+// yazabilsin" gibi kimlik bazlı kısıtlama uygulanamıyor. Bunun yerine odaların
+// silinmesini engelliyoruz ve her yazmanın uygulamanın ürettiği belge
+// şekliyle (beklenen alanlar + tipler) eşleştiğini zorunlu kılıyoruz — rastgele
+// biri projeyi bulup odaları silemesin, bozamasın ya da çöp/kötü niyetli veri
+// yazamasın.
 service cloud.firestore {
   match /databases/{database}/documents {
+
     match /games/{gameId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow delete: if false;
+      allow create: if gameId.matches('^[A-Z0-9]{5}$') && isValidUnoGame(request.resource.data)
+                    && request.resource.data.players.size() == 1
+                    && request.resource.data.status == 'waiting';
+      allow update: if isValidUnoGame(request.resource.data);
     }
+
     match /pisti_games/{gameId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow delete: if false;
+      allow create: if gameId.matches('^[A-Z0-9]{5}$') && isValidPistiGame(request.resource.data)
+                     && request.resource.data.players.size() == 1
+                     && request.resource.data.status == 'waiting';
+      allow update: if isValidPistiGame(request.resource.data);
+    }
+
+    function isValidUnoGame(d) {
+      return d.keys().hasOnly([
+        'status', 'players', 'playerNames', 'hands', 'drawPile', 'discardPile',
+        'currentColor', 'currentTurn', 'direction', 'hasDrawn', 'unoSafe',
+        'reverseColor', 'blockedPlayers', 'winner', 'lastAction', 'createdAt'
+      ])
+      && d.status is string
+      && d.players is list && d.players.size() <= 4
+      && d.playerNames is map
+      && d.hands is map
+      && d.drawPile is list
+      && d.discardPile is list
+      && d.currentColor is string
+      && d.currentTurn is string
+      && d.direction is number
+      && d.hasDrawn is bool
+      && d.unoSafe is list
+      && d.blockedPlayers is list
+      && d.createdAt is number;
+    }
+
+    function isValidPistiGame(d) {
+      return d.keys().hasOnly([
+        'status', 'players', 'playerNames', 'hands', 'pile', 'drawPile',
+        'won', 'pistiCount', 'lastCapturer', 'lastAction', 'pendingCapture',
+        'currentTurn', 'winner', 'winners', 'scores', 'scoreDetail', 'createdAt',
+        'skipResultDelay'
+      ])
+      && d.status is string
+      && d.players is list && d.players.size() <= 4
+      && d.playerNames is map
+      && d.hands is map
+      && d.pile is list
+      && d.drawPile is list
+      && d.won is map
+      && d.pistiCount is map
+      && d.currentTurn is string
+      && d.winners is list
+      && d.scores is map
+      && d.scoreDetail is map
+      && d.createdAt is number;
     }
   }
 }
