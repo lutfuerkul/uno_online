@@ -130,6 +130,11 @@ function shuffle(arr) {
   return arr;
 }
 
+// Oyunu kimin başlatacağı (ilk sıra) rastgele seçilir; odayı kuran kişi değil.
+function randomPlayer(players) {
+  return players[Math.floor(Math.random() * players.length)];
+}
+
 function isWild(c) {
   return c.type === "wild" || c.type === "wildDrawFour";
 }
@@ -309,7 +314,7 @@ async function startGame() {
       drawPile: deck,
       discardPile: [first],
       currentColor: first.color,
-      currentTurn: players[0],
+      currentTurn: randomPlayer(players),
       direction: 1,
       hasDrawn: false,
       unoSafe: [],
@@ -570,7 +575,7 @@ function startLocalGame(numPlayers) {
   LOCAL = {
     status: "playing", players, playerNames: names,
     hands, drawPile: deck, discardPile: [first],
-    currentColor: first.color, currentTurn: players[0], direction: 1,
+    currentColor: first.color, currentTurn: randomPlayer(players), direction: 1,
     hasDrawn: false, unoSafe: [], reverseColor: null, blockedPlayers: [],
     winner: null, lastAction: null, local: true, createdAt: Date.now(),
   };
