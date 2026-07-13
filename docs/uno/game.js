@@ -784,12 +784,36 @@ function cardHtml(card, opts = {}) {
     `<span class="corner br">${cornerSym(card)}</span></div>`;
 }
 
+// Oyun bitince kazananın son attığı kart görülsün diye sonuç ekranına
+// geçmeden önce 3 saniye tahtayı göstermeye devam ederiz.
+const RESULT_DELAY_MS = 3000;
+let resultDelayTimer = null;
+let showResult = false;
+
+function resetResultDelay() {
+  if (resultDelayTimer) { clearTimeout(resultDelayTimer); resultDelayTimer = null; }
+  showResult = false;
+}
+
 function render() {
   if (connecting) return renderConnecting();
   if (!gameId) return showLocalSetup ? renderLocalSetup() : renderHome();
   if (!state) return renderLoading();
-  if (state.status === "waiting") return renderLobby();
-  if (state.status === "finished") return renderResult();
+  if (state.status === "waiting") { resetResultDelay(); return renderLobby(); }
+  if (state.status === "finished") {
+    if (!showResult) {
+      if (!resultDelayTimer) {
+        resultDelayTimer = setTimeout(() => {
+          resultDelayTimer = null;
+          showResult = true;
+          render();
+        }, RESULT_DELAY_MS);
+      }
+      return renderBoard();
+    }
+    return renderResult();
+  }
+  resetResultDelay();
   return renderBoard();
 }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -29,10 +30,42 @@ class GameScreen extends StatelessWidget {
           ? const Center(child: CircularProgressIndicator())
           : state.status == 'waiting'
               ? _WaitingRoom(code: provider.gameId!)
-              : state.status == 'finished'
-                  ? _Result()
-                  : _Board(),
+              : const _GameBody(),
     );
+  }
+}
+
+/// Oyun tahtasını gösterir; oyun bitince kazananın son attığı kart
+/// görülsün diye sonuç ekranına geçmeden önce 3 saniye bekler.
+class _GameBody extends StatefulWidget {
+  const _GameBody();
+
+  @override
+  State<_GameBody> createState() => _GameBodyState();
+}
+
+class _GameBodyState extends State<_GameBody> {
+  Timer? _resultTimer;
+  bool _showResult = false;
+
+  @override
+  void dispose() {
+    _resultTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<GameProvider>();
+    final finished = provider.state?.status == 'finished';
+
+    if (finished) {
+      _resultTimer ??= Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _showResult = true);
+      });
+      if (_showResult) return _Result();
+    }
+    return _Board();
   }
 }
 
