@@ -785,8 +785,8 @@ function cardHtml(card, opts = {}) {
 }
 
 // Oyun bitince kazananın son attığı kart görülsün diye sonuç ekranına
-// geçmeden önce 3 saniye tahtayı göstermeye devam ederiz.
-const RESULT_DELAY_MS = 3000;
+// geçmeden önce 2 saniye tahtayı göstermeye devam ederiz.
+const RESULT_DELAY_MS = 2000;
 let resultDelayTimer = null;
 let showResult = false;
 
