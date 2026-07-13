@@ -159,6 +159,25 @@ function nextIndex(idx, n, steps = 1) {
   return ((idx + steps) % n + n) % n;
 }
 
+// Ekranda soldan sağa sıra yönünde dizim (rakipler veya tüm koltuklar).
+function opponentsLeftToRight(players, viewerId) {
+  const n = players.length;
+  const myIdx = players.indexOf(viewerId);
+  if (myIdx === -1) return players.filter((p) => p !== viewerId);
+  const out = [];
+  for (let i = 1; i < n; i++) out.push(players[nextIndex(myIdx, n, i)]);
+  return out;
+}
+
+function seatOrderLeftToRight(players, viewerId) {
+  const n = players.length;
+  const myIdx = players.indexOf(viewerId);
+  if (myIdx === -1) return [...players];
+  const out = [];
+  for (let i = 1; i <= n; i++) out.push(players[nextIndex(myIdx, n, i)]);
+  return out;
+}
+
 // ------------------------------------------------------------------
 // El (round) kurulumu: 4'er kart dağıt + masaya kart aç.
 // İlk açılışta masaya kart konur; en üstteki (yüzü açık) kart dışında
@@ -846,10 +865,10 @@ function renderLoading() {
 }
 
 function renderLobby() {
-  const players = state.players || [];
-  const isHost = players[0] === playerId;
-  const rows = players.map((p, i) => {
-    const tags = [i === 0 ? "kurucu" : "", p === playerId ? "sen" : ""].filter(Boolean).join(" · ");
+  const players = seatOrderLeftToRight(state.players || [], playerId);
+  const isHost = (state.players || [])[0] === playerId;
+  const rows = players.map((p) => {
+    const tags = [(state.players || [])[0] === p ? "kurucu" : "", p === playerId ? "sen" : ""].filter(Boolean).join(" · ");
     return `
     <div class="lobby-row">
       <span>${escapeHtml(state.playerNames[p] || "Oyuncu")}</span>
@@ -917,7 +936,7 @@ function renderBoard() {
   const deckCount = (state.drawPile || []).length;
 
   const pistiCount = state.pistiCount || {};
-  const others = players.filter((p) => p !== playerId);
+  const others = opponentsLeftToRight(players, playerId);
   const oppHtml = others.map((p) => {
     const count = (state.hands[p] || []).length;
     const wonCount = (state.won[p] || []).length;
