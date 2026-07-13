@@ -54,8 +54,13 @@ class GameService {
         throw Exception('Bu oda dolu.');
       }
 
+      final normalized = _normalizeName(name);
+      if (_isNameTaken(names, normalized)) {
+        throw Exception('Bu isim zaten alınmış. Başka bir isim seç.');
+      }
+
       players.add(playerId);
-      names[playerId] = name;
+      names[playerId] = normalized;
 
       // Oyunu başlat: deste kur, karıştır, 7'şer kart dağıt.
       final deck = DeckService.buildDeck()..shuffle();
@@ -246,5 +251,22 @@ class GameService {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final rnd = Random.secure();
     return List.generate(5, (_) => chars[rnd.nextInt(chars.length)]).join();
+  }
+
+  String _normalizeName(String name) {
+    final trimmed = name.trim();
+    return trimmed.length > 12 ? trimmed.substring(0, 12) : trimmed;
+  }
+
+  String _nameKey(String name) => _normalizeName(name).toLowerCase();
+
+  bool _isNameTaken(Map<String, dynamic> names, String name, {String? exceptId}) {
+    final key = _nameKey(name);
+    if (key.isEmpty) return false;
+    for (final entry in names.entries) {
+      if (exceptId != null && entry.key == exceptId) continue;
+      if (_nameKey(entry.value?.toString() ?? '') == key) return true;
+    }
+    return false;
   }
 }

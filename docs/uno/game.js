@@ -38,6 +38,21 @@ function normalizeName(name) {
   return String(name || "").trim().slice(0, MAX_NAME_LENGTH);
 }
 
+function nameKey(name) {
+  return normalizeName(name).toLocaleLowerCase("tr");
+}
+
+// Aynı odada (büyük/küçük harf duyarsız) isim tekrarına izin verme.
+function isNameTaken(names, name, exceptId = null) {
+  const key = nameKey(name);
+  if (!key) return false;
+  for (const [id, n] of Object.entries(names || {})) {
+    if (exceptId && id === exceptId) continue;
+    if (nameKey(n) === key) return true;
+  }
+  return false;
+}
+
 // ------------------------------------------------------------------
 // Yerel (bilgisayara karşı) mod — Firebase yerine bellek-içi durum
 // ------------------------------------------------------------------
@@ -272,8 +287,9 @@ async function joinGame(code, name) {
       const players = g.players || [];
       if (players.includes(playerId)) return; // yeniden bağlanma
       if (players.length >= MAX_PLAYERS) throw new Error(`Oda dolu (en fazla ${MAX_PLAYERS} kişi).`);
-      players.push(playerId);
       const names = g.playerNames || {};
+      if (isNameTaken(names, name)) throw new Error("Bu isim zaten alınmış. Başka bir isim seç.");
+      players.push(playerId);
       names[playerId] = name;
       tx.update(ref, { players, playerNames: names });
     }), 12000, "Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.");
