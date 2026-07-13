@@ -467,6 +467,7 @@ async function drawCard() {
 
     tx.update(ref, { hands, drawPile: draw, discardPile: discard, hasDrawn: true });
   });
+  maybeEndStalemate();
 }
 
 // Kart çektikten sonra oynamak istemezse sırayı sonraki oyuncuya geçirir.
@@ -497,6 +498,7 @@ async function pass() {
       lastAction: { player: playerId, cardType: "pass" },
     });
   });
+  maybeEndStalemate();
 }
 
 function subscribe(code) {
@@ -505,6 +507,7 @@ function subscribe(code) {
   unsub = onSnapshot(doc(db, "games", code), (snap) => {
     state = snap.exists() ? snap.data() : null;
     render();
+    maybeEndStalemate();
     scheduleBot();
   });
   render();
@@ -629,6 +632,81 @@ function unoPlayable(hand, g) {
     : canPlay(c, top, g.currentColor));
 }
 
+function canDrawFromPiles(draw, discard) {
+  return draw.length > 0 || discard.length > 1;
+}
+
+// Çekilecek kart kalmadı ve kimse oynayamıyorsa oyun kilitlenmiştir.
+function isGameDeadlocked(g) {
+  if (!g || g.status !== "playing") return false;
+  const draw = g.drawPile || [];
+  const discard = g.discardPile || [];
+  const top = discard[discard.length - 1];
+  const players = g.players || [];
+  const n = players.length;
+  const dir = g.direction || 1;
+  const curIdx = players.indexOf(g.currentTurn);
+  if (curIdx === -1 || !top) return false;
+
+  const canDraw = canDrawFromPiles(draw, discard);
+
+  function handHasPlay(hand, reverseColor) {
+    if (reverseColor != null) {
+      return hand.some((c) => canPlayUnderReverseLock(c, reverseColor));
+    }
+    return hand.some((c) => canPlay(c, top, g.currentColor));
+  }
+
+  for (let step = 0; step < n; step++) {
+    const pid = players[nextIndex(curIdx, dir, n, step)];
+    const hand = g.hands[pid] || [];
+    const reverseColor = step === 0 ? (g.reverseColor || null) : null;
+
+    if (handHasPlay(hand, reverseColor)) return false;
+
+    if (step === 0) {
+      if (!g.hasDrawn && canDraw) return false;
+      if (!g.hasDrawn && !canDraw) return true;
+    } else if (canDraw) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function endGameStalemate() {
+  if (isLocal()) {
+    if (!LOCAL || LOCAL.status !== "playing" || !isGameDeadlocked(LOCAL)) return;
+    LOCAL = {
+      ...LOCAL,
+      status: "finished",
+      winner: null,
+      lastAction: { player: LOCAL.currentTurn, cardType: "stalemate" },
+    };
+    afterLocalWrite();
+    return;
+  }
+  if (!gameId || !db) return;
+  const ref = doc(db, "games", gameId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const g = snap.data();
+    if (g.status !== "playing" || !isGameDeadlocked(g)) return;
+    tx.update(ref, {
+      status: "finished",
+      winner: null,
+      lastAction: { player: g.currentTurn, cardType: "stalemate" },
+    });
+  });
+}
+
+function maybeEndStalemate() {
+  if (!state || state.status !== "playing") return;
+  if (!isGameDeadlocked(state)) return;
+  endGameStalemate().catch(() => {});
+}
+
 function botPickCard(cands, g, botId) {
   const opps = g.players.filter((p) => p !== botId);
   const threat = Math.min(...opps.map((p) => (g.hands[p] || []).length));
@@ -667,6 +745,10 @@ function scheduleBot() {
 
 async function runBotMove(botId) {
   if (!isLocal() || !LOCAL || LOCAL.status !== "playing" || LOCAL.currentTurn !== botId) return;
+  if (isGameDeadlocked(LOCAL)) {
+    await endGameStalemate();
+    return;
+  }
   suppressLocalRender = true;
   playerId = botId;
   try {
@@ -693,6 +775,7 @@ async function runBotMove(botId) {
     playerId = humanId;
     suppressLocalRender = false;
   }
+  maybeEndStalemate();
   if (localCb) localCb(localSnap()); // render + sonraki sıra
 }
 
@@ -945,7 +1028,9 @@ function renderLobby() {
 // Son hamle mesajı yalnızca gerçekten oynanmış bir hamleyle uyumluysa gösterilir.
 function shouldShowLastAction() {
   const la = state?.lastAction;
-  if (!la || state.status !== "playing") return false;
+  if (!la) return false;
+  if (la.cardType === "stalemate") return state.status === "finished";
+  if (state.status !== "playing") return false;
 
   const pile = state.discardPile || [];
   // Sadece açılış kartı varsa henüz hamle yoktur; önceki oyundan kalan mesajı gizle.
@@ -985,6 +1070,7 @@ function lastActionText() {
     case "wild": return `🎨 ${who} Joker oynadı (renk seçti)`;
     case "number": return `${who} ${COLOR_TR[la.cardColor] || ""} ${la.cardValue} oynadı`;
     case "pass": return `⏭️ ${who} pas geçti`;
+    case "stalemate": return "🤝 Hamle şansı kalmadı — oyun berabere bitti";
     default: return "";
   }
 }
@@ -1088,13 +1174,16 @@ function renderBoard() {
 }
 
 function renderResult() {
-  const iWon = state.winner === playerId;
+  const tie = state.winner == null;
+  const iWon = !tie && state.winner === playerId;
   const winnerName = iWon ? "Sen" : (state.playerNames[state.winner] || "Rakip");
   app.innerHTML = `
     <div class="center">
-      <div class="emoji">${iWon ? "🎉" : "😔"}</div>
-      <div style="font-size:28px;font-weight:800">${iWon ? "Kazandın!" : "Kaybettin"}</div>
-      <div class="muted">${escapeHtml(winnerName)} oyunu kazandı.</div>
+      <div class="emoji">${tie ? "🤝" : (iWon ? "🎉" : "😔")}</div>
+      <div style="font-size:28px;font-weight:800">${tie ? "Berabere!" : (iWon ? "Kazandın!" : "Kaybettin")}</div>
+      <div class="muted">${tie
+        ? "Hamle şansı kalmadığı için oyun berabere sonlandırıldı."
+        : `${escapeHtml(winnerName)} oyunu kazandı.`}</div>
       <button class="btn-primary" id="rematch" style="max-width:260px">🔁 Tekrar Oyna</button>
       <button class="btn-outline" id="leave" style="max-width:260px">Çık</button>
       <div class="muted">Tekrar Oyna herkesi bekleme odasına döndürür; kurucu yeniden başlatır.</div>
