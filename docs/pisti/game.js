@@ -339,9 +339,15 @@ async function playCard(cardId) {
     const lastAction = { player: playerId, card, captured, isPisti };
 
     if (captured) {
+      const players = g.players;
+      const allHandsEmpty = players.every((p) => (hands[p] || []).length === 0);
+      const endsGame = allHandsEmpty && (g.drawPile || []).length === 0;
       // Faz A: kart masada görünür kalır; toplama biraz sonra collectPile ile
       // yapılır (oyuncu attığı kartı masada görsün, sonra topluyor).
-      tx.update(ref, { hands, pile, lastAction, pendingCapture: { by: playerId, isPisti } });
+      tx.update(ref, {
+        hands, pile, lastAction,
+        pendingCapture: { by: playerId, isPisti, endsGame },
+      });
       return;
     }
 
@@ -392,6 +398,7 @@ async function collectPile() {
     const g = snap.data();
     if (!g.pendingCapture) return;
     const by = g.pendingCapture.by;
+    const endsGame = !!g.pendingCapture.endsGame;
 
     const won = { ...g.won };
     won[by] = [...(won[by] || []), ...(g.pile || [])];
@@ -423,6 +430,7 @@ async function collectPile() {
       won, pistiCount, pile, hands, drawPile, lastCapturer: by,
       currentTurn: nextTurn, pendingCapture: null,
       status, winner, winners, scores, scoreDetail,
+      skipResultDelay: status === "finished" && endsGame,
     });
   });
 }
@@ -464,13 +472,17 @@ function subscribe(code) {
 }
 
 // Masayı yakalayan varsa (pendingCapture), kısa bir gecikmeyle toplar —
-// önce atılan kart masada görünür, sonra toplanır. Yerelde her zaman;
-// online'da yakalayan oyuncunun cihazı tetikler.
+// önce atılan kart masada görünür, sonra toplanır. Oyun bu hamleyle
+// bitiyorsa toplam bekleme 2 sn (ayrı sonuç gecikmesi yok).
+const COLLECT_DELAY_MS = 1200;
+const END_GAME_CAPTURE_DELAY_MS = 2000;
+
 function maybeScheduleCollect() {
   if (collectTimer) return;
   if (!state || state.status !== "playing" || !state.pendingCapture) return;
   if (!(isLocal() || state.pendingCapture.by === humanId)) return;
-  collectTimer = setTimeout(() => { collectTimer = null; collectPile(); }, 1200);
+  const delay = state.pendingCapture.endsGame ? END_GAME_CAPTURE_DELAY_MS : COLLECT_DELAY_MS;
+  collectTimer = setTimeout(() => { collectTimer = null; collectPile(); }, delay);
 }
 
 function leave() {
@@ -478,6 +490,7 @@ function leave() {
   unsub = null;
   if (botTimer) { clearTimeout(botTimer); botTimer = null; }
   if (collectTimer) { clearTimeout(collectTimer); collectTimer = null; }
+  resetResultDelay();
   LOCAL = null; localCb = null; suppressLocalRender = false;
   playerId = DEVICE_ID; humanId = DEVICE_ID;
   gameId = null;
@@ -498,7 +511,7 @@ async function rematch() {
       status: "waiting",
       hands: {}, pile: [], drawPile: [], won: {}, pistiCount: {},
       lastCapturer: null, lastAction: null, pendingCapture: null, currentTurn: "",
-      winner: null, winners: [], scores: {}, scoreDetail: {},
+      winner: null, winners: [], scores: {}, scoreDetail: {}, skipResultDelay: null,
     });
   });
 }
@@ -691,12 +704,42 @@ function courtArt(rank) {
   </svg>`;
 }
 
+// Oyun bitince son hamle görülsün diye sonuç ekranına geçmeden önce
+// 2 saniye tahtayı göstermeye devam ederiz (yakalama ile bitişte
+// bu süre toplama beklemesine dahildir).
+const RESULT_DELAY_MS = 2000;
+let resultDelayTimer = null;
+let showResult = false;
+
+function resetResultDelay() {
+  if (resultDelayTimer) { clearTimeout(resultDelayTimer); resultDelayTimer = null; }
+  showResult = false;
+}
+
 function render() {
   if (connecting) return renderConnecting();
   if (!gameId) return showLocalSetup ? renderLocalSetup() : renderHome();
   if (!state) return renderLoading();
-  if (state.status === "waiting") return renderLobby();
-  if (state.status === "finished") return renderResult();
+  if (state.status === "waiting") { resetResultDelay(); return renderLobby(); }
+  if (state.status === "finished") {
+    if (!showResult) {
+      const delay = state.skipResultDelay ? 0 : RESULT_DELAY_MS;
+      if (delay === 0) {
+        showResult = true;
+        return renderResult();
+      }
+      if (!resultDelayTimer) {
+        resultDelayTimer = setTimeout(() => {
+          resultDelayTimer = null;
+          showResult = true;
+          render();
+        }, delay);
+      }
+      return renderBoard();
+    }
+    return renderResult();
+  }
+  resetResultDelay();
   return renderBoard();
 }
 
