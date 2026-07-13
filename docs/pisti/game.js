@@ -26,9 +26,7 @@ if (FB_READY) {
 
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
-// 3 kişiyle 2 deste (104 kart) tam bölünmüyor; bu yüzden sadece 2 ya da 4
-// kişilik oyuna izin verilir (3 kişi bekleme odasında kalabilir ama başlatılamaz).
-const ALLOWED_PLAYER_COUNTS = [2, 4];
+const ALLOWED_PLAYER_COUNTS = [2, 3, 4];
 const MAX_NAME_LENGTH = 12;
 const MAX_OPP_CARD_VISUAL = 4; // rakip elinde en fazla bu kadar kart görseli
 
@@ -142,9 +140,10 @@ function nextIndex(idx, n, steps = 1) {
 }
 
 // ------------------------------------------------------------------
-// El (round) kurulumu: 4'er kart dağıt + masaya 4 kart aç.
-// İlk açılışta masaya 4 kart konur; en üstteki (yüzü açık) kart dışında
-// hepsi kapalıdır (3 kapalı + 1 açık) — hem 2 hem 4 kişilik oyunda.
+// El (round) kurulumu: 4'er kart dağıt + masaya kart aç.
+// İlk açılışta masaya kart konur; en üstteki (yüzü açık) kart dışında
+// hepsi kapalıdır — 2 ve 4 kişilik oyunda 3 kapalı + 1 açık (4 kart),
+// 3 kişilik oyunda 4 kapalı + 1 açık (5 kart).
 // Sadece yüzü açık (en üst) kartın vale olmaması sağlanır; kapalı kartlar
 // vale/puanlı olabilir ve yakalanınca puanları oyuncuya yazılır.
 // ------------------------------------------------------------------
@@ -248,7 +247,7 @@ async function joinGame(code, name) {
   }
 }
 
-// Sadece kurucu, 2 ya da 4 oyuncu varken oyunu başlatır (3 kişi desteklenmez).
+// Sadece kurucu, 2, 3 ya da 4 oyuncu varken oyunu başlatır.
 async function startGame() {
   const ref = doc(db, "pisti_games", gameId);
   await runTransaction(db, async (tx) => {
@@ -261,7 +260,8 @@ async function startGame() {
     if (!ALLOWED_PLAYER_COUNTS.includes(players.length)) return;
 
     const numDecks = players.length > 2 ? 2 : 1;
-    const tableSize = 4; // her durumda masada 4 kart: 3 kapalı + 1 açık
+    // 3 kişide masaya 4 kapalı + 1 açık (5 kart); 2 ve 4 kişide 3 kapalı + 1 açık (4 kart).
+    const tableSize = players.length === 3 ? 5 : 4;
     const deck = shuffle(buildDeck(numDecks));
     const hands = dealHands(deck, players);
     const pile = dealTable(deck, tableSize);
@@ -575,7 +575,7 @@ function startLocalGame(numPlayers) {
   for (let i = 1; i < numPlayers; i++) names["bot" + i] = "🤖 Oyuncu " + i;
 
   const numDecks = numPlayers > 2 ? 2 : 1;
-  const tableSize = 4; // her durumda masada 4 kart: 3 kapalı + 1 açık
+  const tableSize = numPlayers === 3 ? 5 : 4;
   const deck = shuffle(buildDeck(numDecks));
   const hands = dealHands(deck, players);
   const pile = dealTable(deck, tableSize);
@@ -794,7 +794,7 @@ function renderHome() {
   };
 }
 
-// "Bilgisayara Karşı" — 2 ya da 4 kişi seçim ekranı.
+// "Bilgisayara Karşı" — 2, 3 ya da 4 kişi seçim ekranı.
 function renderLocalSetup() {
   app.innerHTML = `
     <div class="center">
@@ -805,9 +805,10 @@ function renderLocalSetup() {
       <div class="muted">Kaç kişi olsun? (sen + bilgisayarlar)</div>
       <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:260px">
         <button class="btn-primary" data-n="2">2 Oyuncu (sen + 1 bot)</button>
+        <button class="btn-primary" data-n="3">3 Oyuncu (sen + 2 bot)</button>
         <button class="btn-primary" data-n="4">4 Oyuncu (sen + 3 bot)</button>
       </div>
-      <div class="muted">Pişti 2 ya da 4 kişiyle oynanır.</div>
+      <div class="muted">Pişti 2, 3 ya da 4 kişiyle oynanır.</div>
       <button class="btn-outline" id="back" style="max-width:200px">Geri</button>
     </div>`;
   app.querySelectorAll("button[data-n]").forEach((b) => {
@@ -849,8 +850,7 @@ function renderLobby() {
         ? `<button class="btn-primary" id="start" ${!ALLOWED_PLAYER_COUNTS.includes(players.length) ? "disabled style='opacity:.5'" : ""}>
              Oyunu Başlat
            </button>
-           ${players.length < MIN_PLAYERS ? `<div class="muted">En az 2 oyuncu gerekiyor</div>` : ""}
-           ${players.length === 3 ? `<div class="muted">3 kişiyle oynanamaz — 2 kişiyle ya da 4. kişiyi bekleyerek 4 kişiyle başlat</div>` : ""}`
+           ${players.length < MIN_PLAYERS ? `<div class="muted">En az 2 oyuncu gerekiyor</div>` : ""}`
         : `<div class="muted">Kurucu başlatınca oyun başlayacak...</div><div class="spinner"></div>`}
 
       <button class="btn-outline" id="back" style="max-width:200px">Çık</button>
