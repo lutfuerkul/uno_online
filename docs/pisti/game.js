@@ -795,7 +795,7 @@ function renderHome() {
         <div class="logo">PİŞTİ</div>
         <div class="logo-sub">ONLINE</div>
       </div>
-      <input id="name" placeholder="İsmin" maxlength="${MAX_NAME_LENGTH}" value="${escapeHtml(playerName)}" />
+      <input id="name" placeholder="Adınız / Nickname" maxlength="${MAX_NAME_LENGTH}" value="${escapeHtml(playerName)}" />
       <button class="btn-primary" id="vscpu" style="width:100%;background:#1565c0">🤖 Bilgisayara Karşı Oyna</button>
       <div class="divider"></div>
       <button class="btn-primary" id="create" ${FB_READY ? "" : "disabled style='opacity:.5'"}>Yeni Oyun Kur</button>
