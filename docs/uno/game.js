@@ -140,6 +140,11 @@ function isWild(c) {
   return c.type === "wild" || c.type === "wildDrawFour";
 }
 
+// Reverse kilidi varken oynanabilir: aynı renk, başka reverse, +2 ya da joker.
+function canPlayUnderReverseLock(card, reverseColor) {
+  return card.type === "reverse" || card.type === "drawTwo" || card.color === reverseColor || isWild(card);
+}
+
 function canPlay(card, top, currentColor) {
   if (isWild(card)) return true;
   if (card.color === currentColor) return true;
@@ -341,11 +346,11 @@ async function playCard(cardId, chosenColor, targetId) {
     const card = hand[idx];
     const top = g.discardPile[g.discardPile.length - 1];
 
-    // Reverse sonrası özel kısıt: sadece aynı renk ya da başka bir reverse.
+    // Reverse sonrası özel kısıt: aynı renk, başka reverse, +2 ya da joker.
     const inReverse = g.reverseColor != null;
     if (inReverse) {
-      const ok = card.type === "reverse" || card.color === g.reverseColor;
-      if (!ok) return;
+      if (!canPlayUnderReverseLock(card, g.reverseColor)) return;
+      if (isWild(card) && !chosenColor) return;
     } else {
       if (!canPlay(card, top, g.currentColor)) return;
       if (isWild(card) && !chosenColor) return;
@@ -621,7 +626,7 @@ function unoPlayable(hand, g) {
   const top = g.discardPile[g.discardPile.length - 1];
   const reverseColor = g.reverseColor || null;
   return hand.filter((c) => reverseColor != null
-    ? (c.type === "reverse" || c.color === reverseColor)
+    ? canPlayUnderReverseLock(c, reverseColor)
     : canPlay(c, top, g.currentColor));
 }
 
@@ -995,10 +1000,10 @@ function renderBoard() {
   const unoSafe = state.unoSafe || [];
   const reverseColor = state.reverseColor || null; // reverse kilidi (varsa)
 
-  // Reverse kilidi varken sadece aynı renk ya da reverse oynanabilir.
+  // Reverse kilidi varken aynı renk, reverse, +2 ya da joker oynanabilir.
   const playableNow = (c) => isMyTurn && (
     reverseColor != null
-      ? (c.type === "reverse" || c.color === reverseColor)
+      ? canPlayUnderReverseLock(c, reverseColor)
       : canPlay(c, top, state.currentColor)
   );
 
@@ -1066,7 +1071,7 @@ function renderBoard() {
       <div class="turn ${isMyTurn ? "mine" : "theirs"}">
         ${isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu")}
         ${isMyTurn && reverseColor != null
-          ? `<div class="hint">↩️ Reverse! Sadece <b>${COLOR_TR[reverseColor] || reverseColor}</b> ya da başka bir Reverse oyna — yoksa çek/pas.</div>`
+          ? `<div class="hint">↩️ Reverse! Sadece <b>${COLOR_TR[reverseColor] || reverseColor}</b>, başka bir Reverse, +2 ya da Joker oyna — yoksa çek/pas.</div>`
           : ""}
       </div>
 
@@ -1122,11 +1127,11 @@ async function tryPlay(cardId) {
 
   // Oynanabilirlik (reverse kilidi varsa ona göre).
   const ok = reverseColor != null
-    ? (card.type === "reverse" || card.color === reverseColor)
+    ? canPlayUnderReverseLock(card, reverseColor)
     : canPlay(card, top, state.currentColor);
   if (!ok) {
     return toast(reverseColor != null
-      ? `Reverse sonrası sadece ${COLOR_TR[reverseColor] || ""} ya da Reverse oynayabilirsin.`
+      ? `Reverse sonrası sadece ${COLOR_TR[reverseColor] || ""}, Reverse, +2 ya da Joker oynayabilirsin.`
       : "Bu kart oynanamaz.");
   }
 

@@ -7,7 +7,7 @@
 // sürüm, çevrimdışıyken önbellekten). Firebase/gstatic gibi dış istekler
 // dokunulmadan doğrudan ağa gider.
 
-const CACHE = "kartoyunlari-cache-v17";
+const CACHE = "kartoyunlari-cache-v19";
 const ASSETS = [
   "./",
   "./index.html",
@@ -17,7 +17,7 @@ const ASSETS = [
 
   "./uno/",
   "./uno/index.html",
-  "./uno/game.js?v=12",
+  "./uno/game.js?v=19",
   "./uno/firebase-config.js",
   "./uno/icons/icon-192.png",
   "./uno/icons/icon-512.png",
