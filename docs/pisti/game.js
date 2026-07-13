@@ -852,6 +852,7 @@ function renderBoard() {
   const oppHtml = others.map((p) => {
     const count = (state.hands[p] || []).length;
     const wonCount = (state.won[p] || []).length;
+    const pisti = pistiCount[p] || 0;
     const isTurn = state.currentTurn === p;
     return `
       <div class="opp ${isTurn ? "opp-turn" : ""}">
@@ -860,6 +861,7 @@ function renderBoard() {
           Array.from({ length: Math.min(count, 4) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
         <div class="opp-score">${wonCount}</div>
+        ${pisti > 0 ? `<div class="pisti-tag">🔥 ${pisti} pişti</div>` : ""}
       </div>`;
   }).join("");
 
