@@ -860,7 +860,7 @@ function renderBoard() {
         <div class="opp-cards">${
           Array.from({ length: Math.min(count, 4) }, () => cardHtml(null, { faceDown: true, small: true })).join("")
         }</div>
-        <div class="muted">${count} elde · ${wonCount} kazandı</div>
+        <div class="opp-score">${wonCount}</div>
         ${pisti > 0 ? `<div class="pisti-tag">🔥 ${pisti} pişti</div>` : ""}
       </div>`;
   }).join("");

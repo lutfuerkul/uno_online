@@ -107,6 +107,7 @@
     .opp-cards { display: flex; justify-content: center; margin: 2px 0; }
     .opp-cards .card { margin-left: -21px; }
     .opp-cards .card:first-child { margin-left: 0; }
+    .opp-score { font-weight: 800; font-size: 15px; line-height: 1.2; }
 
     .middle { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
       gap: 22px; background: #0f4a2e; }
@@ -179,7 +180,7 @@
   <!-- Firebase ayarların (bunu sen dolduracaksın) -->
   <script src="firebase-config.js"></script>
   <!-- Oyun kodu -->
-  <script type="module" src="game.js?v=11"></script>
+  <script type="module" src="game.js?v=13"></script>
 
   <!-- Ortak service worker (../sw.js), tüm siteyi (kök + uno/ + pisti/) kapsar. -->
   <script>
@@ -191,7 +192,7 @@
         window.location.reload();
       });
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("../sw.js?v=11").then((reg) => {
+        navigator.serviceWorker.register("../sw.js?v=13").then((reg) => {
           reg.update();
         }).catch((err) => {
           console.warn("Service worker kaydı başarısız:", err);
