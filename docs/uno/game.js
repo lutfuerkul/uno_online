@@ -916,7 +916,7 @@ function renderHome() {
         <div class="logo">UNO</div>
         <div class="logo-sub">ONLINE</div>
       </div>
-      <input id="name" placeholder="İsmin" maxlength="${MAX_NAME_LENGTH}" value="${escapeHtml(playerName)}" />
+      <input id="name" placeholder="Adınız / Nickname" maxlength="${MAX_NAME_LENGTH}" value="${escapeHtml(playerName)}" />
       <button class="btn-uno" id="vscpu" style="width:100%;animation:none">🤖 Bilgisayara Karşı Oyna</button>
       <div class="divider"></div>
       <button class="btn-primary" id="create" ${FB_READY ? "" : "disabled style='opacity:.5'"}>Yeni Oyun Kur</button>
