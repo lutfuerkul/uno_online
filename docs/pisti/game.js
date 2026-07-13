@@ -128,6 +128,11 @@ function shuffle(arr) {
   return arr;
 }
 
+// Oyunu kimin başlatacağı (ilk sıra) rastgele seçilir; odayı kuran kişi değil.
+function randomPlayer(players) {
+  return players[Math.floor(Math.random() * players.length)];
+}
+
 function genCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let s = "";
@@ -272,7 +277,7 @@ async function startGame() {
     tx.update(ref, {
       hands, drawPile: deck, pile, won, pistiCount,
       lastCapturer: null, lastAction: null, pendingCapture: null,
-      currentTurn: players[0],
+      currentTurn: randomPlayer(players),
       winner: null, winners: [], scores: {}, scoreDetail: {},
       status: "playing",
     });
@@ -585,7 +590,7 @@ function startLocalGame(numPlayers) {
   LOCAL = {
     status: "playing", players, playerNames: names, hands, pile, drawPile: deck,
     won, pistiCount, lastCapturer: null, lastAction: null, pendingCapture: null,
-    currentTurn: players[0],
+    currentTurn: randomPlayer(players),
     winner: null, winners: [], scores: {}, scoreDetail: {}, local: true, createdAt: Date.now(),
   };
   showLocalSetup = false;
