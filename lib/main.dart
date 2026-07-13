@@ -23,7 +23,7 @@ class UnoApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => GameProvider(),
       child: MaterialApp(
-        title: 'UNO Online',
+        title: 'Uno & Pisti',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorSchemeSeed: const Color(0xFFD32F2F),
