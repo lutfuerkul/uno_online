@@ -784,9 +784,9 @@ function cardHtml(card, opts = {}) {
     `<span class="corner br">${cornerSym(card)}</span></div>`;
 }
 
-// Oyun bitince kazananın son attığı kart görülsün diye sonuç ekranına
-// geçmeden önce 3 saniye tahtayı göstermeye devam ederiz.
-const RESULT_DELAY_MS = 3000;
+// Oyun bitince son hamle görülsün diye sonuç ekranına geçmeden önce
+// 2 saniye tahtayı göstermeye devam ederiz.
+const RESULT_DELAY_MS = 2000;
 let resultDelayTimer = null;
 let showResult = false;
 

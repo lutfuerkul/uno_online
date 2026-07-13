@@ -180,7 +180,7 @@
   <!-- Firebase ayarların (bunu sen dolduracaksın) -->
   <script src="firebase-config.js"></script>
   <!-- Oyun kodu -->
-  <script type="module" src="game.js?v=14"></script>
+  <script type="module" src="game.js?v=15"></script>
 
   <!-- Ortak service worker (../sw.js), tüm siteyi (kök + uno/ + pisti/) kapsar. -->
   <script>
@@ -192,7 +192,7 @@
         window.location.reload();
       });
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("../sw.js?v=13").then((reg) => {
+        navigator.serviceWorker.register("../sw.js?v=15").then((reg) => {
           reg.update();
         }).catch((err) => {
           console.warn("Service worker kaydı başarısız:", err);

@@ -478,6 +478,7 @@ function leave() {
   unsub = null;
   if (botTimer) { clearTimeout(botTimer); botTimer = null; }
   if (collectTimer) { clearTimeout(collectTimer); collectTimer = null; }
+  resetResultDelay();
   LOCAL = null; localCb = null; suppressLocalRender = false;
   playerId = DEVICE_ID; humanId = DEVICE_ID;
   gameId = null;
@@ -691,12 +692,36 @@ function courtArt(rank) {
   </svg>`;
 }
 
+// Oyun bitince son hamle görülsün diye sonuç ekranına geçmeden önce
+// 2 saniye tahtayı göstermeye devam ederiz.
+const RESULT_DELAY_MS = 2000;
+let resultDelayTimer = null;
+let showResult = false;
+
+function resetResultDelay() {
+  if (resultDelayTimer) { clearTimeout(resultDelayTimer); resultDelayTimer = null; }
+  showResult = false;
+}
+
 function render() {
   if (connecting) return renderConnecting();
   if (!gameId) return showLocalSetup ? renderLocalSetup() : renderHome();
   if (!state) return renderLoading();
-  if (state.status === "waiting") return renderLobby();
-  if (state.status === "finished") return renderResult();
+  if (state.status === "waiting") { resetResultDelay(); return renderLobby(); }
+  if (state.status === "finished") {
+    if (!showResult) {
+      if (!resultDelayTimer) {
+        resultDelayTimer = setTimeout(() => {
+          resultDelayTimer = null;
+          showResult = true;
+          render();
+        }, RESULT_DELAY_MS);
+      }
+      return renderBoard();
+    }
+    return renderResult();
+  }
+  resetResultDelay();
   return renderBoard();
 }
 
