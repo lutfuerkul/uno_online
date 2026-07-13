@@ -9,7 +9,7 @@ kendi telefonlarından bir oda kodu üzerinden buluşup oynar.
 |-------|--------|---------------|
 | 🎴 Seçim ekranı | `docs/` | Siteyi açınca gördüğün ilk ekran — UNO ya da Pişti'yi seçersin. Ana ekrana eklenebilen tek uygulama burası. |
 | 🌐 **UNO** (2-4 kişi) | `docs/uno/` | Klasik UNO, oda koduyla online. |
-| 🃏 **Pişti** (2 ya da 4 kişi, takım yok) | `docs/pisti/` | Klasik iskambil kağıtlarıyla Pişti, oda koduyla online. |
+| 🃏 **Pişti** (2, 3 ya da 4 kişi, takım yok) | `docs/pisti/` | Klasik iskambil kağıtlarıyla Pişti, oda koduyla online. |
 | 📱 **Flutter** (UNO uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler için ayrı bir UNO sürümü. |
 
 ---
@@ -52,7 +52,7 @@ uygulama olarak yüklenir, içinde iki oyun olur. Yapman gerekenler:
 
 ### 🤖 Bilgisayara karşı (tek başına, internet/Firebase gerekmez)
 Her iki oyunda da ana ekranda **"🤖 Bilgisayara Karşı Oyna"** butonu var:
-- Açılışta kaç kişi olacağını seçersin — **UNO: 2/3/4**, **Pişti: 2/4** (sen +
+- Açılışta kaç kişi olacağını seçersin — **UNO: 2/3/4**, **Pişti: 2/3/4** (sen +
   botlar).
 - Oyun tamamen telefonda yerel çalışır; Firebase/oda kodu gerekmez, çevrimdışı
   bile oynanır.
@@ -64,19 +64,16 @@ Her iki oyunda da ana ekranda **"🤖 Bilgisayara Karşı Oyna"** butonu var:
 
 ## 🃏 Pişti kuralları
 
-Klasik 52 kartlık iskambil destesiyle oynanan, 2 ya da 4 kişilik (takım yok,
-herkes kendi başına) Pişti. Oyun **sadece 2 ya da 4 kişiyle** başlatılabilir
-— 3 kişi bekleme odasında kalabilir ama "Oyunu Başlat" butonu 4. kişi
-katılana (ya da biri ayrılıp 2 kişi kalana) kadar devre dışı olur (104 kart
-3 kişiye tam bölünmediği için).
+Klasik 52 kartlık iskambil destesiyle oynanan, 2, 3 ya da 4 kişilik (takım
+yok, herkes kendi başına) Pişti.
 
 ### Kurallar (özet)
-- 2 oyuncuda tek 52 kartlık standart deste, 4 oyuncuda iki deste birleştirilip
-  104 kartla oynanır. Her oyuncuya 4'er kart dağıtılır.
-- **İlk açılışta masaya 4 kart konur: 3 kapalı + 1 açık** (hem 2 hem 4 kişilik
-  oyunda). Yüzü açık kart hiçbir zaman vale olmaz; kapalı kartlar vale/puanlı
-  olabilir ve o desteyi **kim yakalarsa** kapalı kartların puanları da onun
-  puanına eklenir.
+- 2 oyuncuda tek 52 kartlık standart deste; 3 ve 4 oyuncuda iki deste
+  birleştirilip 104 kartla oynanır. Her oyuncuya 4'er kart dağıtılır.
+- **İlk açılışta masaya kart konur:** 2 ve 4 kişilik oyunda 3 kapalı + 1 açık
+  (4 kart); **3 kişilik oyunda 4 kapalı + 1 açık** (5 kart). Yüzü açık kart
+  hiçbir zaman vale olmaz; kapalı kartlar vale/puanlı olabilir ve o desteyi
+  **kim yakalarsa** kapalı kartların puanları da onun puanına eklenir.
 - İlk açılışta yüzü açık kartla oyuncunun elindeki kart eşleşirse **pişti
   sayılmaz** (masada birden fazla kart olduğu için); sadece yakalanan kartların
   puanları hesaplanır.
@@ -91,12 +88,13 @@ katılana (ya da biri ayrılıp 2 kişi kalana) kadar devre dışı olur (104 ka
     deste yakalayan oyuncuya toplanır (herkes atılan kartı rahatça görsün).
 - Bir turdaki 4'er kart bitince, deste hâlâ doluysa yeniden dağıtılır. Kartlar
   oyunculara **eşit** dağıtılır: 2 kişide her el 4'er, 4 kişide **son el 5'er**
-  kart olur (böylece 104 kart 4 oyuncuya tam bölünür — herkes 25 kart oynar).
-  Deste bitince oyun sona erer ve masada kalan kartlar son yakalayana yazılır.
+  kart olur (104 kart 4 oyuncuya tam bölünür — herkes 25 kart oynar); 3 kişide
+  de aynı şekilde **son el 5'er** kart olur (herkes 33 kart oynar). Deste
+  bitince oyun sona erer ve masada kalan kartlar son yakalayana yazılır.
 - **Puanlama:** Her Pişti +10 · yakalanan her As +1 · Sinek 2'li +2 ·
-  Karo 10'lu +3 · yakalanan her Vale +1 · en çok kart toplayan +3 (4 kişilik
-  oyunda bu özel kartlardan ikişer tane olabilir, her biri ayrı puan getirir).
-  En yüksek puan kazanır.
+  Karo 10'lu +3 · yakalanan her Vale +1 · en çok kart toplayan +3 (3 ve 4
+  kişilik oyunda bu özel kartlardan ikişer tane olabilir, her biri ayrı puan
+  getirir). En yüksek puan kazanır.
 
 ---
 
@@ -172,10 +170,12 @@ flutter pub get
    Bu komut, şablon olan `lib/firebase_options.dart` dosyasının üzerine gerçek
    ayarları yazar.
 
-4. Firestore güvenlik kurallarını ayarla. Geliştirme için bu depodaki
-   `firestore.rules` dosyasını Firebase Console → Firestore → Rules bölümüne
-   yapıştırabilirsin. **Uyarı:** bu kurallar sadece geliştirme içindir,
-   yayınlamadan önce sıkılaştır.
+4. Firestore güvenlik kurallarını ayarla: bu depodaki `firestore.rules`
+   dosyasını Firebase Console → Firestore → Rules bölümüne yapıştır. Bu
+   kurallar oda silinmesini engeller ve her yazmanın uygulamanın beklediği
+   alan/tip şekliyle eşleşmesini zorunlu kılar. **Not:** Auth eklenmediği
+   için "sadece sıradaki oyuncu yazabilsin" gibi kimlik bazlı bir kontrol
+   yok — bunun için Firebase Authentication eklemek gerekir.
 
 ### 4. Çalıştır
 
