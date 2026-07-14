@@ -1212,7 +1212,7 @@ function renderResult() {
       <div style="font-size:28px;font-weight:800">${tie ? "Berabere!" : (iWon ? "Kazandın!" : "Kaybettin")}</div>
       <div class="muted">${tie
         ? "Hamle şansı kalmadığı için oyun berabere sonlandırıldı."
-        : `${escapeHtml(winnerName)} oyunu kazandı.`}</div>
+        : (iWon ? "Sen oyunu kazandın." : `${escapeHtml(winnerName)} oyunu kazandı.`)}</div>
       <button class="btn-primary" id="rematch" style="max-width:260px">🔁 Tekrar Oyna</button>
       <button class="btn-outline" id="leave" style="max-width:260px">Çık</button>
       <div class="muted">Tekrar Oyna herkesi bekleme odasına döndürür; kurucu yeniden başlatır.</div>

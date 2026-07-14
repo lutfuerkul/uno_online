@@ -93,7 +93,7 @@ class _Result extends StatelessWidget {
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Text('$winnerName oyunu kazandı.'),
+          Text(won ? 'Sen oyunu kazandın.' : '$winnerName oyunu kazandı.'),
           const SizedBox(height: 32),
           FilledButton(
             onPressed: provider.leaveGame,
