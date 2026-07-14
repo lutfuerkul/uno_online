@@ -1085,9 +1085,24 @@ function lastActionText() {
   }
 }
 
+function finishStatusBanner(g) {
+  if (g.status !== "finished") return null;
+  const w = g.winner;
+  if (w == null) {
+    return { cls: "theirs", text: "🤝 Hamle şansı kalmadı — berabere bitti" };
+  }
+  if (w === playerId) {
+    return { cls: "mine", text: "🎉 Oyunu bitirdin!" };
+  }
+  const name = escapeHtml(g.playerNames[w] || "Oyuncu");
+  return { cls: "theirs", text: `🏆 ${name} kazandı!` };
+}
+
 function renderBoard() {
   const players = state.players;
-  const isMyTurn = state.currentTurn === playerId;
+  const finished = state.status === "finished";
+  const finishBanner = finishStatusBanner(state);
+  const isMyTurn = !finished && state.currentTurn === playerId;
   const myHand = state.hands[playerId] || [];
   const top = state.discardPile[state.discardPile.length - 1];
   const dir = state.direction || 1;
@@ -1106,7 +1121,9 @@ function renderBoard() {
   const others = opponentsLeftToRight(players, playerId, dir);
   const oppHtml = others.map((p) => {
     const count = (state.hands[p] || []).length;
-    const isTurn = state.currentTurn === p;
+    const isTurn = finished
+      ? (state.winner != null && p === state.winner)
+      : state.currentTurn === p;
     const blk = blockedList.filter((x) => x === p).length;
     const unoBit = count === 1 ? `<div class="uno-tag">UNO</div>` : "";
     return `
@@ -1123,7 +1140,7 @@ function renderBoard() {
   const iAmBlocked = blockedList.includes(playerId);
 
   const handHtml = myHand.map((c) =>
-    cardHtml(c, { clickable: true, playable: playableNow(c) })
+    cardHtml(c, { clickable: !finished, playable: playableNow(c) })
   ).join("");
 
   // Joker açık karttaysa, seçilen rengi herkes görsün diye o renkte göster.
@@ -1156,9 +1173,11 @@ function renderBoard() {
       ${shouldShowLastAction() ? `<div class="last-action">${lastActionText()}</div>` : ""}
       ${iAmBlocked ? `<div class="last-action" style="color:#ff8a80">🚫 Bloklandın</div>` : ""}
 
-      <div class="turn ${isMyTurn ? "mine" : "theirs"}">
-        ${isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu")}
-        ${isMyTurn && reverseColor != null
+      <div class="turn ${finishBanner ? finishBanner.cls : (isMyTurn ? "mine" : "theirs")}">
+        ${finishBanner
+          ? finishBanner.text
+          : (isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu"))}
+        ${!finished && isMyTurn && reverseColor != null
           ? `<div class="hint">↩️ Reverse! Sadece <b>${COLOR_TR[reverseColor] || reverseColor}</b>, başka bir Reverse, +2, Joker ya da +4 oyna — yoksa çek/pas.</div>`
           : ""}
       </div>
