@@ -10,7 +10,7 @@ kendi telefonlarından bir oda kodu üzerinden buluşup oynar.
 | 🎴 Seçim ekranı | `docs/` | Siteyi açınca gördüğün ilk ekran — UNO ya da Pişti'yi seçersin. Ana ekrana eklenebilen tek uygulama burası. |
 | 🌐 **UNO** (2-4 kişi) | `docs/uno/` | Klasik UNO, oda koduyla online. |
 | 🃏 **Pişti** (2, 3 ya da 4 kişi, takım yok) | `docs/pisti/` | Klasik iskambil kağıtlarıyla Pişti, oda koduyla online. |
-| 📱 **Flutter** (UNO uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler için ayrı bir UNO sürümü. |
+| 📱 **Flutter** (UNO + Pişti uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler için: UNO (online + bilgisayara karşı) ve Pişti (şimdilik yalnızca bilgisayara karşı). |
 
 ---
 
@@ -102,12 +102,27 @@ yok, herkes kendi başına) Pişti.
 
 Aşağısı, bir bilgisayarda APK/iOS uygulaması olarak derlemek içindir.
 
+### 🤖 Bilgisayara karşı (internet gerekmez)
+
+Açılışta UNO ya da Pişti'yi seçtikten sonra ana ekranda **"Bilgisayara Karşı
+Oyna"** seçeneği var: 2, 3 ya da 4 kişi (sen + botlar) seçip tamamen cihaz
+içinde, internet ya da Firebase olmadan oynayabilirsin. Bot kartları basit
+kural tabanlı bir mantıkla seçer (rakip(ler)in eli azaldıkça saldırgan
+kartları öne çıkarır, jokerleri/valeyi mümkün olduğunca saklar).
+
+Pişti'nin Flutter'da şu an **yalnızca bu modu** var; online (oda koduyla) çok
+oyunculu Pişti henüz eklenmedi (web sürümünde `docs/pisti/` altında mevcut).
+
 ## Nasıl çalışır?
 
-Tüm oyun durumu (desteler, eller, sıra, geçerli renk) Firestore'da **tek bir
-belgede** tutulur. İki telefon da bu belgeyi canlı dinler; biri kart oynayınca
-belge güncellenir ve değişiklik anında diğer telefona yansır. Ayrı bir sunucu
-kodu yoktur.
+**Online UNO** için tüm oyun durumu (desteler, eller, sıra, geçerli renk)
+Firestore'da **tek bir belgede** tutulur. İki telefon da bu belgeyi canlı
+dinler; biri kart oynayınca belge güncellenir ve değişiklik anında diğer
+telefona yansır. Ayrı bir sunucu kodu yoktur.
+
+**Bilgisayara karşı** modlarda (hem UNO hem Pişti) aynı kurallar cihaz
+içinde, Firestore'a hiç dokunmadan çalışır; botların hamleleri kısa bir
+gecikmeyle otomatik oynanır.
 
 ## Teknolojiler
 
@@ -121,21 +136,42 @@ kodu yoktur.
 
 ```
 lib/
-├── main.dart                     # Uygulama girişi + yönlendirme
-├── firebase_options.dart         # (flutterfire configure ile oluşturulur)
+├── main.dart                       # Uygulama girişi + oyun seçim ekranı
+├── firebase_options.dart           # (flutterfire configure ile oluşturulur)
 ├── models/
-│   ├── uno_card.dart             # Kart modeli
-│   └── game_state.dart           # Firestore belgesinin Dart karşılığı
+│   ├── uno_card.dart                # UNO kart modeli
+│   ├── game_state.dart              # Firestore belgesinin Dart karşılığı (online UNO)
+│   └── local_uno_state.dart         # Bilgisayara karşı (yerel) UNO durumu
 ├── services/
-│   ├── deck_service.dart         # 108 kartlık deste + oynama kuralları
-│   └── game_service.dart         # Firestore işlemleri (kur/katıl/oyna/çek)
+│   ├── deck_service.dart            # 108 kartlık deste + oynama kuralları
+│   ├── game_service.dart            # Firestore işlemleri (kur/katıl/oyna/çek)
+│   └── uno_bot_service.dart         # UNO bot yapay zekası
 ├── providers/
-│   └── game_provider.dart        # UI ↔ servis köprüsü
+│   ├── game_provider.dart           # Online UNO: UI ↔ Firestore köprüsü
+│   └── local_uno_provider.dart      # Bilgisayara karşı UNO motoru
 ├── screens/
-│   ├── home_screen.dart          # Oyun kur / katıl
-│   └── game_screen.dart          # Bekleme odası + oyun tahtası + sonuç
-└── widgets/
-    └── card_widget.dart          # Kart görseli
+│   ├── game_select_screen.dart      # Açılış: UNO ya da Pişti seç
+│   ├── uno_root_screen.dart         # Online UNO: giriş/oyun ekranı yönlendirmesi
+│   ├── home_screen.dart             # Online UNO: kur / katıl / bilgisayara karşı
+│   ├── game_screen.dart             # Online UNO: bekleme odası + tahta + sonuç
+│   ├── uno_bot_screen.dart          # Bilgisayara karşı UNO: oyuncu sayısı seçimi
+│   └── local_uno_game_screen.dart   # Bilgisayara karşı UNO: oyun tahtası
+├── widgets/
+│   └── card_widget.dart             # UNO kart görseli
+└── pisti/                           # Pişti (şu an yalnızca bilgisayara karşı)
+    ├── models/
+    │   ├── pisti_card.dart
+    │   └── pisti_game_state.dart
+    ├── services/
+    │   ├── pisti_deck_service.dart  # Deste, dağıtım, puanlama
+    │   └── pisti_bot_service.dart   # Pişti bot yapay zekası
+    ├── providers/
+    │   └── pisti_local_provider.dart
+    ├── screens/
+    │   ├── pisti_home_screen.dart   # Oyuncu sayısı seçimi
+    │   └── pisti_game_screen.dart   # Oyun tahtası + sonuç
+    └── widgets/
+        └── pisti_card_widget.dart
 ```
 
 ## Kurulum

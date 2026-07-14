@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/game_provider.dart';
+import 'uno_bot_screen.dart';
 
 /// Giriş ekranı: ad gir, oyun kur veya oda koduyla katıl.
 class HomeScreen extends StatefulWidget {
@@ -121,6 +122,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     label: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Text('Oyuna Katıl'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const UnoBotScreen()),
+                    ),
+                    icon: const Icon(Icons.smart_toy_outlined),
+                    label: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text('🤖 Bilgisayara Karşı Oyna'),
                     ),
                   ),
                 ),

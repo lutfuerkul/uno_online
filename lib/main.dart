@@ -4,8 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
 import 'providers/game_provider.dart';
-import 'screens/game_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/game_select_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,19 +28,8 @@ class UnoApp extends StatelessWidget {
           colorSchemeSeed: const Color(0xFFD32F2F),
           useMaterial3: true,
         ),
-        home: const _Root(),
+        home: const GameSelectScreen(),
       ),
     );
-  }
-}
-
-/// Odaya girildiyse oyun ekranını, aksi halde giriş ekranını gösterir.
-class _Root extends StatelessWidget {
-  const _Root();
-
-  @override
-  Widget build(BuildContext context) {
-    final inGame = context.select<GameProvider, bool>((p) => p.gameId != null);
-    return inGame ? const GameScreen() : const HomeScreen();
   }
 }
