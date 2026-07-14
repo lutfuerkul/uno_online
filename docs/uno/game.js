@@ -374,15 +374,16 @@ async function playCard(cardId, chosenColor, targetId) {
     if (idx === -1) return;
     const card = hand[idx];
     const top = g.discardPile[g.discardPile.length - 1];
+    const finisher = hand.length === 1; // son kart — renk/hedef seçimi ve ceza yok
 
     // Reverse sonrası özel kısıt: aynı renk, başka reverse, +2, Joker ya da +4.
     const inReverse = g.reverseColor != null;
     if (inReverse) {
       if (!canPlayUnderReverseLock(card, g.reverseColor)) return;
-      if (isWild(card) && !chosenColor) return;
+      if (isWild(card) && !chosenColor && !finisher) return;
     } else {
       if (!canPlay(card, top, g.currentColor)) return;
-      if (isWild(card) && !chosenColor) return;
+      if (isWild(card) && !chosenColor && !finisher) return;
     }
 
     hand.splice(idx, 1);
@@ -395,7 +396,7 @@ async function playCard(cardId, chosenColor, targetId) {
     const n = players.length;
     const curIdx = players.indexOf(playerId);
     const dir = g.direction || 1;
-    const newColor = isWild(card) ? chosenColor : card.color;
+    const newColor = isWild(card) ? (chosenColor || g.currentColor) : card.color;
 
     // Kart etkisine göre sırayı hesapla.
     const newDir = dir; // (bu varyantta reverse yön çevirmiyor)
@@ -405,18 +406,20 @@ async function playCard(cardId, chosenColor, targetId) {
     let nextReverseColor = null; // reverse comboyu sürdürür/başlatır
     let blocked = [...(g.blockedPlayers || [])]; // bekleyen bloklar (birikir)
     let effectTarget = null; // gösterim: kimi blokladı / kime kart çektirdi
-    if (card.type === "skip") {
-      effectTarget = pickTarget();
-      blocked.push(effectTarget); // o oyuncu bir kez sıra atlar (blok birikir)
-    } else if (card.type === "reverse") {
-      keepTurn = true;
-      nextReverseColor = card.color; // sonraki hamle bu renge/reverse'e kilitli
-    } else if (card.type === "drawTwo") {
-      effectTarget = pickTarget();
-      drawInto(hands, effectTarget, draw, discard, 2);
-    } else if (card.type === "wildDrawFour") {
-      effectTarget = pickTarget();
-      drawInto(hands, effectTarget, draw, discard, 4);
+    if (!finisher) {
+      if (card.type === "skip") {
+        effectTarget = pickTarget();
+        blocked.push(effectTarget); // o oyuncu bir kez sıra atlar (blok birikir)
+      } else if (card.type === "reverse") {
+        keepTurn = true;
+        nextReverseColor = card.color; // sonraki hamle bu renge/reverse'e kilitli
+      } else if (card.type === "drawTwo") {
+        effectTarget = pickTarget();
+        drawInto(hands, effectTarget, draw, discard, 2);
+      } else if (card.type === "wildDrawFour") {
+        effectTarget = pickTarget();
+        drawInto(hands, effectTarget, draw, discard, 4);
+      }
     }
 
     // Sırayı ilerlet; bloklu oyuncular denk geldikçe atlanır (bloklar tükenir).
@@ -762,9 +765,10 @@ async function runBotMove(botId) {
     }
     if (playable.length > 0) {
       const card = botPickCard(playable, g, botId);
-      const chosenColor = isWild(card) ? botPickColor(hand) : null;
+      const finisher = hand.length === 1;
+      const chosenColor = !finisher && isWild(card) ? botPickColor(hand) : null;
       let targetId = null;
-      if (card.type === "drawTwo" || card.type === "wildDrawFour" || card.type === "skip") {
+      if (!finisher && (card.type === "drawTwo" || card.type === "wildDrawFour" || card.type === "skip")) {
         targetId = botPickTarget(g, botId);
       }
       await playCard(card.id, chosenColor, targetId);
@@ -1219,21 +1223,26 @@ async function tryPlay(cardId) {
       : "Bu kart oynanamaz.");
   }
 
-  // Joker / +4 → renk seç.
+  // Son kartla bitişte renk/hedef seçimi ve ceza uygulanmaz.
+  const finisher = myHand.length === 1;
+
+  // Joker / +4 → renk seç (bitiş kartı değilse).
   let chosenColor = null;
-  if (card.type === "wild" || card.type === "wildDrawFour") {
+  if (!finisher && (card.type === "wild" || card.type === "wildDrawFour")) {
     chosenColor = await pickColor();
     if (!chosenColor) return;
   }
 
   // +2 / +4 → kartların ekleneceği oyuncu; Skip → bloklanacak oyuncu.
   let targetId = null;
-  if (card.type === "drawTwo" || card.type === "wildDrawFour") {
-    targetId = await pickPlayer("Kime eklensin?");
-    if (!targetId) return;
-  } else if (card.type === "skip") {
-    targetId = await pickPlayer("Kimi blokla?");
-    if (!targetId) return;
+  if (!finisher) {
+    if (card.type === "drawTwo" || card.type === "wildDrawFour") {
+      targetId = await pickPlayer("Kime eklensin?");
+      if (!targetId) return;
+    } else if (card.type === "skip") {
+      targetId = await pickPlayer("Kimi blokla?");
+      if (!targetId) return;
+    }
   }
 
   playCard(cardId, chosenColor, targetId);
