@@ -690,8 +690,8 @@ async function runBotMove(botId) {
 // gelir (ör. `cards/SA.webp` = Maça As). Android uygulaması da (PistiCardWidget)
 // aynı dosyaları kullandığı için kartlar iki platformda birebir aynı görünür.
 function cardHtml(card, opts = {}) {
-  const { faceDown = false, small = false, big = false, clickable = false, dim = false } = opts;
-  const w = small ? 34 : big ? 84 : 62;
+  const { faceDown = false, small = false, big = false, width = 0, clickable = false, dim = false } = opts;
+  const w = width || (small ? 34 : big ? 84 : 62);
   const sv = `--w:${w}px`;
 
   if (!card || faceDown) {
@@ -935,7 +935,7 @@ function renderBoard() {
     : "";
 
   const handHtml = myHand.map((c) =>
-    cardHtml(c, { big: true, clickable: isMyTurn, dim: !isMyTurn })
+    cardHtml(c, { width: 70, clickable: isMyTurn, dim: !isMyTurn })
   ).join("");
 
   app.innerHTML = `
