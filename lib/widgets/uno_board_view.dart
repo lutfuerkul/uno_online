@@ -295,27 +295,31 @@ class _Board extends StatelessWidget {
             children: [
               const Text('Renk seç', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
-              // Web'deki `.picker-row` gibi tek satır; dar ekranlarda da tek
-              // satır kalsın diye kutu boyutu 48'e küçültüldü.
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final c in [CardColor.red, CardColor.yellow, CardColor.green, CardColor.blue]) ...[
-                    if (c != CardColor.red) const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx, c),
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: UnoColors.forCard(c),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0x33FFFFFF), width: 2),
+              // Web'deki `.picker-row` gibi tek satır. FittedBox, satır
+              // dialoga sığmazsa (küçük ekran / büyük görüntü ölçeği) hepsini
+              // orantılı küçültür — taşma/sarma olmaz.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final c in [CardColor.red, CardColor.yellow, CardColor.green, CardColor.blue]) ...[
+                      if (c != CardColor.red) const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx, c),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: UnoColors.forCard(c),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0x33FFFFFF), width: 2),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
               const SizedBox(height: 16),
               TextButton(
