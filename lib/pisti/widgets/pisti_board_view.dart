@@ -304,15 +304,11 @@ class _OpponentTile extends StatelessWidget {
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
           ),
           const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < math.min(count, 4); i++)
-                Padding(
-                  padding: EdgeInsets.only(left: i == 0 ? 0 : -21),
-                  child: const PistiCardWidget(faceDown: true, width: 34),
-                ),
-            ],
+          _OverlappingOpponentCards(
+            count: count,
+            cardWidth: 34,
+            overlap: 21,
+            cardBuilder: () => const PistiCardWidget(faceDown: true, width: 34),
           ),
           Text('$won', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
           if (pisti > 0)
@@ -353,6 +349,41 @@ class _LastActionBanner extends StatelessWidget {
         '$playerName ${action.card.nameTr} oynadı${action.captured ? ' — yaktı! 🔥' : ''}',
         textAlign: TextAlign.center,
         style: const TextStyle(color: PistiColors.lastAction, fontSize: 16.5, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+/// Rakip kartlarını web'deki `margin-left: -21px` ile aynı şekilde üst üste
+/// bindirir. Flutter'da negatif padding yasak olduğu için Stack kullanılır.
+class _OverlappingOpponentCards extends StatelessWidget {
+  final int count;
+  final double cardWidth;
+  final double overlap;
+  final Widget Function() cardBuilder;
+
+  const _OverlappingOpponentCards({
+    required this.count,
+    required this.cardWidth,
+    required this.overlap,
+    required this.cardBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final n = math.min(count, 4);
+    if (n <= 0) return const SizedBox.shrink();
+    final step = cardWidth - overlap;
+    final height = cardWidth * 1.5;
+    return SizedBox(
+      width: cardWidth + (n - 1) * step,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (var i = 0; i < n; i++)
+            Positioned(left: i * step, child: cardBuilder()),
+        ],
       ),
     );
   }
