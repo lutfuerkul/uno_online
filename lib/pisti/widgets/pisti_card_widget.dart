@@ -4,20 +4,14 @@ import '../models/pisti_card.dart';
 import '../theme/pisti_theme.dart';
 import 'pisti_back_pattern_painter.dart';
 import 'pisti_court_painter.dart';
+import 'pisti_suit_painter.dart';
 
 /// Bir iskambil kağıdını (veya arka yüzünü) çizer — `docs/pisti/game.js`'teki
-/// `cardHtml()` ile birebir aynı görsel dili kullanır: klasik beyaz kart
-/// yüzü, köşelerde rütbe+takım, sayı kartlarında büyük takım sembolü,
-/// Vale/Kız/Papaz'da taç+yüz figürlü panel.
+/// `cardHtml()` ile birebir aynı görsel dili kullanır.
 class PistiCardWidget extends StatefulWidget {
   final PistiCard? card;
-
-  /// true ise kartın arka yüzü gösterilir (rakiplerin elindeki kartlar için).
   final bool faceDown;
-
-  /// Sıra sende değilken web'deki `.card.face.dim { opacity: .55 }` ile aynı.
   final bool dimmed;
-
   final VoidCallback? onTap;
   final double width;
 
@@ -112,33 +106,40 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
     );
   }
 
+  Widget _buildCorner(PistiCard c, double width, Color color) {
+    final rankSize = width * 0.19;
+    final suitSize = width * 0.15;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          c.rankLabel,
+          style: _cardTextStyle.merge(
+            TextStyle(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontSize: rankSize,
+              height: 1.0,
+            ),
+          ),
+        ),
+        PistiSuitGlyph(suit: c.suit, size: suitSize, color: color),
+      ],
+    );
+  }
+
   Widget _buildFace(PistiCard c, double width) {
     final color = c.isRed ? PistiColors.cardFaceRed : PistiColors.cardFaceBlack;
     final isCourt = c.rank == PistiRank.jack ||
         c.rank == PistiRank.queen ||
         c.rank == PistiRank.king;
 
-    final cornerText = Text(
-      '${c.rankLabel}\n${c.suitSymbol}',
-      textAlign: TextAlign.center,
-      style: _cardTextStyle.merge(
-        TextStyle(
-          color: color,
-          fontWeight: FontWeight.w800,
-          fontSize: width * 0.19,
-          height: 1.05,
-        ),
-      ),
-    );
+    final corner = _buildCorner(c, width, color);
 
     return Stack(
+      clipBehavior: Clip.none,
       children: [
-        Positioned(top: width * 0.06, left: width * 0.08, child: cornerText),
-        Positioned(
-          bottom: width * 0.06,
-          right: width * 0.08,
-          child: Transform.rotate(angle: 3.14159265359, child: cornerText),
-        ),
+        // Web: .court z-index 1, .corner z-index 2 — figür altta, köşe üstte
         if (isCourt)
           Positioned(
             top: width * 0.2,
@@ -158,13 +159,18 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
           )
         else
           Center(
-            child: Text(
-              c.suitSymbol,
-              style: _cardTextStyle.merge(
-                TextStyle(color: color, fontSize: width * 0.4, height: 1),
-              ),
+            child: PistiSuitGlyph(
+              suit: c.suit,
+              size: width * 0.34,
+              color: color,
             ),
           ),
+        Positioned(top: width * 0.06, left: width * 0.08, child: corner),
+        Positioned(
+          bottom: width * 0.06,
+          right: width * 0.08,
+          child: Transform.rotate(angle: 3.14159265359, child: corner),
+        ),
       ],
     );
   }
