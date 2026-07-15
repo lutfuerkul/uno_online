@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../models/pisti_card.dart';
 import '../theme/pisti_theme.dart';
 import 'pisti_back_pattern_painter.dart';
-import 'pisti_court_painter.dart';
-import 'pisti_suit_painter.dart';
 
-/// Bir iskambil kağıdını (veya arka yüzünü) çizer — `docs/pisti/game.js`'teki
-/// `cardHtml()` ile birebir aynı görsel dili kullanır.
+/// Bir iskambil kağıdını (veya arka yüzünü) çizer. Kart yüzleri web ile
+/// ortak görsellerden gelir (`docs/pisti/cards/`, ör. `SA.webp` = Maça As);
+/// `docs/pisti/game.js`'teki `cardHtml()` da aynı dosyaları kullandığı için
+/// kartlar iki platformda birebir aynı görünür.
 class PistiCardWidget extends StatefulWidget {
   final PistiCard? card;
   final bool faceDown;
@@ -33,14 +33,11 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
 
   bool get _isFaceDown => widget.faceDown || widget.card == null;
 
-  static const _cardTextStyle = TextStyle(
-    fontFamilyFallback: ['system-ui', 'Segoe UI', 'Roboto', 'sans-serif'],
-  );
-
   @override
   Widget build(BuildContext context) {
     final width = widget.width;
-    final height = width * 1.45;
+    // 1.4: docs/pisti/cards/ içindeki kart görsellerinin en-boy oranı.
+    final height = width * 1.4;
     final c = widget.card;
     final isJack = !_isFaceDown && c != null && c.isJack;
 
@@ -63,28 +60,25 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
               ],
         border: _isFaceDown
             ? Border.all(color: PistiColors.cardBackBorder, width: width * 0.055)
-            : Border.all(color: const Color(0x22000000), width: 1),
+            : null,
         color: _isFaceDown ? PistiColors.cardBackBg : PistiColors.cardFaceBg,
       ),
       clipBehavior: Clip.antiAlias,
-      child: _isFaceDown ? _buildBack(width) : _buildFace(c!, width),
+      child: _isFaceDown ? _buildBack(width) : _buildFace(c!),
     );
 
     if (widget.dimmed && !_isFaceDown) {
       body = Opacity(opacity: 0.55, child: body);
     }
 
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
-      child: GestureDetector(
-        onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
-        onTapUp: widget.onTap != null ? (_) => setState(() => _pressed = false) : null,
-        onTapCancel: widget.onTap != null ? () => setState(() => _pressed = false) : null,
-        onTap: widget.onTap,
-        child: Transform.translate(
-          offset: Offset(0, _pressed ? 2 : 0),
-          child: body,
-        ),
+    return GestureDetector(
+      onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: widget.onTap != null ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: widget.onTap != null ? () => setState(() => _pressed = false) : null,
+      onTap: widget.onTap,
+      child: Transform.translate(
+        offset: Offset(0, _pressed ? 2 : 0),
+        child: body,
       ),
     );
   }
@@ -106,72 +100,24 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
     );
   }
 
-  Widget _buildCorner(PistiCard c, double width, Color color) {
-    final rankSize = width * 0.19;
-    final suitSize = width * 0.15;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          c.rankLabel,
-          style: _cardTextStyle.merge(
-            TextStyle(
-              color: color,
-              fontWeight: FontWeight.w800,
-              fontSize: rankSize,
-              height: 1.0,
-            ),
-          ),
-        ),
-        PistiSuitGlyph(suit: c.suit, size: suitSize, color: color),
-      ],
-    );
+  static String _suitLetter(PistiSuit suit) {
+    switch (suit) {
+      case PistiSuit.spades:
+        return 'S';
+      case PistiSuit.hearts:
+        return 'H';
+      case PistiSuit.diamonds:
+        return 'D';
+      case PistiSuit.clubs:
+        return 'C';
+    }
   }
 
-  Widget _buildFace(PistiCard c, double width) {
-    final color = c.isRed ? PistiColors.cardFaceRed : PistiColors.cardFaceBlack;
-    final isCourt = c.rank == PistiRank.jack ||
-        c.rank == PistiRank.queen ||
-        c.rank == PistiRank.king;
-
-    final corner = _buildCorner(c, width, color);
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Web: .court z-index 1, .corner z-index 2 — figür altta, köşe üstte
-        if (isCourt)
-          Positioned(
-            top: width * 0.2,
-            bottom: width * 0.2,
-            left: width * 0.12,
-            right: width * 0.12,
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: SizedBox(
-                width: 100,
-                height: 150,
-                child: CustomPaint(
-                  painter: PistiCourtPainter(rank: c.rank),
-                ),
-              ),
-            ),
-          )
-        else
-          Center(
-            child: PistiSuitGlyph(
-              suit: c.suit,
-              size: width * 0.34,
-              color: color,
-            ),
-          ),
-        Positioned(top: width * 0.06, left: width * 0.08, child: corner),
-        Positioned(
-          bottom: width * 0.06,
-          right: width * 0.08,
-          child: Transform.rotate(angle: 3.14159265359, child: corner),
-        ),
-      ],
+  Widget _buildFace(PistiCard c) {
+    return Image.asset(
+      'docs/pisti/cards/${_suitLetter(c.suit)}${c.rankLabel}.webp',
+      fit: BoxFit.fill,
+      semanticLabel: c.nameTr,
     );
   }
 }

@@ -115,9 +115,7 @@ function afterLocalWrite() {
 // Kart mantığı
 // ------------------------------------------------------------------
 const SUITS = ["S", "H", "D", "C"]; // Maça, Kupa, Karo, Sinek
-const SUIT_SYMBOL = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const SUIT_NAME = { S: "Maça", H: "Kupa", D: "Karo", C: "Sinek" };
-const RED_SUITS = ["H", "D"];
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
 function uid() {
@@ -685,8 +683,12 @@ async function runBotMove(botId) {
 }
 
 // ------------------------------------------------------------------
-// Görünüm (render) — klasik iskambil kağıdı çizimi
+// Görünüm (render) — klasik iskambil kağıdı görselleri
 // ------------------------------------------------------------------
+
+// Kart yüzleri kod ile çizilmez; `cards/` klasöründeki ortak görsellerden
+// gelir (ör. `cards/SA.webp` = Maça As). Android uygulaması da (PistiCardWidget)
+// aynı dosyaları kullandığı için kartlar iki platformda birebir aynı görünür.
 function cardHtml(card, opts = {}) {
   const { faceDown = false, small = false, big = false, clickable = false, dim = false } = opts;
   const w = small ? 34 : big ? 84 : 62;
@@ -696,52 +698,15 @@ function cardHtml(card, opts = {}) {
     return `<div class="card back" style="${sv}"><span class="back-pattern"></span></div>`;
   }
 
-  const red = RED_SUITS.includes(card.suit);
-  const cls = red ? "red" : "black";
-  const sym = SUIT_SYMBOL[card.suit];
   const click = clickable ? ` data-card="${card.id}"` : "";
   const dimCls = dim ? " dim" : "";
 
-  // Resimli kartlar (Vale/Kız/Papaz) klasik figürlü görünüm alır; Vale ayrıca
-  // altın çerçeveyle vurgulanır (Pişti'de yanlışlıkla oynanmasın diye).
-  const isFace = card.rank === "J" || card.rank === "Q" || card.rank === "K";
+  // Vale altın çerçeveyle vurgulanır (Pişti'de yanlışlıkla oynanmasın diye).
   const jackCls = card.rank === "J" ? " jack" : "";
-  const center = isFace
-    ? `<span class="court">${courtArt(card.rank)}</span>`
-    : `<span class="center-pip"><span class="suit-big">${sym}</span></span>`;
 
-  return `<div class="card face ${cls}${jackCls}${dimCls}" style="${sv}"${click}>
-      <span class="corner tl">${card.rank}<br/>${sym}</span>
-      ${center}
-      <span class="corner br">${card.rank}<br/>${sym}</span>
+  return `<div class="card face${jackCls}${dimCls}" style="${sv}"${click}>
+      <img src="cards/${card.suit}${card.rank}.webp" alt="${cardName(card)}" draggable="false"/>
     </div>`;
-}
-
-// Klasik "figürlü kart" çizimi (üstte ve altta simetrik). J/Q/K için ortak
-// figür; sadece taçtaki mücevher rengi rütbeye göre değişir. Kart rengini
-// (kırmızı/siyah) köşe indeksleri belirtir.
-function courtArt(rank) {
-  const gem = rank === "K" ? "#c62828" : rank === "Q" ? "#1565c0" : "#2e7d32";
-  const half = `
-    <g stroke="#1a1a1a" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M34 33 L38 22 L44 30 L50 20 L56 30 L62 22 L66 33 Z" fill="#f4c430"/>
-      <circle cx="38" cy="22" r="1.8" fill="${gem}"/>
-      <circle cx="50" cy="20" r="1.8" fill="${gem}"/>
-      <circle cx="62" cy="22" r="1.8" fill="${gem}"/>
-      <rect x="34" y="33" width="32" height="5" fill="#c62828"/>
-      <ellipse cx="50" cy="46" rx="8.5" ry="9.5" fill="#f6d7b8"/>
-      <path d="M41.5 44 h4 M54.5 44 h4" stroke="#1a1a1a" stroke-width="1.2"/>
-      <path d="M47 50 q3 2 6 0" fill="none" stroke="#1a1a1a" stroke-width="1.2"/>
-      <path d="M33 74 Q33 55 50 55 Q67 55 67 74 Z" fill="#c62828"/>
-      <path d="M45 55 L50 63 L55 55 Z" fill="#f4c430"/>
-      <path d="M50 63 V74" stroke="#f4c430" stroke-width="2"/>
-    </g>`;
-  return `<svg viewBox="0 0 100 150" preserveAspectRatio="xMidYMid meet">
-    <rect x="5" y="5" width="90" height="140" rx="7" fill="#fffdf5" stroke="#c9a227" stroke-width="1.6"/>
-    <line x1="12" y1="75" x2="88" y2="75" stroke="#c9a227" stroke-width="1" stroke-dasharray="3 2.5"/>
-    ${half}
-    <g transform="rotate(180 50 75)">${half}</g>
-  </svg>`;
 }
 
 // Oyun bitince son hamle görülsün diye sonuç ekranına geçmeden önce
@@ -970,7 +935,7 @@ function renderBoard() {
     : "";
 
   const handHtml = myHand.map((c) =>
-    cardHtml(c, { clickable: isMyTurn, dim: !isMyTurn })
+    cardHtml(c, { big: true, clickable: isMyTurn, dim: !isMyTurn })
   ).join("");
 
   app.innerHTML = `

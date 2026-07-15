@@ -43,41 +43,19 @@
     /* --- Klasik iskambil kağıdı --- */
     .card {
       --w: 62px;
-      width: var(--w); height: calc(var(--w) * 1.45);
+      /* 1.4: cards/ klasöründeki kart görsellerinin en-boy oranı. */
+      width: var(--w); height: calc(var(--w) * 1.4);
       position: relative; flex: 0 0 auto; overflow: hidden;
       border-radius: calc(var(--w) * 0.12);
       box-shadow: 0 2px 5px #0007; user-select: none;
     }
     .card.face {
-      background: #fdfdfa; border: 1px solid #00000022;
+      background: #fdfdfa;
     }
-    .card.face.red { color: #c62828; }
-    .card.face.black { color: #1a1a1a; }
+    .card.face img { width: 100%; height: 100%; display: block; object-fit: fill; }
     .card.face.dim { opacity: .55; }
     .card.face[data-card] { cursor: pointer; }
     .card.face[data-card]:active { transform: translateY(2px); }
-
-    .corner {
-      position: absolute; z-index: 2; font-weight: 800; line-height: 1.05;
-      font-size: calc(var(--w) * 0.19); text-align: center;
-    }
-    .corner.tl { top: calc(var(--w) * 0.06); left: calc(var(--w) * 0.08); }
-    .corner.br { bottom: calc(var(--w) * 0.06); right: calc(var(--w) * 0.08); transform: rotate(180deg); }
-
-    .center-pip {
-      position: absolute; inset: 0; z-index: 1;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    }
-    .suit-big { font-size: calc(var(--w) * 0.4); line-height: 1; }
-
-    /* resimli kart (Vale / Kız / Papaz): merkezde figürlü çizim */
-    .court {
-      position: absolute; z-index: 1;
-      top: calc(var(--w) * 0.2); bottom: calc(var(--w) * 0.2);
-      left: calc(var(--w) * 0.12); right: calc(var(--w) * 0.12);
-      display: flex; align-items: stretch; justify-content: center;
-    }
-    .court svg { width: 100%; height: 100%; display: block; }
     /* Vale kartı fark edilsin diye ince altın çerçeve + hafif zemin */
     .card.face.jack { box-shadow: 0 0 0 calc(var(--w) * 0.045) #e6b800, 0 2px 6px #0007; }
 
@@ -113,7 +91,7 @@
       gap: 22px; background: #0f4a2e; }
     .pile { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .pile small { color: #ffffffaa; }
-    .empty-slot { width: 84px; height: calc(84px * 1.45); border: 2px dashed #ffffff33;
+    .empty-slot { width: 84px; height: calc(84px * 1.4); border: 2px dashed #ffffff33;
       border-radius: 10px; display: flex; align-items: center; justify-content: center;
       color: #ffffff66; font-size: 13px; }
     .mini-stat { font-size: 30px; }
@@ -180,7 +158,7 @@
   <!-- Firebase ayarların (bunu sen dolduracaksın) -->
   <script src="firebase-config.js"></script>
   <!-- Oyun kodu -->
-  <script type="module" src="game.js?v=20"></script>
+  <script type="module" src="game.js?v=21"></script>
 
   <!-- Ortak service worker (../sw.js), tüm siteyi (kök + uno/ + pisti/) kapsar. -->
   <script>

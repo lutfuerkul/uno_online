@@ -130,6 +130,8 @@ class CardWidget extends StatelessWidget {
     final isWildUnselected = c.isWild && chosenColorOverride == null;
 
     if (isWildUnselected && c.type == CardType.wild) {
+      // Web'deki `.oval.wildoval` (conic-gradient) karşılığı: ovalin tamamı
+      // dört renkli çeyreğe bölünür — klasik UNO joker görünümü.
       return Center(
         child: Transform.rotate(
           angle: 24 * math.pi / 180,
@@ -137,9 +139,25 @@ class CardWidget extends StatelessWidget {
             widthFactor: 0.8,
             heightFactor: 0.98,
             child: ClipOval(
-              child: CustomPaint(
-                painter: const UnoSymbolPainter(symbol: UnoSymbol.wild),
-                child: const SizedBox.expand(),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: const [
+                        Expanded(child: ColoredBox(color: UnoColors.blue, child: SizedBox.expand())),
+                        Expanded(child: ColoredBox(color: UnoColors.red, child: SizedBox.expand())),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Row(
+                      children: const [
+                        Expanded(child: ColoredBox(color: UnoColors.green, child: SizedBox.expand())),
+                        Expanded(child: ColoredBox(color: UnoColors.yellow, child: SizedBox.expand())),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

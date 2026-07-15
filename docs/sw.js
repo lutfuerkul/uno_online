@@ -7,7 +7,7 @@
 // sürüm, çevrimdışıyken önbellekten). Firebase/gstatic gibi dış istekler
 // dokunulmadan doğrudan ağa gider.
 
-const CACHE = "kartoyunlari-cache-v29";
+const CACHE = "kartoyunlari-cache-v30";
 const ASSETS = [
   "./",
   "./index.html",
@@ -24,11 +24,18 @@ const ASSETS = [
 
   "./pisti/",
   "./pisti/index.html",
-  "./pisti/game.js?v=20",
+  "./pisti/game.js?v=21",
   "./pisti/firebase-config.js",
   "./pisti/icons/icon-192.png",
   "./pisti/icons/icon-512.png",
 ];
+
+// Pişti kart görselleri (52 kart) — çevrimdışı oyun için önbelleğe alınır.
+for (const suit of ["S", "H", "D", "C"]) {
+  for (const rank of ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]) {
+    ASSETS.push(`./pisti/cards/${suit}${rank}.webp`);
+  }
+}
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
