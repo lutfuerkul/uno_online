@@ -1098,6 +1098,19 @@ function finishStatusBanner(g) {
   return { cls: "theirs", text: `🏆 ${name} kazandı!` };
 }
 
+// Eli renk gruplarına göre dizer (kırmızı, sarı, yeşil, mavi, jokerler en
+// sonda); aynı renk içinde önce sayılar (küçükten büyüğe), sonra aksiyon
+// kartları. Yalnızca görüntüleme sırasıdır — oyun durumundaki el değişmez,
+// böylece açılışta ve sonradan çekilen kartlar hep renk grubunun yanına oturur.
+const HAND_COLOR_ORDER = { red: 0, yellow: 1, green: 2, blue: 3, wild: 4 };
+const HAND_TYPE_ORDER = { number: 0, skip: 1, reverse: 2, drawTwo: 3, wild: 0, wildDrawFour: 1 };
+function sortedHand(hand) {
+  return [...hand].sort((a, b) =>
+    (HAND_COLOR_ORDER[a.color] - HAND_COLOR_ORDER[b.color]) ||
+    (HAND_TYPE_ORDER[a.type] - HAND_TYPE_ORDER[b.type]) ||
+    ((a.value ?? 0) - (b.value ?? 0)));
+}
+
 function renderBoard() {
   const players = state.players;
   const finished = state.status === "finished";
@@ -1139,7 +1152,7 @@ function renderBoard() {
   }).join("");
   const iAmBlocked = blockedList.includes(playerId);
 
-  const handHtml = myHand.map((c) =>
+  const handHtml = sortedHand(myHand).map((c) =>
     cardHtml(c, { clickable: !finished, playable: playableNow(c) })
   ).join("");
 

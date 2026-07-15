@@ -17,7 +17,7 @@ const ASSETS = [
 
   "./uno/",
   "./uno/index.html",
-  "./uno/game.js?v=28",
+  "./uno/game.js?v=29",
   "./uno/firebase-config.js",
   "./uno/icons/icon-192.png",
   "./uno/icons/icon-512.png",
