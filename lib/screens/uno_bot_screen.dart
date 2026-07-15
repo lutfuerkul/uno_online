@@ -153,7 +153,7 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
               TextField(
                 controller: _nameController,
                 textAlign: TextAlign.center,
-                maxLength: 12,
+                maxLength: 8,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'İsmin (opsiyonel)',

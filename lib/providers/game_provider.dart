@@ -12,7 +12,7 @@ import '../services/uno_engine.dart';
 /// Uygulama genelinde (online) oyun durumunu tutar ve UI ile [GameService]
 /// arasında köprü kurar.
 class GameProvider extends ChangeNotifier implements UnoBoardController {
-  static const int maxNameLength = 12;
+  static const int maxNameLength = 8;
   static const int maxOppCardVisual = 4;
   static const int maxPlayers = UnoEngine.maxPlayers;
 

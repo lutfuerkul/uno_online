@@ -27,7 +27,7 @@ if (FB_READY) {
 const MIN_PLAYERS = 2;
 const MAX_PLAYERS = 4;
 const ALLOWED_PLAYER_COUNTS = [2, 3, 4];
-const MAX_NAME_LENGTH = 12;
+const MAX_NAME_LENGTH = 8;
 const MAX_OPP_CARD_VISUAL = 4; // rakip elinde en fazla bu kadar kart görseli
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).

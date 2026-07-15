@@ -12,7 +12,7 @@ import '../services/pisti_game_service.dart';
 /// Uygulama genelinde (online) Pişti oyun durumunu tutar ve UI ile
 /// [PistiGameService] arasında köprü kurar.
 class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController {
-  static const int maxNameLength = 12;
+  static const int maxNameLength = 8;
   static const int maxPlayers = PistiEngine.maxPlayers;
 
   final PistiGameService _service = PistiGameService();

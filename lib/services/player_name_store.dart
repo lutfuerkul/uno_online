@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PlayerNameStore {
   static const String unoKey = 'uno_name';
   static const String pistiKey = 'pisti_name';
-  static const int maxLength = 12;
+  static const int maxLength = 8;
 
   static Future<String> loadUnoName() => _load(unoKey);
   static Future<String> loadPistiName() => _load(pistiKey);
