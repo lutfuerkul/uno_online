@@ -13,6 +13,7 @@ import '../services/pisti_engine.dart';
 class PistiLocalProvider extends ChangeNotifier implements PistiBoardController {
   static const String humanId = 'you';
   static const Duration _collectDelay = Duration(milliseconds: 1200);
+  static const Duration _endGameCaptureDelay = Duration(milliseconds: 2000);
   static const Duration _botMoveDelay = Duration(milliseconds: 2000);
 
   @override
@@ -89,7 +90,9 @@ class PistiLocalProvider extends ChangeNotifier implements PistiBoardController 
   }
 
   Future<void> _resolveCapture(int session) async {
-    await Future.delayed(_collectDelay);
+    final pending = state?.pendingCapture;
+    final delay = pending?.endsGame == true ? _endGameCaptureDelay : _collectDelay;
+    await Future.delayed(delay);
     if (session != _session) return;
     final s = state;
     if (s == null || s.pendingCapture == null) return;

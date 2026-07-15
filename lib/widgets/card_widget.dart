@@ -37,7 +37,7 @@ class CardWidget extends StatelessWidget {
     this.faceDown = false,
     this.highlighted = false,
     this.onTap,
-    this.width = 64,
+    this.width = 62,
     this.chosenColorOverride,
     this.showBackLogo = true,
   });
@@ -57,45 +57,43 @@ class CardWidget extends StatelessWidget {
     return UnoColors.forCard(c.color);
   }
 
+  List<BoxShadow> _cardShadows(double width) {
+    if (highlighted) {
+      return [
+        BoxShadow(
+          color: const Color(0xDDFFFFFF),
+          spreadRadius: width * 0.06,
+          blurRadius: 0,
+        ),
+        const BoxShadow(color: Color(0x70000000), blurRadius: 6, offset: Offset(0, 2)),
+      ];
+    }
+    return const [
+      BoxShadow(color: Color(0x60000000), blurRadius: 5, offset: Offset(0, 2)),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final height = width * 1.5;
     final border = width * 0.07;
 
-    Widget card = Container(
+    final card = Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         color: _backgroundColor,
         borderRadius: BorderRadius.circular(width * 0.14),
         border: Border.all(color: Colors.white, width: border),
-        boxShadow: const [
-          BoxShadow(color: Color(0x60000000), blurRadius: 5, offset: Offset(0, 2)),
-        ],
+        boxShadow: _cardShadows(width),
       ),
       clipBehavior: Clip.antiAlias,
       child: _isFaceDown ? _buildBack() : _buildFront(),
     );
 
-    if (highlighted) {
-      card = Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(width * 0.14 + width * 0.06),
-          boxShadow: [
-            BoxShadow(color: Colors.white.withOpacity(0.87), spreadRadius: width * 0.06),
-          ],
-        ),
-        margin: EdgeInsets.all(width * 0.06),
-        child: card,
-      );
-    }
-
     return GestureDetector(
       onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: highlighted ? 0 : 3),
-        child: card,
-      ),
+      child: card,
     );
   }
 
@@ -119,7 +117,7 @@ class CardWidget extends StatelessWidget {
               fontSize: width * 0.34,
               fillColor: UnoColors.yellow,
               strokeColor: UnoColors.cardBack,
-              strokeWidth: width * 0.045,
+              strokeWidth: width * 0.022,
               italic: true,
             ),
           ),
@@ -132,7 +130,6 @@ class CardWidget extends StatelessWidget {
     final isWildUnselected = c.isWild && chosenColorOverride == null;
 
     if (isWildUnselected && c.type == CardType.wild) {
-      // Oynanmamış joker: ovalin tamamı dört renkli pasta.
       return Center(
         child: Transform.rotate(
           angle: 24 * math.pi / 180,
@@ -140,8 +137,25 @@ class CardWidget extends StatelessWidget {
             widthFactor: 0.8,
             heightFactor: 0.98,
             child: ClipOval(
-              child: CustomPaint(
-                painter: const UnoSymbolPainter(symbol: UnoSymbol.wild),
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: SweepGradient(
+                    startAngle: -math.pi / 2,
+                    endAngle: 3 * math.pi / 2,
+                    colors: [
+                      Color(0xFFD32F2F),
+                      Color(0xFFD32F2F),
+                      Color(0xFFF9A825),
+                      Color(0xFFF9A825),
+                      Color(0xFF388E3C),
+                      Color(0xFF388E3C),
+                      Color(0xFF1976D2),
+                      Color(0xFF1976D2),
+                      Color(0xFFD32F2F),
+                    ],
+                    stops: [0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1],
+                  ),
+                ),
                 child: const SizedBox.expand(),
               ),
             ),
@@ -193,14 +207,12 @@ class CardWidget extends StatelessWidget {
     }
     switch (c.type) {
       case CardType.number:
-        return Text(
+        return _StrokedText(
           '${c.value}',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: width * 0.56,
-            height: 1,
-            color: hex,
-          ),
+          fontSize: width * 0.56,
+          fillColor: hex,
+          strokeColor: const Color(0x40000000),
+          strokeWidth: width * 0.014,
         );
       case CardType.skip:
         return SizedBox(
@@ -221,14 +233,12 @@ class CardWidget extends StatelessWidget {
           child: CustomPaint(painter: UnoSymbolPainter(symbol: UnoSymbol.twoCards, color: hex)),
         );
       case CardType.wildDrawFour:
-        return Text(
+        return _StrokedText(
           '+4',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: width * 0.56,
-            height: 1,
-            color: hex,
-          ),
+          fontSize: width * 0.56,
+          fillColor: hex,
+          strokeColor: const Color(0x40000000),
+          strokeWidth: width * 0.014,
         );
       case CardType.wild:
         return SizedBox(
