@@ -176,22 +176,24 @@ lib/
 
 ## Kurulum
 
-### 1. Flutter platform dosyalarını oluştur
+### 1. Paketleri indir
 
-Depoda yalnızca `lib/` ve `pubspec.yaml` var. Android/iOS klasörlerini üretmek
-için proje kökünde şunu çalıştır (mevcut `lib/` ve `pubspec.yaml` korunur):
-
-```bash
-flutter create --org com.example --project-name uno_online .
-```
-
-### 2. Paketleri indir
+`android/` klasörü depoda hazır (Android APK derlemek için gereken Gradle/
+Kotlin dosyaları). Sadece paketleri indirmen yeterli:
 
 ```bash
 flutter pub get
 ```
 
-### 3. Firebase'i bağla
+(iOS ya da masaüstü gibi başka platformlar da istersen: `flutter create
+--platforms=ios .` gibi eksik platformu ekleyebilirsin; mevcut `lib/` ve
+`android/` korunur.)
+
+### 2. Firebase'i bağla (yalnızca online oyun için gerekli)
+
+`lib/firebase_options.dart` şu an bir şablon; bağlanmadan da uygulama açılır
+ve **bilgisayara karşı (çevrimdışı)** modlar sorunsuz çalışır — sadece "Yeni
+Oyun Kur" / "Oyuna Katıl" (online) çalışmaz. Online oyunu da istiyorsan:
 
 1. [Firebase Console](https://console.firebase.google.com)'da yeni bir proje
    oluştur.
@@ -213,13 +215,32 @@ flutter pub get
    için "sadece sıradaki oyuncu yazabilsin" gibi kimlik bazlı bir kontrol
    yok — bunun için Firebase Authentication eklemek gerekir.
 
-### 4. Çalıştır
+### 3. Çalıştır (geliştirme sırasında)
 
-İki farklı cihazda (veya emülatörde) çalıştır:
+Bir cihazda (veya emülatörde) çalıştır:
 
 ```bash
 flutter run
 ```
+
+### 4. APK al
+
+**Bilgisayarın yoksa / Android SDK kurmak istemiyorsan:** Bu depoda
+`.github/workflows/build-apk.yml` adında bir GitHub Actions iş akışı var.
+`main` dalına her push'ta (ya da Actions sekmesinden elle "Run workflow" ile)
+APK'yı GitHub'ın kendi sunucularında derler; bittiğinde **Actions → ilgili
+çalıştırma → Artifacts** bölümünden `uno-pisti-debug-apk` dosyasını
+indirebilirsin. Bilgisayarına Flutter/Android SDK kurmana gerek kalmaz.
+
+**Kendi bilgisayarında derlemek istersen:** Android SDK'yı (Android Studio
+üzerinden ya da `sdkmanager` ile) kurup şunu çalıştır:
+
+```bash
+flutter build apk --debug
+```
+
+APK, `build/app/outputs/flutter-apk/app-debug.apk` yolunda oluşur; telefona
+kopyalayıp "bilinmeyen kaynaklardan yükle" izniyle kurabilirsin.
 
 ## Nasıl oynanır?
 

@@ -8,9 +8,14 @@ import 'screens/game_select_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (_) {
+    // Firebase henüz yapılandırılmadıysa (bkz. README) online oda kur/katıl
+    // çalışmaz, ama bilgisayara karşı (çevrimdışı) modlar bundan etkilenmez.
+  }
   runApp(const UnoApp());
 }
 
