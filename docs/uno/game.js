@@ -23,7 +23,7 @@ if (FB_READY) {
 }
 
 const MAX_PLAYERS = 4;
-const MAX_NAME_LENGTH = 12;
+const MAX_NAME_LENGTH = 8;
 const MAX_OPP_CARD_VISUAL = 4; // rakip elinde en fazla bu kadar kart görseli
 
 // Her cihaza kalıcı bir oyuncu kimliği ver (yenilenince kaybolmasın).

@@ -147,7 +147,7 @@ class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
               TextField(
                 controller: _nameController,
                 textAlign: TextAlign.center,
-                maxLength: 12,
+                maxLength: 8,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'İsmin (opsiyonel)',
