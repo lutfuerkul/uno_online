@@ -58,17 +58,19 @@
     .card.face[data-card]:active { transform: translateY(2px); }
 
     .corner {
-      position: absolute; z-index: 2; font-weight: 800; line-height: 1.05;
+      position: absolute; z-index: 2; font-weight: 800; line-height: 1;
       font-size: calc(var(--w) * 0.19); text-align: center;
     }
     .corner.tl { top: calc(var(--w) * 0.06); left: calc(var(--w) * 0.08); }
     .corner.br { bottom: calc(var(--w) * 0.06); right: calc(var(--w) * 0.08); transform: rotate(180deg); }
+    /* Sembol vektörü (game.js suitSvg) satır içi boşluk bırakmasın diye blok. */
+    .corner .suit { display: block; margin: 0 auto; }
 
     .center-pip {
       position: absolute; inset: 0; z-index: 1;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     }
-    .suit-big { font-size: calc(var(--w) * 0.4); line-height: 1; }
+    .center-pip .suit { display: block; }
 
     /* resimli kart (Vale / Kız / Papaz): merkezde figürlü çizim */
     .court {
@@ -180,7 +182,7 @@
   <!-- Firebase ayarların (bunu sen dolduracaksın) -->
   <script src="firebase-config.js"></script>
   <!-- Oyun kodu -->
-  <script type="module" src="game.js?v=20"></script>
+  <script type="module" src="game.js?v=21"></script>
 
   <!-- Ortak service worker (../sw.js), tüm siteyi (kök + uno/ + pisti/) kapsar. -->
   <script>

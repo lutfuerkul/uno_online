@@ -115,7 +115,6 @@ function afterLocalWrite() {
 // Kart mantığı
 // ------------------------------------------------------------------
 const SUITS = ["S", "H", "D", "C"]; // Maça, Kupa, Karo, Sinek
-const SUIT_SYMBOL = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const SUIT_NAME = { S: "Maça", H: "Kupa", D: "Karo", C: "Sinek" };
 const RED_SUITS = ["H", "D"];
 const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
@@ -687,6 +686,22 @@ async function runBotMove(botId) {
 // ------------------------------------------------------------------
 // Görünüm (render) — klasik iskambil kağıdı çizimi
 // ------------------------------------------------------------------
+
+// ♠♥♦♣ sembolleri cihaz fontuna bırakılmaz: her cihazda (ve Android
+// uygulamasındaki `PistiSuitPainter` ile) birebir aynı görünsün diye
+// vektör olarak çizilir. 100x100 birimlik tuval, merkez etrafında 1.35
+// görsel ölçek — painter'daki path'ler ve `_visualScale` ile aynı.
+const SUIT_PATH = {
+  S: '<path d="M50 22 C22 42 22 62 50 58 C78 62 78 42 50 22 Z"/><rect x="46" y="58" width="8" height="22"/><rect x="38" y="78" width="24" height="6"/>',
+  H: '<path d="M50 78 C20 55 20 28 50 38 C80 28 80 55 50 78 Z"/>',
+  D: '<path d="M50 18 L78 50 L50 82 L22 50 Z"/>',
+  C: '<circle cx="50" cy="34" r="14"/><circle cx="32" cy="52" r="14"/><circle cx="68" cy="52" r="14"/><rect x="46" y="52" width="8" height="28"/><rect x="38" y="76" width="24" height="6"/>',
+};
+
+function suitSvg(suit, sizePx) {
+  return `<svg class="suit" width="${sizePx}" height="${sizePx}" viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" transform="translate(50 50) scale(1.35) translate(-50 -50)">${SUIT_PATH[suit]}</g></svg>`;
+}
+
 function cardHtml(card, opts = {}) {
   const { faceDown = false, small = false, big = false, clickable = false, dim = false } = opts;
   const w = small ? 34 : big ? 84 : 62;
@@ -698,9 +713,14 @@ function cardHtml(card, opts = {}) {
 
   const red = RED_SUITS.includes(card.suit);
   const cls = red ? "red" : "black";
-  const sym = SUIT_SYMBOL[card.suit];
   const click = clickable ? ` data-card="${card.id}"` : "";
   const dimCls = dim ? " dim" : "";
+
+  // Köşe indeksi ve merkez sembol boyutları Android tarafındaki
+  // PistiCardWidget ile aynı oranlardır (rütbe .19w, köşe sembolü .15w,
+  // merkez sembol .34w).
+  const corner = (pos) =>
+    `<span class="corner ${pos}">${card.rank}${suitSvg(card.suit, w * 0.15)}</span>`;
 
   // Resimli kartlar (Vale/Kız/Papaz) klasik figürlü görünüm alır; Vale ayrıca
   // altın çerçeveyle vurgulanır (Pişti'de yanlışlıkla oynanmasın diye).
@@ -708,12 +728,12 @@ function cardHtml(card, opts = {}) {
   const jackCls = card.rank === "J" ? " jack" : "";
   const center = isFace
     ? `<span class="court">${courtArt(card.rank)}</span>`
-    : `<span class="center-pip"><span class="suit-big">${sym}</span></span>`;
+    : `<span class="center-pip">${suitSvg(card.suit, w * 0.34)}</span>`;
 
   return `<div class="card face ${cls}${jackCls}${dimCls}" style="${sv}"${click}>
-      <span class="corner tl">${card.rank}<br/>${sym}</span>
+      ${corner("tl")}
       ${center}
-      <span class="corner br">${card.rank}<br/>${sym}</span>
+      ${corner("br")}
     </div>`;
 }
 
