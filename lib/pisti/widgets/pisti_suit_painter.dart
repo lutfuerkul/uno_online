@@ -5,6 +5,10 @@ import '../models/pisti_card.dart';
 /// `docs/pisti/game.js` köşe/orta takım sembolleri (♠♥♦♣) — Unicode font
 /// boyutu cihazdan cihaza değiştiği için vektör olarak çizilir.
 class PistiSuitPainter extends CustomPainter {
+  /// Yollar 100×100 kutunun ~%60'ını kaplar; web'deki Unicode sembolle aynı
+  /// görünmesi için merkezden ölçeklenir.
+  static const double _visualScale = 1.5;
+
   final PistiSuit suit;
   final Color color;
 
@@ -18,6 +22,9 @@ class PistiSuitPainter extends CustomPainter {
     final scale = size.width / 100;
     canvas.save();
     canvas.scale(scale, scale);
+    canvas.translate(50, 50);
+    canvas.scale(_visualScale, _visualScale);
+    canvas.translate(-50, -50);
     switch (suit) {
       case PistiSuit.spades:
         _paintSpade(canvas, paint);
