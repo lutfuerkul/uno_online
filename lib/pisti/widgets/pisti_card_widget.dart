@@ -4,6 +4,7 @@ import '../models/pisti_card.dart';
 import '../theme/pisti_theme.dart';
 import 'pisti_back_pattern_painter.dart';
 import 'pisti_court_painter.dart';
+import 'pisti_suit_painter.dart';
 
 /// Bir iskambil kağıdını (veya arka yüzünü) çizer — `docs/pisti/game.js`'teki
 /// `cardHtml()` ile birebir aynı görsel dili kullanır: klasik beyaz kart
@@ -105,30 +106,41 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
     );
   }
 
+  Widget _buildCorner(PistiCard c, double width, Color color) {
+    final rankSize = width * 0.19;
+    final suitSize = width * 0.17;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          c.rankLabel,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w800,
+            fontSize: rankSize,
+            height: 1.05,
+          ),
+        ),
+        PistiSuitGlyph(suit: c.suit, size: suitSize, color: color),
+      ],
+    );
+  }
+
   Widget _buildFace(PistiCard c, double width) {
     final color = c.isRed ? PistiColors.cardFaceRed : PistiColors.cardFaceBlack;
     final isCourt = c.rank == PistiRank.jack ||
         c.rank == PistiRank.queen ||
         c.rank == PistiRank.king;
 
-    final cornerText = Text(
-      '${c.rankLabel}\n${c.suitSymbol}',
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        color: color,
-        fontWeight: FontWeight.w800,
-        fontSize: width * 0.19,
-        height: 1.05,
-      ),
-    );
+    final corner = _buildCorner(c, width, color);
 
     return Stack(
       children: [
-        Positioned(top: width * 0.06, left: width * 0.08, child: cornerText),
+        Positioned(top: width * 0.06, left: width * 0.08, child: corner),
         Positioned(
           bottom: width * 0.06,
           right: width * 0.08,
-          child: Transform.rotate(angle: 3.14159265359, child: cornerText),
+          child: Transform.rotate(angle: 3.14159265359, child: corner),
         ),
         Center(
           child: isCourt
@@ -142,9 +154,10 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
                     child: CustomPaint(painter: PistiCourtPainter(rank: c.rank)),
                   ),
                 )
-              : Text(
-                  c.suitSymbol,
-                  style: TextStyle(color: color, fontSize: width * 0.4, height: 1),
+              : PistiSuitGlyph(
+                  suit: c.suit,
+                  size: width * 0.4,
+                  color: color,
                 ),
         ),
       ],

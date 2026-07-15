@@ -122,16 +122,30 @@ class UnoSymbolPainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
+
+    // `docs/uno/game.js` svgWild() yollarıyla birebir aynı dilimler.
+    final wedges = [
+      _wildWedge(50, 15, 85, 50),
+      _wildWedge(85, 50, 50, 85),
+      _wildWedge(50, 85, 15, 50),
+      _wildWedge(15, 50, 50, 15),
+    ];
     for (var i = 0; i < 4; i++) {
-      final startAngle = (-90 + i * 90) * math.pi / 180;
-      final path = Path()
-        ..moveTo(50, 50)
-        ..arcTo(const Rect.fromLTWH(15, 15, 70, 70), startAngle,
-            90 * math.pi / 180, false)
-        ..close();
-      canvas.drawPath(path, Paint()..color = colors[i]);
-      canvas.drawPath(path, stroke);
+      canvas.drawPath(wedges[i], Paint()..color = colors[i]);
+      canvas.drawPath(wedges[i], stroke);
     }
+  }
+
+  Path _wildWedge(double x1, double y1, double x2, double y2) {
+    return Path()
+      ..moveTo(50, 50)
+      ..lineTo(x1, y1)
+      ..arcToPoint(
+        Offset(x2, y2),
+        radius: const Radius.circular(35),
+        clockwise: true,
+      )
+      ..close();
   }
 
   /// (x,y,w,h,radius) tanımlı bir yuvarlak köşeli dikdörtgeni, (cx,cy) etrafında
