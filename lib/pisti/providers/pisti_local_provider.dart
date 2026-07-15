@@ -12,8 +12,8 @@ import '../services/pisti_engine.dart';
 /// olmasıdır. İnternet ya da Firebase gerekmez.
 class PistiLocalProvider extends ChangeNotifier implements PistiBoardController {
   static const String humanId = 'you';
-  static const Duration _collectDelay = Duration(milliseconds: 1100);
-  static const Duration _botMoveDelay = Duration(milliseconds: 900);
+  static const Duration _collectDelay = Duration(milliseconds: 1200);
+  static const Duration _botMoveDelay = Duration(milliseconds: 2000);
 
   @override
   PistiGameState? state;

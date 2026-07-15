@@ -98,7 +98,7 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     // gecikmeden sonra masayı topla (bkz. PistiLocalProvider ile aynı desen).
     if (state?.pendingCapture != null) {
       final session = gameId;
-      Future.delayed(const Duration(milliseconds: 1100), () {
+      Future.delayed(const Duration(milliseconds: 1200), () {
         if (gameId == session) _service.collectPile(id);
       });
     }

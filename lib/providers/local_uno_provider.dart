@@ -12,7 +12,7 @@ import '../services/uno_engine.dart';
 /// ya da Firebase gerekmez.
 class LocalUnoProvider extends ChangeNotifier implements UnoBoardController {
   static const String humanId = 'you';
-  static const Duration _botMoveDelay = Duration(milliseconds: 700);
+  static const Duration _botMoveDelay = Duration(milliseconds: 2000);
 
   @override
   GameState? state;

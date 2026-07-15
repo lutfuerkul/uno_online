@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/game_provider.dart';
+import '../services/player_name_store.dart';
 import '../theme/uno_theme.dart';
 import 'uno_bot_screen.dart';
 
@@ -19,6 +22,29 @@ class _HomeScreenState extends State<HomeScreen> {
   final _codeController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _loadSavedName();
+  }
+
+  Future<void> _loadSavedName() async {
+    final name = await PlayerNameStore.loadUnoName();
+    if (!mounted || name.isEmpty) return;
+    _nameController.text = name;
+  }
+
+  void _persistName(String raw) {
+    final name = PlayerNameStore.normalize(raw);
+    if (_nameController.text != name) {
+      _nameController.value = _nameController.value.copyWith(
+        text: name,
+        selection: TextSelection.collapsed(offset: name.length),
+      );
+    }
+    unawaited(PlayerNameStore.saveUnoName(name));
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _codeController.dispose();
@@ -26,7 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String? _validateName() {
-    final name = _nameController.text.trim();
+    final name = PlayerNameStore.normalize(_nameController.text);
+    _nameController.text = name;
+    unawaited(PlayerNameStore.saveUnoName(name));
     if (name.isEmpty) {
       _toast('Önce bir isim gir.');
       return null;
@@ -101,6 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   textAlign: TextAlign.center,
                   maxLength: GameProvider.maxNameLength,
                   style: const TextStyle(color: Colors.white),
+                  onChanged: _persistName,
                   decoration: _inputDecoration('Adınız / Nickname').copyWith(counterText: ''),
                 ),
                 const SizedBox(height: 14),
