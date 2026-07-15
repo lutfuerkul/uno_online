@@ -110,9 +110,15 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const PistiBotScreen()),
-                    ),
+                    onPressed: () {
+                      final name = _validateName();
+                      if (name == null) return;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => PistiBotScreen(initialPlayerName: name),
+                        ),
+                      );
+                    },
                     child: const Text('🤖 Bilgisayara Karşı Oyna',
                         style: TextStyle(fontWeight: FontWeight.w700)),
                   ),

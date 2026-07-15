@@ -12,7 +12,10 @@ import '../widgets/uno_result_view.dart';
 /// (`docs/uno/game.js` `renderLocalSetup()` ile birebir aynı), sonra web ile
 /// aynı tahta ([UnoBoardView]) gösterilir.
 class UnoBotScreen extends StatelessWidget {
-  const UnoBotScreen({super.key});
+  const UnoBotScreen({super.key, this.initialPlayerName});
+
+  /// Ana ekranda girilen isim; doluysa kurulumda tekrar sorulmaz.
+  final String? initialPlayerName;
 
   @override
   Widget build(BuildContext context) {
@@ -20,19 +23,23 @@ class UnoBotScreen extends StatelessWidget {
       create: (_) => LocalUnoProvider(),
       child: Scaffold(
         backgroundColor: UnoColors.background,
-        body: const SafeArea(child: _UnoBotRoot()),
+        body: SafeArea(child: _UnoBotRoot(initialPlayerName: initialPlayerName)),
       ),
     );
   }
 }
 
 class _UnoBotRoot extends StatelessWidget {
-  const _UnoBotRoot();
+  const _UnoBotRoot({this.initialPlayerName});
+
+  final String? initialPlayerName;
 
   @override
   Widget build(BuildContext context) {
     final started = context.select<LocalUnoProvider, bool>((p) => p.state != null);
-    return started ? const _LocalGameBody() : const _UnoBotSetupForm();
+    return started
+        ? const _LocalGameBody()
+        : _UnoBotSetupForm(initialPlayerName: initialPlayerName);
   }
 }
 
@@ -90,20 +97,30 @@ class _LocalGameBodyState extends State<_LocalGameBody> {
 }
 
 class _UnoBotSetupForm extends StatefulWidget {
-  const _UnoBotSetupForm();
+  const _UnoBotSetupForm({this.initialPlayerName});
+
+  final String? initialPlayerName;
 
   @override
   State<_UnoBotSetupForm> createState() => _UnoBotSetupFormState();
 }
 
 class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
-  final _nameController = TextEditingController();
+  late final TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialPlayerName ?? '');
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
   }
+
+  bool get _showNameField => (widget.initialPlayerName ?? '').trim().isEmpty;
 
   void _start(int total) {
     context.read<LocalUnoProvider>().startGame(
@@ -131,25 +148,27 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
               'Kaç kişi olsun? (sen + bilgisayarlar)',
               style: TextStyle(color: UnoColors.muted, fontSize: 14),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              textAlign: TextAlign.center,
-              maxLength: 12,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'İsmin (opsiyonel)',
-                hintStyle: const TextStyle(color: Color(0x66FFFFFF)),
-                counterText: '',
-                filled: true,
-                fillColor: UnoColors.inputBg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: UnoColors.inputBorder, width: 2),
+            if (_showNameField) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _nameController,
+                textAlign: TextAlign.center,
+                maxLength: 12,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'İsmin (opsiyonel)',
+                  hintStyle: const TextStyle(color: Color(0x66FFFFFF)),
+                  counterText: '',
+                  filled: true,
+                  fillColor: UnoColors.inputBg,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: UnoColors.inputBorder, width: 2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
             SizedBox(
               width: 260,
               child: Column(

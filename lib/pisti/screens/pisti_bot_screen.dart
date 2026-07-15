@@ -12,7 +12,10 @@ import '../widgets/pisti_result_view.dart';
 /// (`docs/pisti/game.js` `renderLocalSetup()` ile birebir aynı), sonra web
 /// ile aynı tahta ([PistiBoardView]) gösterilir.
 class PistiBotScreen extends StatelessWidget {
-  const PistiBotScreen({super.key});
+  const PistiBotScreen({super.key, this.initialPlayerName});
+
+  /// Ana ekranda girilen isim; doluysa kurulumda tekrar sorulmaz.
+  final String? initialPlayerName;
 
   @override
   Widget build(BuildContext context) {
@@ -20,19 +23,23 @@ class PistiBotScreen extends StatelessWidget {
       create: (_) => PistiLocalProvider(),
       child: Scaffold(
         backgroundColor: PistiColors.background,
-        body: const SafeArea(child: _PistiBotRoot()),
+        body: SafeArea(child: _PistiBotRoot(initialPlayerName: initialPlayerName)),
       ),
     );
   }
 }
 
 class _PistiBotRoot extends StatelessWidget {
-  const _PistiBotRoot();
+  const _PistiBotRoot({this.initialPlayerName});
+
+  final String? initialPlayerName;
 
   @override
   Widget build(BuildContext context) {
     final started = context.select<PistiLocalProvider, bool>((p) => p.state != null);
-    return started ? const _LocalGameBody() : const _PistiBotSetupForm();
+    return started
+        ? const _LocalGameBody()
+        : _PistiBotSetupForm(initialPlayerName: initialPlayerName);
   }
 }
 
@@ -84,20 +91,30 @@ class _LocalGameBodyState extends State<_LocalGameBody> {
 }
 
 class _PistiBotSetupForm extends StatefulWidget {
-  const _PistiBotSetupForm();
+  const _PistiBotSetupForm({this.initialPlayerName});
+
+  final String? initialPlayerName;
 
   @override
   State<_PistiBotSetupForm> createState() => _PistiBotSetupFormState();
 }
 
 class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
-  final _nameController = TextEditingController();
+  late final TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialPlayerName ?? '');
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
   }
+
+  bool get _showNameField => (widget.initialPlayerName ?? '').trim().isEmpty;
 
   void _start(int total) {
     context.read<PistiLocalProvider>().startGame(
@@ -125,25 +142,27 @@ class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
               'Kaç kişi olsun? (sen + bilgisayarlar)',
               style: TextStyle(color: PistiColors.muted, fontSize: 14),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              textAlign: TextAlign.center,
-              maxLength: 12,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'İsmin (opsiyonel)',
-                hintStyle: const TextStyle(color: Color(0x66FFFFFF)),
-                counterText: '',
-                filled: true,
-                fillColor: PistiColors.inputBg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: PistiColors.inputBorder, width: 2),
+            if (_showNameField) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _nameController,
+                textAlign: TextAlign.center,
+                maxLength: 12,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'İsmin (opsiyonel)',
+                  hintStyle: const TextStyle(color: Color(0x66FFFFFF)),
+                  counterText: '',
+                  filled: true,
+                  fillColor: PistiColors.inputBg,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: PistiColors.inputBorder, width: 2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
             SizedBox(
               width: 260,
               child: Column(

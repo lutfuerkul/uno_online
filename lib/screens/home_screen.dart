@@ -113,9 +113,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const UnoBotScreen()),
-                    ),
+                    onPressed: () {
+                      final name = _validateName();
+                      if (name == null) return;
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => UnoBotScreen(initialPlayerName: name),
+                        ),
+                      );
+                    },
                     child: const Text('🤖 Bilgisayara Karşı Oyna',
                         style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
