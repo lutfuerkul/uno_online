@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/game_provider.dart';
+import '../theme/uno_theme.dart';
 import 'uno_bot_screen.dart';
 
-/// Giriş ekranı: ad gir, oyun kur veya oda koduyla katıl.
+/// Giriş ekranı: ad gir, oyun kur veya oda koduyla katıl. `docs/uno/game.js`
+/// `renderHome()` ile birebir aynı görsel dili kullanır.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -26,18 +28,40 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _validateName() {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Önce bir isim gir.')),
-      );
+      _toast('Önce bir isim gir.');
       return null;
     }
     if (name.length > GameProvider.maxNameLength) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('İsim en fazla ${GameProvider.maxNameLength} karakter olabilir.')),
-      );
+      _toast('İsim en fazla ${GameProvider.maxNameLength} karakter olabilir.');
       return null;
     }
     return name;
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Color(0x66FFFFFF)),
+      filled: true,
+      fillColor: UnoColors.inputBg,
+      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: UnoColors.inputBorder, width: 2),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: UnoColors.inputBorder, width: 2),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: UnoColors.inputBorder, width: 2),
+      ),
+    );
   }
 
   @override
@@ -45,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final provider = context.watch<GameProvider>();
 
     return Scaffold(
+      backgroundColor: UnoColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -57,98 +82,121 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontSize: 72,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFFD32F2F),
+                    color: UnoColors.red,
                     letterSpacing: 4,
+                    height: 1,
                   ),
                 ),
                 const Text(
                   'ONLINE',
-                  style: TextStyle(fontSize: 20, letterSpacing: 8),
+                  style: TextStyle(
+                    fontSize: 18,
+                    letterSpacing: 10,
+                    color: Color(0xCCFFFFFF),
+                  ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 24),
                 TextField(
                   controller: _nameController,
                   textAlign: TextAlign.center,
                   maxLength: GameProvider.maxNameLength,
-                  decoration: const InputDecoration(
-                    labelText: 'İsmin',
-                    border: OutlineInputBorder(),
-                  ),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('Adınız / Nickname').copyWith(counterText: ''),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton.icon(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: UnoColors.btnUnoBg,
+                      foregroundColor: UnoColors.background,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const UnoBotScreen()),
+                    ),
+                    child: const Text('🤖 Bilgisayara Karşı Oyna',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(height: 1, color: UnoColors.divider),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: UnoColors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                     onPressed: () {
                       final name = _validateName();
                       if (name != null) provider.createGame(name);
                     },
-                    icon: const Icon(Icons.add),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('Yeni Oyun Kur'),
-                    ),
+                    child: const Text('Yeni Oyun Kur', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextField(
                   controller: _codeController,
                   textAlign: TextAlign.center,
                   textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(
-                    labelText: 'Oda Kodu',
-                    hintText: 'örn. K7P2M',
-                    border: OutlineInputBorder(),
-                  ),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('Oda Kodu (örn. K7P2M)'),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                     onPressed: () {
                       final name = _validateName();
                       if (name == null) return;
                       if (_codeController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Oda kodunu gir.')),
-                        );
+                        _toast('Oda kodunu gir.');
                         return;
                       }
                       provider.joinGame(_codeController.text, name);
                     },
-                    icon: const Icon(Icons.login),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('Oyuna Katıl'),
-                    ),
+                    child: const Text('Oyuna Katıl', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Divider(),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const UnoBotScreen()),
-                    ),
-                    icon: const Icon(Icons.smart_toy_outlined),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('🤖 Bilgisayara Karşı Oyna'),
-                    ),
-                  ),
+                const Text(
+                  'Online: 2-4 kişi · Bilgisayara karşı: 2-4 kişi',
+                  style: TextStyle(color: UnoColors.muted, fontSize: 14),
+                  textAlign: TextAlign.center,
                 ),
                 if (provider.error != null) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Text(
                     provider.error!,
-                    style: const TextStyle(color: Colors.red),
+                    style: const TextStyle(color: UnoColors.error, fontSize: 14),
                     textAlign: TextAlign.center,
                   ),
                 ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('← Oyun Seç', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
               ],
             ),
           ),

@@ -3,41 +3,39 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/local_uno_provider.dart';
-import '../theme/uno_theme.dart';
-import '../widgets/uno_board_view.dart';
-import '../widgets/uno_result_view.dart';
+import '../providers/pisti_local_provider.dart';
+import '../theme/pisti_theme.dart';
+import '../widgets/pisti_board_view.dart';
+import '../widgets/pisti_result_view.dart';
 
 /// "Bilgisayara Karşı Oyna" akışını yönetir: önce oyuncu sayısı seçilir
-/// (`docs/uno/game.js` `renderLocalSetup()` ile birebir aynı), sonra web ile
-/// aynı tahta ([UnoBoardView]) gösterilir.
-class UnoBotScreen extends StatelessWidget {
-  const UnoBotScreen({super.key});
+/// (`docs/pisti/game.js` `renderLocalSetup()` ile birebir aynı), sonra web
+/// ile aynı tahta ([PistiBoardView]) gösterilir.
+class PistiBotScreen extends StatelessWidget {
+  const PistiBotScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => LocalUnoProvider(),
+      create: (_) => PistiLocalProvider(),
       child: Scaffold(
-        backgroundColor: UnoColors.background,
-        body: const SafeArea(child: _UnoBotRoot()),
+        backgroundColor: PistiColors.background,
+        body: const SafeArea(child: _PistiBotRoot()),
       ),
     );
   }
 }
 
-class _UnoBotRoot extends StatelessWidget {
-  const _UnoBotRoot();
+class _PistiBotRoot extends StatelessWidget {
+  const _PistiBotRoot();
 
   @override
   Widget build(BuildContext context) {
-    final started = context.select<LocalUnoProvider, bool>((p) => p.state != null);
-    return started ? const _LocalGameBody() : const _UnoBotSetupForm();
+    final started = context.select<PistiLocalProvider, bool>((p) => p.state != null);
+    return started ? const _LocalGameBody() : const _PistiBotSetupForm();
   }
 }
 
-/// Oyun bitince kazananın son attığı kart görülsün diye 2 saniye tahtayı
-/// göstermeye devam eder (web ile aynı süre).
 class _LocalGameBody extends StatefulWidget {
   const _LocalGameBody();
 
@@ -57,7 +55,7 @@ class _LocalGameBodyState extends State<_LocalGameBody> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<LocalUnoProvider>();
+    final provider = context.watch<PistiLocalProvider>();
     final finished = provider.state?.status == 'finished';
 
     if (finished) {
@@ -65,12 +63,10 @@ class _LocalGameBodyState extends State<_LocalGameBody> {
         if (mounted) setState(() => _showResult = true);
       });
       if (_showResult) {
-        return UnoResultView(
+        return PistiResultView(
           controller: provider,
           onRematch: provider.rematch,
-          onLeave: () {
-            provider.leaveGame();
-          },
+          onLeave: () => provider.leaveGame(),
         );
       }
     } else {
@@ -79,24 +75,22 @@ class _LocalGameBodyState extends State<_LocalGameBody> {
       _showResult = false;
     }
 
-    return UnoBoardView(
+    return PistiBoardView(
       controller: provider,
       roomLabel: '🤖 Bilgisayara Karşı',
-      onLeave: () {
-        provider.leaveGame();
-      },
+      onLeave: () => provider.leaveGame(),
     );
   }
 }
 
-class _UnoBotSetupForm extends StatefulWidget {
-  const _UnoBotSetupForm();
+class _PistiBotSetupForm extends StatefulWidget {
+  const _PistiBotSetupForm();
 
   @override
-  State<_UnoBotSetupForm> createState() => _UnoBotSetupFormState();
+  State<_PistiBotSetupForm> createState() => _PistiBotSetupFormState();
 }
 
-class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
+class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
   final _nameController = TextEditingController();
 
   @override
@@ -106,7 +100,7 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
   }
 
   void _start(int total) {
-    context.read<LocalUnoProvider>().startGame(
+    context.read<PistiLocalProvider>().startGame(
           playerName: _nameController.text.trim(),
           totalPlayers: total,
         );
@@ -129,7 +123,7 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
             const SizedBox(height: 16),
             const Text(
               'Kaç kişi olsun? (sen + bilgisayarlar)',
-              style: TextStyle(color: UnoColors.muted, fontSize: 14),
+              style: TextStyle(color: PistiColors.muted, fontSize: 14),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -142,10 +136,10 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
                 hintStyle: const TextStyle(color: Color(0x66FFFFFF)),
                 counterText: '',
                 filled: true,
-                fillColor: UnoColors.inputBg,
+                fillColor: PistiColors.inputBg,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: UnoColors.inputBorder, width: 2),
+                  borderSide: const BorderSide(color: PistiColors.inputBorder, width: 2),
                 ),
               ),
             ),
@@ -159,7 +153,7 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: UnoColors.red,
+                          backgroundColor: PistiColors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
@@ -172,6 +166,11 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
                 ],
               ),
             ),
+            const Text(
+              'Pişti 2, 3 ya da 4 kişiyle oynanır.',
+              style: TextStyle(color: PistiColors.muted, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: 200,
               child: OutlinedButton(
