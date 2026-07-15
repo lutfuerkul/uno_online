@@ -10,7 +10,10 @@ import 'pisti_engine.dart';
 /// [PistiEngine] üzerinden yürütülür; bu sınıf yalnızca okuma/yazma/
 /// eşzamanlılık (transaction) ile ilgilenir.
 class PistiGameService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // Getter (final alan değil): Firebase henüz initializeApp() ile
+  // başlatılmadıysa PistiGameService()'in kendisi değil, yalnızca gerçekten
+  // bir Firestore işlemi yapılmaya çalışıldığında hata fırlatsın diye.
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _games =>
       _db.collection('pisti_games');
