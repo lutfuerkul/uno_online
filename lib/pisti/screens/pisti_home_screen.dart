@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/pisti_online_provider.dart';
-import '../services/player_name_store.dart';
+import '../../services/player_name_store.dart';
 import '../theme/pisti_theme.dart';
 import 'pisti_bot_screen.dart';
 
