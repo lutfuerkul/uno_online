@@ -30,6 +30,13 @@ const ASSETS = [
   "./pisti/icons/icon-512.png",
 ];
 
+// Pişti kart görselleri (52 kart) — çevrimdışı oyun için önbelleğe alınır.
+for (const suit of ["S", "H", "D", "C"]) {
+  for (const rank of ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]) {
+    ASSETS.push(`./pisti/cards/${suit}${rank}.webp`);
+  }
+}
+
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())

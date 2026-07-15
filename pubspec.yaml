@@ -40,3 +40,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icons/
+    # Pişti kart görselleri — web (docs/pisti/) ile ortak dosyalar; iki
+    # platformda kartların birebir aynı görünmesi için tek kaynak.
+    - docs/pisti/cards/

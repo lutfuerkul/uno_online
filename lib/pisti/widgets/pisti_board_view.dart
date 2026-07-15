@@ -239,7 +239,7 @@ class _EmptySlot extends StatelessWidget {
       ),
       child: Container(
         width: width,
-        height: width * 1.45,
+        height: width * 1.4,
         alignment: Alignment.center,
         child: const Text('boş', style: TextStyle(color: Color(0x66FFFFFF), fontSize: 13)),
       ),
@@ -303,7 +303,7 @@ class _TableStack extends StatelessWidget {
 
     return SizedBox(
       width: 84 + 10,
-      height: 84 * 1.45 + 8,
+      height: 84 * 1.4 + 8,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -497,7 +497,7 @@ class _OverlappingOpponentCards extends StatelessWidget {
     final n = math.min(count, 4);
     if (n <= 0) return const SizedBox.shrink();
     final step = cardWidth - overlap;
-    final height = cardWidth * 1.45;
+    final height = cardWidth * 1.4;
     return SizedBox(
       width: cardWidth + (n - 1) * step,
       height: height,
