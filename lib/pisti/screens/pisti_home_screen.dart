@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/pisti_online_provider.dart';
+import '../services/player_name_store.dart';
 import '../theme/pisti_theme.dart';
 import 'pisti_bot_screen.dart';
 
@@ -20,6 +23,29 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
   final _codeController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _loadSavedName();
+  }
+
+  Future<void> _loadSavedName() async {
+    final name = await PlayerNameStore.loadPistiName();
+    if (!mounted || name.isEmpty) return;
+    _nameController.text = name;
+  }
+
+  void _persistName(String raw) {
+    final name = PlayerNameStore.normalize(raw);
+    if (_nameController.text != name) {
+      _nameController.value = _nameController.value.copyWith(
+        text: name,
+        selection: TextSelection.collapsed(offset: name.length),
+      );
+    }
+    unawaited(PlayerNameStore.savePistiName(name));
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _codeController.dispose();
@@ -27,7 +53,9 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
   }
 
   String? _validateName() {
-    final name = _nameController.text.trim();
+    final name = PlayerNameStore.normalize(_nameController.text);
+    _nameController.text = name;
+    unawaited(PlayerNameStore.savePistiName(name));
     if (name.isEmpty) {
       _toast('Önce bir isim gir.');
       return null;
@@ -99,6 +127,7 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                   textAlign: TextAlign.center,
                   maxLength: PistiOnlineProvider.maxNameLength,
                   style: const TextStyle(color: Colors.white),
+                  onChanged: _persistName,
                   decoration: _inputDecoration('Adınız / Nickname').copyWith(counterText: ''),
                 ),
                 const SizedBox(height: 14),

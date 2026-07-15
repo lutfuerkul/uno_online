@@ -125,7 +125,7 @@ class _Board extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(width: 22),
+                  const SizedBox(width: 20),
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -185,21 +185,23 @@ class _Board extends StatelessWidget {
 
         // --- El ---
         Container(
-          height: 130,
           color: UnoColors.hand,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: ListView(
+          padding: const EdgeInsets.all(12),
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            children: [
-              for (final card in controller.myHand)
-                CardWidget(
-                  card: card,
-                  width: 68,
-                  highlighted: !_finished && controller.canPlay(card),
-                  onTap: _finished ? null : () => _tryPlay(context, card),
-                ),
-            ],
+            child: Row(
+              children: [
+                for (var i = 0; i < controller.myHand.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  CardWidget(
+                    card: controller.myHand[i],
+                    width: 62,
+                    highlighted: !_finished && controller.canPlay(controller.myHand[i]),
+                    onTap: _finished ? null : () => _tryPlay(context, controller.myHand[i]),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ],

@@ -177,21 +177,23 @@ class _Board extends StatelessWidget {
         ),
 
         Container(
-          height: 140,
           color: PistiColors.hand,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: ListView(
+          padding: const EdgeInsets.all(12),
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            children: [
-              for (final card in controller.myHand)
-                PistiCardWidget(
-                  card: card,
-                  width: 70,
-                  highlighted: _isMyTurn,
-                  onTap: _isMyTurn ? () => _tryPlay(context, card) : null,
-                ),
-            ],
+            child: Row(
+              children: [
+                for (var i = 0; i < controller.myHand.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  PistiCardWidget(
+                    card: controller.myHand[i],
+                    width: 62,
+                    dimmed: !_isMyTurn,
+                    onTap: _isMyTurn ? () => _tryPlay(context, controller.myHand[i]) : null,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ],
@@ -216,17 +218,64 @@ class _EmptySlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: width * 1.45,
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0x33FFFFFF), width: 2),
-        borderRadius: BorderRadius.circular(10),
+    return CustomPaint(
+      painter: _DashedBorderPainter(
+        color: const Color(0x33FFFFFF),
+        strokeWidth: 2,
+        radius: 10,
+        dashWidth: 6,
+        dashGap: 4,
       ),
-      alignment: Alignment.center,
-      child: const Text('boş', style: TextStyle(color: Color(0x66FFFFFF), fontSize: 13)),
+      child: Container(
+        width: width,
+        height: width * 1.45,
+        alignment: Alignment.center,
+        child: const Text('boş', style: TextStyle(color: Color(0x66FFFFFF), fontSize: 13)),
+      ),
     );
   }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double radius;
+  final double dashWidth;
+  final double dashGap;
+
+  const _DashedBorderPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.radius,
+    required this.dashWidth,
+    required this.dashGap,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(strokeWidth / 2, strokeWidth / 2, size.width - strokeWidth, size.height - strokeWidth),
+      Radius.circular(radius),
+    );
+
+    final path = Path()..addRRect(rect);
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final end = distance + dashWidth;
+        canvas.drawPath(metric.extractPath(distance, end.clamp(0, metric.length)), paint);
+        distance += dashWidth + dashGap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) => false;
 }
 
 /// Masadaki desteyi gösterir: en üstteki kart açık, altındakiler kapalı yığın
@@ -245,29 +294,26 @@ class _TableStack extends StatelessWidget {
       width: 84 + 10,
       height: 84 * 1.45 + 8,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           if (hidden >= 2)
             Positioned(
-              top: 0,
-              left: 0,
+              left: -10,
+              top: -8,
               child: Transform.rotate(
                 angle: -7 * math.pi / 180,
                 child: const PistiCardWidget(faceDown: true, width: 84),
               ),
             ),
           Positioned(
-            top: 4,
-            left: 5,
+            left: -5,
+            top: -4,
             child: Transform.rotate(
               angle: -3.5 * math.pi / 180,
               child: const PistiCardWidget(faceDown: true, width: 84),
             ),
           ),
-          Positioned(
-            top: 8,
-            left: 10,
-            child: PistiCardWidget(card: top, width: 84),
-          ),
+          PistiCardWidget(card: top, width: 84),
         ],
       ),
     );
@@ -320,35 +366,89 @@ class _OpponentTile extends StatelessWidget {
   }
 }
 
-class _LastActionBanner extends StatelessWidget {
+class _LastActionBanner extends StatefulWidget {
   final PistiLastAction action;
   final String playerName;
   const _LastActionBanner({required this.action, required this.playerName});
 
   @override
+  State<_LastActionBanner> createState() => _LastActionBannerState();
+}
+
+class _LastActionBannerState extends State<_LastActionBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scale = Tween<double>(begin: 1, end: 1.05).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    if (widget.action.isPisti) {
+      _controller.repeat(reverse: true);
+      Future.delayed(const Duration(milliseconds: 1600), () {
+        if (mounted) _controller.stop();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (action.isPisti) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-        decoration: BoxDecoration(
-          color: PistiColors.pistiBannerBg,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(
-          '🎉 $playerName PİŞTİ yaptı! (${action.card.nameTr})',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-              color: PistiColors.pistiBannerText, fontSize: 17, fontWeight: FontWeight.w900),
+    if (widget.action.isPisti) {
+      return ScaleTransition(
+        scale: _scale,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          decoration: BoxDecoration(
+            color: PistiColors.pistiBannerBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '🎉 ${widget.playerName} PİŞTİ yaptı! (${widget.action.card.nameTr})',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: PistiColors.pistiBannerText,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
       );
     }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-      child: Text(
-        '$playerName ${action.card.nameTr} oynadı${action.captured ? ' — yaktı! 🔥' : ''}',
+      child: RichText(
         textAlign: TextAlign.center,
-        style: const TextStyle(color: PistiColors.lastAction, fontSize: 16.5, fontWeight: FontWeight.w700),
+        text: TextSpan(
+          style: const TextStyle(
+            color: PistiColors.lastAction,
+            fontSize: 16.5,
+            fontWeight: FontWeight.w700,
+          ),
+          children: [
+            TextSpan(text: '${widget.playerName} '),
+            TextSpan(
+              text: widget.action.card.nameTr,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            TextSpan(
+              text: widget.action.captured ? ' oynadı — yaktı! 🔥' : ' oynadı',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -374,7 +474,7 @@ class _OverlappingOpponentCards extends StatelessWidget {
     final n = math.min(count, 4);
     if (n <= 0) return const SizedBox.shrink();
     final step = cardWidth - overlap;
-    final height = cardWidth * 1.5;
+    final height = cardWidth * 1.45;
     return SizedBox(
       width: cardWidth + (n - 1) * step,
       height: height,

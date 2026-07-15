@@ -9,12 +9,15 @@ import 'pisti_court_painter.dart';
 /// `cardHtml()` ile birebir aynı görsel dili kullanır: klasik beyaz kart
 /// yüzü, köşelerde rütbe+takım, sayı kartlarında büyük takım sembolü,
 /// Vale/Kız/Papaz'da taç+yüz figürlü panel.
-class PistiCardWidget extends StatelessWidget {
+class PistiCardWidget extends StatefulWidget {
   final PistiCard? card;
 
   /// true ise kartın arka yüzü gösterilir (rakiplerin elindeki kartlar için).
   final bool faceDown;
-  final bool highlighted;
+
+  /// Sıra sende değilken web'deki `.card.face.dim { opacity: .55 }` ile aynı.
+  final bool dimmed;
+
   final VoidCallback? onTap;
   final double width;
 
@@ -22,57 +25,70 @@ class PistiCardWidget extends StatelessWidget {
     super.key,
     this.card,
     this.faceDown = false,
-    this.highlighted = false,
+    this.dimmed = false,
     this.onTap,
     this.width = 62,
   });
 
-  bool get _isFaceDown => faceDown || card == null;
+  @override
+  State<PistiCardWidget> createState() => _PistiCardWidgetState();
+}
+
+class _PistiCardWidgetState extends State<PistiCardWidget> {
+  bool _pressed = false;
+
+  bool get _isFaceDown => widget.faceDown || widget.card == null;
 
   @override
   Widget build(BuildContext context) {
+    final width = widget.width;
     final height = width * 1.45;
+    final c = widget.card;
+    final isJack = !_isFaceDown && c != null && c.isJack;
 
     Widget body = Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(width * 0.12),
-        boxShadow: const [
-          BoxShadow(color: Color(0x70000000), blurRadius: 5, offset: Offset(0, 2)),
-        ],
+        boxShadow: isJack
+            ? [
+                BoxShadow(
+                  color: PistiColors.jackGlow,
+                  spreadRadius: width * 0.045,
+                  blurRadius: 0,
+                ),
+                const BoxShadow(color: Color(0x70000000), blurRadius: 6, offset: Offset(0, 2)),
+              ]
+            : const [
+                BoxShadow(color: Color(0x70000000), blurRadius: 5, offset: Offset(0, 2)),
+              ],
         border: _isFaceDown
             ? Border.all(color: PistiColors.cardBackBorder, width: width * 0.055)
             : Border.all(color: const Color(0x22000000), width: 1),
         color: _isFaceDown ? PistiColors.cardBackBg : PistiColors.cardFaceBg,
       ),
       clipBehavior: Clip.antiAlias,
-      child: _isFaceDown ? _buildBack() : _buildFace(card!),
+      child: _isFaceDown ? _buildBack(width) : _buildFace(c!, width),
     );
 
-    if (highlighted && !_isFaceDown && card != null) {
-      body = Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(width * 0.12 + width * 0.045),
-          boxShadow: [
-            BoxShadow(color: Colors.amber.withOpacity(0.9), spreadRadius: width * 0.03),
-          ],
-        ),
-        margin: EdgeInsets.all(width * 0.045),
-        child: body,
-      );
+    if (widget.dimmed && !_isFaceDown) {
+      body = Opacity(opacity: 0.55, child: body);
     }
 
     return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: highlighted ? 0 : 3),
+      onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: widget.onTap != null ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: widget.onTap != null ? () => setState(() => _pressed = false) : null,
+      onTap: widget.onTap,
+      child: Transform.translate(
+        offset: Offset(0, _pressed ? 2 : 0),
         child: body,
       ),
     );
   }
 
-  Widget _buildBack() {
+  Widget _buildBack(double width) {
     return Padding(
       padding: EdgeInsets.all(width * 0.07),
       child: Container(
@@ -89,7 +105,7 @@ class PistiCardWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFace(PistiCard c) {
+  Widget _buildFace(PistiCard c, double width) {
     final color = c.isRed ? PistiColors.cardFaceRed : PistiColors.cardFaceBlack;
     final isCourt = c.rank == PistiRank.jack ||
         c.rank == PistiRank.queen ||
@@ -106,40 +122,32 @@ class PistiCardWidget extends StatelessWidget {
       ),
     );
 
-    return Container(
-      decoration: c.isJack
-          ? BoxDecoration(
-              border: Border.all(color: PistiColors.jackGlow, width: width * 0.045),
-              borderRadius: BorderRadius.circular(width * 0.12),
-            )
-          : null,
-      child: Stack(
-        children: [
-          Positioned(top: width * 0.06, left: width * 0.08, child: cornerText),
-          Positioned(
-            bottom: width * 0.06,
-            right: width * 0.08,
-            child: Transform.rotate(angle: 3.14159265359, child: cornerText),
-          ),
-          Center(
-            child: isCourt
-                ? Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: width * 0.2,
-                      horizontal: width * 0.12,
-                    ),
-                    child: AspectRatio(
-                      aspectRatio: 100 / 150,
-                      child: CustomPaint(painter: PistiCourtPainter(rank: c.rank)),
-                    ),
-                  )
-                : Text(
-                    c.suitSymbol,
-                    style: TextStyle(color: color, fontSize: width * 0.4, height: 1),
+    return Stack(
+      children: [
+        Positioned(top: width * 0.06, left: width * 0.08, child: cornerText),
+        Positioned(
+          bottom: width * 0.06,
+          right: width * 0.08,
+          child: Transform.rotate(angle: 3.14159265359, child: cornerText),
+        ),
+        Center(
+          child: isCourt
+              ? Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: width * 0.2,
+                    horizontal: width * 0.12,
                   ),
-          ),
-        ],
-      ),
+                  child: AspectRatio(
+                    aspectRatio: 100 / 150,
+                    child: CustomPaint(painter: PistiCourtPainter(rank: c.rank)),
+                  ),
+                )
+              : Text(
+                  c.suitSymbol,
+                  style: TextStyle(color: color, fontSize: width * 0.4, height: 1),
+                ),
+        ),
+      ],
     );
   }
 }
