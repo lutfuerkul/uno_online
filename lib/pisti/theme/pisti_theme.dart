@@ -17,6 +17,7 @@ class PistiColors {
   static const divider = Color(0x22FFFFFF);
   static const error = Color(0xFFFF8A80);
   static const muted = Color(0x99FFFFFF);
+  static const pileLabel = Color(0xAAFFFFFF);
 
   static const cardFaceBg = Color(0xFFFDFDFA);
   static const cardFaceRed = Color(0xFFC62828);

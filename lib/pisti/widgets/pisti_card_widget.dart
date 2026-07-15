@@ -4,7 +4,6 @@ import '../models/pisti_card.dart';
 import '../theme/pisti_theme.dart';
 import 'pisti_back_pattern_painter.dart';
 import 'pisti_court_painter.dart';
-import 'pisti_suit_painter.dart';
 
 /// Bir iskambil kağıdını (veya arka yüzünü) çizer — `docs/pisti/game.js`'teki
 /// `cardHtml()` ile birebir aynı görsel dili kullanır: klasik beyaz kart
@@ -39,6 +38,10 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
   bool _pressed = false;
 
   bool get _isFaceDown => widget.faceDown || widget.card == null;
+
+  static const _cardTextStyle = TextStyle(
+    fontFamilyFallback: ['system-ui', 'Segoe UI', 'Roboto', 'sans-serif'],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -106,60 +109,50 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
     );
   }
 
-  Widget _buildCorner(PistiCard c, double width, Color color) {
-    final rankSize = width * 0.19;
-    final suitSize = width * 0.19;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          c.rankLabel,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w800,
-            fontSize: rankSize,
-            height: 1.05,
-          ),
-        ),
-        PistiSuitGlyph(suit: c.suit, size: suitSize, color: color),
-      ],
-    );
-  }
-
   Widget _buildFace(PistiCard c, double width) {
     final color = c.isRed ? PistiColors.cardFaceRed : PistiColors.cardFaceBlack;
     final isCourt = c.rank == PistiRank.jack ||
         c.rank == PistiRank.queen ||
         c.rank == PistiRank.king;
 
-    final corner = _buildCorner(c, width, color);
+    final cornerText = Text(
+      '${c.rankLabel}\n${c.suitSymbol}',
+      textAlign: TextAlign.center,
+      style: _cardTextStyle.merge(
+        TextStyle(
+          color: color,
+          fontWeight: FontWeight.w800,
+          fontSize: width * 0.19,
+          height: 1.05,
+        ),
+      ),
+    );
 
     return Stack(
       children: [
-        Positioned(top: width * 0.06, left: width * 0.08, child: corner),
+        Positioned(top: width * 0.06, left: width * 0.08, child: cornerText),
         Positioned(
           bottom: width * 0.06,
           right: width * 0.08,
-          child: Transform.rotate(angle: 3.14159265359, child: corner),
+          child: Transform.rotate(angle: 3.14159265359, child: cornerText),
         ),
-        Center(
-          child: isCourt
-              ? Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: width * 0.2,
-                    horizontal: width * 0.12,
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: 100 / 150,
-                    child: CustomPaint(painter: PistiCourtPainter(rank: c.rank)),
-                  ),
-                )
-              : PistiSuitGlyph(
-                  suit: c.suit,
-                  size: width * 0.4,
-                  color: color,
-                ),
-        ),
+        if (isCourt)
+          Positioned(
+            top: width * 0.2,
+            bottom: width * 0.2,
+            left: width * 0.12,
+            right: width * 0.12,
+            child: CustomPaint(painter: PistiCourtPainter(rank: c.rank)),
+          )
+        else
+          Center(
+            child: Text(
+              c.suitSymbol,
+              style: _cardTextStyle.merge(
+                TextStyle(color: color, fontSize: width * 0.4, height: 1),
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -84,11 +84,17 @@ class _Board extends StatelessWidget {
 
         Padding(
           padding: const EdgeInsets.all(8),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [for (final id in controller.opponents) _OpponentTile(id: id, controller: controller, state: state)],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < controller.opponents.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  _OpponentTile(id: controller.opponents[i], controller: controller, state: state),
+                ],
+              ],
+            ),
           ),
         ),
 
@@ -102,7 +108,8 @@ class _Board extends StatelessWidget {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Deste ($deckCount)', style: const TextStyle(color: PistiColors.muted, fontSize: 12)),
+                      Text('Deste ($deckCount)',
+                          style: const TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
                       const SizedBox(height: 6),
                       deckCount > 0
                           ? const PistiCardWidget(faceDown: true, width: 84)
@@ -113,10 +120,11 @@ class _Board extends StatelessWidget {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Yerdeki kartlar', style: TextStyle(color: PistiColors.muted, fontSize: 12)),
+                      const Text('Yerdeki kartlar',
+                          style: TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
                       const SizedBox(height: 6),
                       top != null ? _TableStack(pile: pile) : _EmptySlot(width: 84),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
                         decoration: BoxDecoration(
@@ -135,15 +143,18 @@ class _Board extends StatelessWidget {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Sende', style: TextStyle(color: PistiColors.muted, fontSize: 12)),
+                      const Text('Sende', style: TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
                       const SizedBox(height: 6),
                       Text('${controller.wonCount(controller.selfId)} 🂠',
                           style: const TextStyle(color: Colors.white, fontSize: 30)),
                       if (controller.pistiCountFor(controller.selfId) > 0)
-                        Text(
-                          '🔥 ${controller.pistiCountFor(controller.selfId)} pişti',
-                          style: const TextStyle(
-                              color: PistiColors.pistiTag, fontSize: 12, fontWeight: FontWeight.w800),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            '🔥 ${controller.pistiCountFor(controller.selfId)} pişti',
+                            style: const TextStyle(
+                                color: PistiColors.pistiTag, fontSize: 12, fontWeight: FontWeight.w800),
+                          ),
                         ),
                     ],
                   ),
@@ -350,16 +361,22 @@ class _OpponentTile extends StatelessWidget {
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
           ),
           const SizedBox(height: 4),
-          _OverlappingOpponentCards(
-            count: count,
-            cardWidth: 34,
-            overlap: 21,
-            cardBuilder: () => const PistiCardWidget(faceDown: true, width: 34),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: _OverlappingOpponentCards(
+              count: count,
+              cardWidth: 34,
+              overlap: 21,
+              cardBuilder: () => const PistiCardWidget(faceDown: true, width: 34),
+            ),
           ),
           Text('$won', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
           if (pisti > 0)
-            Text('🔥 $pisti pişti',
-                style: const TextStyle(color: PistiColors.pistiTag, fontSize: 12, fontWeight: FontWeight.w800)),
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text('🔥 $pisti pişti',
+                  style: const TextStyle(color: PistiColors.pistiTag, fontSize: 12, fontWeight: FontWeight.w800)),
+            ),
         ],
       ),
     );
@@ -391,10 +408,16 @@ class _LastActionBannerState extends State<_LastActionBanner>
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
     if (widget.action.isPisti) {
-      _controller.repeat(reverse: true);
-      Future.delayed(const Duration(milliseconds: 1600), () {
-        if (mounted) _controller.stop();
-      });
+      _runPistiPulse();
+    }
+  }
+
+  Future<void> _runPistiPulse() async {
+    for (var i = 0; i < 2; i++) {
+      if (!mounted) return;
+      await _controller.forward();
+      if (!mounted) return;
+      await _controller.reverse();
     }
   }
 
