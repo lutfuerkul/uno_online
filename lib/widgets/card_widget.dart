@@ -137,25 +137,8 @@ class CardWidget extends StatelessWidget {
             widthFactor: 0.8,
             heightFactor: 0.98,
             child: ClipOval(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: SweepGradient(
-                    startAngle: -math.pi / 2,
-                    endAngle: 3 * math.pi / 2,
-                    colors: [
-                      Color(0xFFD32F2F),
-                      Color(0xFFD32F2F),
-                      Color(0xFFF9A825),
-                      Color(0xFFF9A825),
-                      Color(0xFF388E3C),
-                      Color(0xFF388E3C),
-                      Color(0xFF1976D2),
-                      Color(0xFF1976D2),
-                      Color(0xFFD32F2F),
-                    ],
-                    stops: [0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1],
-                  ),
-                ),
+              child: CustomPaint(
+                painter: const UnoSymbolPainter(symbol: UnoSymbol.wild),
                 child: const SizedBox.expand(),
               ),
             ),
