@@ -11,7 +11,12 @@ import 'uno_engine.dart';
 /// [UnoEngine] üzerinden yürütülür; bu sınıf yalnızca okuma/yazma/eşzamanlılık
 /// (transaction) ile ilgilenir.
 class GameService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // Getter (final alan değil): Firebase henüz initializeApp() ile
+  // başlatılmadıysa GameService()'in kendisi değil, yalnızca gerçekten bir
+  // Firestore işlemi (kur/katıl/oyna...) yapılmaya çalışıldığında hata
+  // fırlatsın diye. Aksi halde GameProvider oluşturulur oluşturulmaz (UNO'ya
+  // dokunur dokunmaz, bilgisayara karşı moda bile geçmeden) çöküyordu.
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _games =>
       _db.collection('games');
