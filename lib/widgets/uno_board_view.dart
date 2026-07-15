@@ -111,7 +111,7 @@ class _Board extends StatelessWidget {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Deste', style: TextStyle(color: UnoColors.muted, fontSize: 12)),
+                      const Text('Deste', style: TextStyle(color: Colors.white, fontSize: 12)),
                       const SizedBox(height: 6),
                       CardWidget(
                         faceDown: true,
@@ -121,7 +121,7 @@ class _Board extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         _isMyTurn ? (state.hasDrawn ? 'çektin' : 'çekmek için dokun') : '',
-                        style: const TextStyle(color: UnoColors.muted, fontSize: 12),
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ],
                   ),
@@ -129,7 +129,7 @@ class _Board extends StatelessWidget {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Açık kart', style: TextStyle(color: UnoColors.muted, fontSize: 12)),
+                      const Text('Açık kart', style: TextStyle(color: Colors.white, fontSize: 12)),
                       const SizedBox(height: 6),
                       CardWidget(card: top, width: 84, chosenColorOverride: topColorOverride),
                       const SizedBox(height: 8),
@@ -148,7 +148,7 @@ class _Board extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(
                             '${_colorTr[state.currentColor] ?? ''} ${state.direction == 1 ? '↻' : '↺'}',
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
                           ),
                         ],
                       ),
@@ -295,16 +295,18 @@ class _Board extends StatelessWidget {
             children: [
               const Text('Renk seç', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 14,
-                runSpacing: 14,
+              // Web'deki `.picker-row` gibi tek satır; dar ekranlarda da tek
+              // satır kalsın diye kutu boyutu 48'e küçültüldü.
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  for (final c in [CardColor.red, CardColor.yellow, CardColor.green, CardColor.blue])
+                  for (final c in [CardColor.red, CardColor.yellow, CardColor.green, CardColor.blue]) ...[
+                    if (c != CardColor.red) const SizedBox(width: 12),
                     GestureDetector(
                       onTap: () => Navigator.pop(ctx, c),
                       child: Container(
-                        width: 60,
-                        height: 60,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: UnoColors.forCard(c),
                           borderRadius: BorderRadius.circular(12),
@@ -312,6 +314,7 @@ class _Board extends StatelessWidget {
                         ),
                       ),
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),

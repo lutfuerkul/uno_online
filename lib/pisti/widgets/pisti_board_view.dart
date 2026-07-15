@@ -198,7 +198,7 @@ class _Board extends StatelessWidget {
                   if (i > 0) const SizedBox(width: 6),
                   PistiCardWidget(
                     card: controller.myHand[i],
-                    width: 62,
+                    width: 84,
                     dimmed: !_isMyTurn,
                     onTap: _isMyTurn ? () => _tryPlay(context, controller.myHand[i]) : null,
                   ),

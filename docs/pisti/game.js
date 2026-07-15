@@ -935,7 +935,7 @@ function renderBoard() {
     : "";
 
   const handHtml = myHand.map((c) =>
-    cardHtml(c, { clickable: isMyTurn, dim: !isMyTurn })
+    cardHtml(c, { big: true, clickable: isMyTurn, dim: !isMyTurn })
   ).join("");
 
   app.innerHTML = `
