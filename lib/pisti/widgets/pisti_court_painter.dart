@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../models/pisti_card.dart';
@@ -24,8 +26,13 @@ class PistiCourtPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Web SVG: preserveAspectRatio="xMidYMid meet"
+    final scale = math.min(size.width / 100, size.height / 150);
+    final dx = (size.width - 100 * scale) / 2;
+    final dy = (size.height - 150 * scale) / 2;
     canvas.save();
-    canvas.scale(size.width / 100, size.height / 150);
+    canvas.translate(dx, dy);
+    canvas.scale(scale, scale);
 
     // Kartın altındaki krem zeminli, altın çerçeveli panel.
     final bgPaint = Paint()..color = const Color(0xFFFFFDF5);

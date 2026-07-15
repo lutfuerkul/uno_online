@@ -80,14 +80,17 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
       body = Opacity(opacity: 0.55, child: body);
     }
 
-    return GestureDetector(
-      onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: widget.onTap != null ? (_) => setState(() => _pressed = false) : null,
-      onTapCancel: widget.onTap != null ? () => setState(() => _pressed = false) : null,
-      onTap: widget.onTap,
-      child: Transform.translate(
-        offset: Offset(0, _pressed ? 2 : 0),
-        child: body,
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+      child: GestureDetector(
+        onTapDown: widget.onTap != null ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: widget.onTap != null ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: widget.onTap != null ? () => setState(() => _pressed = false) : null,
+        onTap: widget.onTap,
+        child: Transform.translate(
+          offset: Offset(0, _pressed ? 2 : 0),
+          child: body,
+        ),
       ),
     );
   }
@@ -142,7 +145,16 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
             bottom: width * 0.2,
             left: width * 0.12,
             right: width * 0.12,
-            child: CustomPaint(painter: PistiCourtPainter(rank: c.rank)),
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: SizedBox(
+                width: 100,
+                height: 150,
+                child: CustomPaint(
+                  painter: PistiCourtPainter(rank: c.rank),
+                ),
+              ),
+            ),
           )
         else
           Center(
