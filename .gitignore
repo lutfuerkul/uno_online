@@ -21,3 +21,4 @@ firebase.json
 
 # OS
 .DS_Store
+tool/__pycache__/
