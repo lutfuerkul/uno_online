@@ -230,7 +230,7 @@ class _Board extends StatelessWidget {
       case CardType.wildDrawFour:
         return "➕4 $who → $tgt'e 4 kart çektirdi (renk seçti)";
       case CardType.reverse:
-        return '🔄 $who Reverse oynadı (tekrar oynuyor)';
+        return '↩️ $who tekrar oynuyor';
       case CardType.wild:
         return '🎨 $who Joker oynadı (renk seçti)';
       case CardType.number:
@@ -250,7 +250,7 @@ class _Board extends StatelessWidget {
       _toast(
         context,
         rc != null
-            ? 'Reverse sonrası sadece ${_colorTr[rc] ?? ''}, Reverse, +2, Joker ya da +4 oynayabilirsin.'
+            ? '${_colorTr[rc] ?? ''} ya da özel kart yoksa çek/pas'
             : 'Bu kart oynanamaz.',
       );
       return;
@@ -502,7 +502,7 @@ class _TurnBanner extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                '↩️ Reverse! Sadece ${_colorTr[reverseColor] ?? ''}, başka bir Reverse, +2, Joker ya da +4 oyna — yoksa çek/pas.',
+                '↩️ ${_colorTr[reverseColor] ?? ''} ya da özel kart yoksa çek/pas',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
               ),
