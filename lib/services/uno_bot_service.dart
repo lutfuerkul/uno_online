@@ -1,6 +1,6 @@
-import '../models/local_uno_state.dart';
+import '../models/game_state.dart';
 import '../models/uno_card.dart';
-import 'deck_service.dart';
+import 'uno_engine.dart';
 
 /// "Bilgisayara Karşı Oyna" modundaki bot oyuncuların hamle seçimini yapan
 /// basit kural tabanlı yapay zeka. Web sürümündeki bot mantığıyla aynı
@@ -8,18 +8,14 @@ import 'deck_service.dart';
 /// (skip/+2/+4) öne çıkarır, jokerleri mümkün olduğunca sona saklar.
 class UnoBotService {
   /// [hand] içinde şu an oynanabilir kartları döndürür.
-  static List<UnoCard> playable(List<UnoCard> hand, LocalUnoState state) {
-    final top = state.topCard;
-    if (top == null) return const [];
-    return hand
-        .where((c) => DeckService.canPlay(c, top, state.currentColor))
-        .toList();
+  static List<UnoCard> playable(List<UnoCard> hand, GameState state) {
+    return hand.where((c) => UnoEngine.isPlayable(c, state)).toList();
   }
 
   /// Oynanabilir adaylar arasından en iyi kartı seçer.
   static UnoCard pickCard(
     List<UnoCard> candidates,
-    LocalUnoState state,
+    GameState state,
     String botId,
   ) {
     final opponents = state.players.where((p) => p != botId).toList();
@@ -70,5 +66,12 @@ class UnoBotService {
       }
     }
     return best;
+  }
+
+  /// Skip/+2/+4 için hedef oyuncu: kazanmaya en yakın (en az kartlı) rakip.
+  static String pickTarget(GameState state, String botId) {
+    final opponents = state.players.where((p) => p != botId).toList()
+      ..sort((a, b) => (state.hands[a]?.length ?? 0).compareTo(state.hands[b]?.length ?? 0));
+    return opponents.first;
   }
 }

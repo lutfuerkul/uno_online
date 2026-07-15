@@ -1,43 +1,64 @@
-import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 
-import '../models/local_uno_state.dart';
+import '../models/game_state.dart';
+import '../models/uno_board_controller.dart';
 import '../models/uno_card.dart';
-import '../services/deck_service.dart';
 import '../services/uno_bot_service.dart';
+import '../services/uno_engine.dart';
 
 /// "Bilgisayara Karşı Oyna" modunu yöneten yerel (Firestore'suz) UNO motoru.
-/// Tüm kurallar cihaz içinde çalışır; internet ya da Firebase gerekmez.
-class LocalUnoProvider extends ChangeNotifier {
+/// Kurallar [UnoEngine] üzerinden online modla birebir aynıdır; tek fark bu
+/// motorun durumu cihaz içinde tutması ve rakiplerin bot olmasıdır. İnternet
+/// ya da Firebase gerekmez.
+class LocalUnoProvider extends ChangeNotifier implements UnoBoardController {
   static const String humanId = 'you';
-  static const int _startingHandSize = 7;
   static const Duration _botMoveDelay = Duration(milliseconds: 700);
 
-  LocalUnoState? state;
+  @override
+  GameState? state;
 
   int _session = 0;
   bool _botLoopRunning = false;
 
+  @override
+  String get selfId => humanId;
+
+  @override
   bool get isMyTurn => state?.currentTurn == humanId;
+  @override
+  bool get hasDrawn => state?.hasDrawn ?? false;
+  @override
+  CardColor? get reverseColor => state?.reverseColor;
+  @override
   List<UnoCard> get myHand => state?.hands[humanId] ?? const [];
+  @override
   bool get iWon => state?.winner == humanId;
 
-  /// İnsan oyuncu hariç, oturuş sırasına göre diğer oyuncular (botlar).
+  /// İnsan oyuncu hariç, sıra yönünde soldan sağa diğer oyuncular (botlar).
+  @override
   List<String> get opponents =>
       state?.players.where((p) => p != humanId).toList() ?? const [];
 
+  @override
   String opponentName(String id) => state?.playerNames[id] ?? id;
+  @override
   int opponentCardCount(String id) => state?.hands[id]?.length ?? 0;
+  @override
+  int blockedCount(String id) => state?.blockedPlayers.where((p) => p == id).length ?? 0;
 
+  @override
   bool canPlay(UnoCard card) {
     final s = state;
-    final top = s?.topCard;
-    if (s == null || top == null || !isMyTurn) return false;
-    return DeckService.canPlay(card, top, s.currentColor);
+    if (s == null || !isMyTurn) return false;
+    return UnoEngine.isPlayable(card, s);
   }
 
+  String _lastPlayerName = '';
+  int _lastTotalPlayers = 2;
+
   void startGame({required String playerName, required int totalPlayers}) {
+    _lastPlayerName = playerName;
+    _lastTotalPlayers = totalPlayers;
     _session++;
     final session = _session;
 
@@ -47,176 +68,62 @@ class LocalUnoProvider extends ChangeNotifier {
       for (var i = 1; i < totalPlayers; i++) 'bot$i': '🤖 Oyuncu $i',
     };
 
-    final deck = DeckService.buildDeck()..shuffle();
-    final hands = <String, List<UnoCard>>{
-      for (final p in players)
-        p: [for (var i = 0; i < _startingHandSize; i++) deck.removeLast()],
-    };
-
-    var first = deck.removeLast();
-    while (first.isWild || first.type != CardType.number) {
-      deck.insert(0, first);
-      first = deck.removeLast();
-    }
-
-    state = LocalUnoState(
-      players: players,
-      playerNames: names,
-      hands: hands,
-      drawPile: deck,
-      discardPile: [first],
-      currentColor: first.color,
-      currentTurn: players[Random().nextInt(players.length)],
-      direction: 1,
-      status: 'playing',
-      winner: null,
-    );
+    state = UnoEngine.dealNewGame(id: 'local', players: players, playerNames: names);
     notifyListeners();
     _scheduleBotLoop(session);
   }
 
-  Future<void> playCard(UnoCard card, {CardColor? chosenColor}) async {
+  /// Aynı oyuncu sayısıyla yeni bir yerel oyun başlatır (web'deki `rematch()`
+  /// fonksiyonunun yerel dal karşılığı).
+  void rematch() {
+    startGame(playerName: _lastPlayerName, totalPlayers: _lastTotalPlayers);
+  }
+
+  @override
+  Future<void> playCard(UnoCard card, {CardColor? chosenColor, String? targetId}) async {
     final s = state;
-    if (s == null || s.status != 'playing' || s.currentTurn != humanId) return;
-    _applyMove(humanId, card, chosenColor);
+    if (s == null) return;
+    final result = UnoEngine.playCard(
+      state: s,
+      playerId: humanId,
+      card: card,
+      chosenColor: chosenColor,
+      targetId: targetId,
+    );
+    if (result == null) return;
+    state = result;
+    notifyListeners();
     _scheduleBotLoop(_session);
   }
 
+  @override
   Future<void> drawCard() async {
     final s = state;
-    if (s == null || s.status != 'playing' || s.currentTurn != humanId) return;
-    _applyDraw(humanId);
+    if (s == null) return;
+    final result = UnoEngine.drawCard(state: s, playerId: humanId);
+    if (result == null) return;
+    state = result;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> pass() async {
+    final s = state;
+    if (s == null) return;
+    final result = UnoEngine.pass(state: s, playerId: humanId);
+    if (result == null) return;
+    state = result;
+    notifyListeners();
     _scheduleBotLoop(_session);
   }
 
   /// Oyundan çıkıp giriş ekranına döner; bekleyen bot hamlelerini iptal eder.
-  void leaveGame() {
+  @override
+  Future<void> leaveGame() async {
     _session++;
     state = null;
     notifyListeners();
   }
-
-  // --- Dahili oyun motoru ---
-
-  void _applyMove(String playerId, UnoCard card, CardColor? chosenColor) {
-    final s = state!;
-    final hand = List<UnoCard>.from(s.hands[playerId]!);
-    final idx = hand.indexWhere((c) => c.id == card.id);
-    if (idx == -1) return;
-    hand.removeAt(idx);
-
-    final discard = List<UnoCard>.from(s.discardPile)..add(card);
-    final hands = {
-      for (final e in s.hands.entries) e.key: List<UnoCard>.from(e.value),
-    };
-    hands[playerId] = hand;
-    final draw = List<UnoCard>.from(s.drawPile);
-
-    final newColor =
-        card.isWild ? (chosenColor ?? UnoBotService.pickColor(hand)) : card.color;
-    final n = s.players.length;
-    final curIdx = s.players.indexOf(playerId);
-    var direction = s.direction;
-    int nextIdx;
-
-    switch (card.type) {
-      case CardType.skip:
-        nextIdx = _step(curIdx, direction, n, 2);
-        break;
-      case CardType.reverse:
-        if (n == 2) {
-          // 2 kişilik oyunda ters kart, tur atlatma gibi davranır.
-          nextIdx = _step(curIdx, direction, n, 2);
-        } else {
-          direction = -direction;
-          nextIdx = _step(curIdx, direction, n, 1);
-        }
-        break;
-      case CardType.drawTwo:
-        final target = s.players[_step(curIdx, direction, n, 1)];
-        _drawInto(hands, target, draw, discard, 2);
-        nextIdx = _step(curIdx, direction, n, 2);
-        break;
-      case CardType.wildDrawFour:
-        final target = s.players[_step(curIdx, direction, n, 1)];
-        _drawInto(hands, target, draw, discard, 4);
-        nextIdx = _step(curIdx, direction, n, 2);
-        break;
-      case CardType.number:
-      case CardType.wild:
-        nextIdx = _step(curIdx, direction, n, 1);
-        break;
-    }
-
-    final finished = hand.isEmpty;
-    state = s.copyWith(
-      hands: hands,
-      drawPile: draw,
-      discardPile: discard,
-      currentColor: newColor,
-      currentTurn: finished ? playerId : s.players[nextIdx],
-      direction: direction,
-      status: finished ? 'finished' : 'playing',
-      winner: finished ? playerId : null,
-    );
-    notifyListeners();
-  }
-
-  void _applyDraw(String playerId) {
-    final s = state!;
-    final hands = {
-      for (final e in s.hands.entries) e.key: List<UnoCard>.from(e.value),
-    };
-    final draw = List<UnoCard>.from(s.drawPile);
-    final discard = List<UnoCard>.from(s.discardPile);
-    _drawInto(hands, playerId, draw, discard, 1);
-
-    final n = s.players.length;
-    final curIdx = s.players.indexOf(playerId);
-    final nextIdx = _step(curIdx, s.direction, n, 1);
-
-    state = s.copyWith(
-      hands: hands,
-      drawPile: draw,
-      discardPile: discard,
-      currentTurn: s.players[nextIdx],
-    );
-    notifyListeners();
-  }
-
-  /// [player] eline [count] kart çeker. Çekme destesi biterse atılan deste
-  /// (en üstteki hariç) yeniden karılır. Hiç kart kalmasa da sıra ilerler ki
-  /// oyun kilitlenmesin.
-  void _drawInto(
-    Map<String, List<UnoCard>> hands,
-    String player,
-    List<UnoCard> draw,
-    List<UnoCard> discard,
-    int count,
-  ) {
-    final hand = hands[player] ?? <UnoCard>[];
-    for (var i = 0; i < count; i++) {
-      if (draw.isEmpty) {
-        _reshuffle(draw, discard);
-        if (draw.isEmpty) break;
-      }
-      hand.add(draw.removeLast());
-    }
-    hands[player] = hand;
-  }
-
-  void _reshuffle(List<UnoCard> draw, List<UnoCard> discard) {
-    if (discard.length <= 1) return;
-    final top = discard.removeLast();
-    draw.addAll(discard);
-    draw.shuffle();
-    discard
-      ..clear()
-      ..add(top);
-  }
-
-  int _step(int idx, int direction, int n, int steps) =>
-      ((idx + direction * steps) % n + n) % n;
 
   /// Sıradaki oyuncu(lar) bot olduğu sürece kısa gecikmelerle hamlelerini
   /// oynatır; insanın sırası gelince ya da oyun bitince durur.
@@ -244,14 +151,47 @@ class LocalUnoProvider extends ChangeNotifier {
   void _runBotMove(String botId) {
     final s = state!;
     final hand = s.hands[botId] ?? const [];
-    final playableCards = UnoBotService.playable(hand, s);
+    var playableCards = UnoBotService.playable(hand, s);
+
     if (playableCards.isEmpty) {
-      _applyDraw(botId);
-      return;
+      final afterDraw = UnoEngine.drawCard(state: s, playerId: botId);
+      if (afterDraw == null) return;
+      state = afterDraw;
+      notifyListeners();
+      final drawnHand = afterDraw.hands[botId] ?? const [];
+      playableCards = UnoBotService.playable(drawnHand, afterDraw);
+      if (playableCards.isEmpty) {
+        final passed = UnoEngine.pass(state: afterDraw, playerId: botId);
+        if (passed != null) {
+          state = passed;
+          notifyListeners();
+        }
+        return;
+      }
     }
-    final card = UnoBotService.pickCard(playableCards, s, botId);
-    final remaining = hand.where((c) => c.id != card.id).toList();
-    final chosenColor = card.isWild ? UnoBotService.pickColor(remaining) : null;
-    _applyMove(botId, card, chosenColor);
+
+    final current = state!;
+    final card = UnoBotService.pickCard(playableCards, current, botId);
+    final remaining = (current.hands[botId] ?? const []).where((c) => c.id != card.id).toList();
+    final finisher = (current.hands[botId] ?? const []).length == 1;
+    final chosenColor = !finisher && card.isWild ? UnoBotService.pickColor(remaining) : null;
+    String? targetId;
+    if (!finisher &&
+        (card.type == CardType.skip ||
+            card.type == CardType.drawTwo ||
+            card.type == CardType.wildDrawFour)) {
+      targetId = UnoBotService.pickTarget(current, botId);
+    }
+    final result = UnoEngine.playCard(
+      state: current,
+      playerId: botId,
+      card: card,
+      chosenColor: chosenColor,
+      targetId: targetId,
+    );
+    if (result != null) {
+      state = result;
+      notifyListeners();
+    }
   }
 }

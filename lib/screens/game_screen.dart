@@ -1,15 +1,17 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../models/uno_card.dart';
 import '../providers/game_provider.dart';
-import '../widgets/card_widget.dart';
+import '../theme/uno_theme.dart';
+import '../widgets/uno_board_view.dart';
+import '../widgets/uno_result_view.dart';
 
 /// Oyun ekranı: bekleme odası, oyun tahtası ve bitiş durumunu yönetir.
+/// `docs/uno/game.js`'teki renderLobby/renderBoard/renderResult ile birebir
+/// aynı görsel dili kullanır.
 class GameScreen extends StatelessWidget {
   const GameScreen({super.key});
 
@@ -19,24 +21,20 @@ class GameScreen extends StatelessWidget {
     final state = provider.state;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Oda: ${provider.gameId ?? ''}'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: provider.leaveGame,
-        ),
+      backgroundColor: UnoColors.background,
+      body: SafeArea(
+        child: state == null
+            ? const Center(child: CircularProgressIndicator())
+            : state.status == 'waiting'
+                ? const _Lobby()
+                : const _GameBody(),
       ),
-      body: state == null
-          ? const Center(child: CircularProgressIndicator())
-          : state.status == 'waiting'
-              ? _WaitingRoom(code: provider.gameId!)
-              : const _GameBody(),
     );
   }
 }
 
-/// Oyun tahtasını gösterir; oyun bitince kazananın son attığı kart
-/// görülsün diye sonuç ekranına geçmeden önce 3 saniye bekler.
+/// Oyun bitince kazananın son attığı kart görülsün diye sonuç ekranına
+/// geçmeden önce 2 saniye tahtayı göstermeye devam eder (web ile aynı süre).
 class _GameBody extends StatefulWidget {
   const _GameBody();
 
@@ -60,267 +58,168 @@ class _GameBodyState extends State<_GameBody> {
     final finished = provider.state?.status == 'finished';
 
     if (finished) {
-      _resultTimer ??= Timer(const Duration(seconds: 3), () {
+      _resultTimer ??= Timer(const Duration(seconds: 2), () {
         if (mounted) setState(() => _showResult = true);
       });
-      if (_showResult) return _Result();
+      if (_showResult) {
+        return UnoResultView(
+          controller: provider,
+          onRematch: provider.rematch,
+          onLeave: provider.leaveGame,
+        );
+      }
+    } else {
+      _resultTimer?.cancel();
+      _resultTimer = null;
+      _showResult = false;
     }
-    return _Board();
-  }
-}
 
-/// Oyun bitince kazanan/kaybeden sonucunu gösterir.
-class _Result extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<GameProvider>();
-    final won = provider.iWon;
-    final winnerName = provider.state?.winner == provider.playerId
-        ? 'Sen'
-        : provider.opponentName;
-
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            won ? '🎉' : '😔',
-            style: const TextStyle(fontSize: 72),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            won ? 'Kazandın!' : 'Kaybettin',
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(won ? 'Sen oyunu kazandın.' : '$winnerName oyunu kazandı.'),
-          const SizedBox(height: 32),
-          FilledButton(
-            onPressed: provider.leaveGame,
-            child: const Text('Ana menüye dön'),
-          ),
-        ],
-      ),
+    return UnoBoardView(
+      controller: provider,
+      roomLabel: 'Oda: ${provider.gameId ?? ''}',
+      onLeave: provider.leaveGame,
     );
   }
 }
 
-/// İkinci oyuncu katılana kadar oda kodunu gösteren bekleme ekranı.
-class _WaitingRoom extends StatelessWidget {
-  final String code;
-  const _WaitingRoom({required this.code});
+/// İkinci (ve sonraki) oyuncular katılana kadar / kurucu başlatana kadar
+/// gösterilen bekleme odası.
+class _Lobby extends StatelessWidget {
+  const _Lobby();
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Rakip bekleniyor...', style: TextStyle(fontSize: 20)),
-          const SizedBox(height: 24),
-          const Text('Bu kodu arkadaşınla paylaş:'),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: code));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Kod kopyalandı')),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    code,
-                    style: const TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 6,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Icon(Icons.copy),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          const CircularProgressIndicator(),
-        ],
-      ),
-    );
-  }
-}
-
-/// Asıl oyun tahtası.
-class _Board extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<GameProvider>();
     final state = provider.state!;
-    final top = state.topCard;
+    final players = state.players;
+    final isHost = provider.isHost;
 
-    return Column(
-      children: [
-        // --- Rakip ---
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Text(
-                provider.opponentName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  math.min(provider.opponentCardCount, GameProvider.maxOppCardVisual),
-                  (_) => const CardWidget(faceDown: true, width: 34),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Bekleme Odası',
+              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text('Bu kodu paylaş:', style: TextStyle(color: UnoColors.muted, fontSize: 14)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: provider.gameId ?? ''));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Kopyalandı ✓')),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                decoration: BoxDecoration(
+                  color: UnoColors.codeBoxBg,
+                  border: Border.all(color: UnoColors.red, width: 2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      provider.gameId ?? '',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 40,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 6,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('📋', style: TextStyle(fontSize: 22)),
+                  ],
                 ),
               ),
-              Text('${provider.opponentCardCount} kart'),
-            ],
-          ),
-        ),
-
-        // --- Orta alan: geçerli renk, atılan kart, çekme destesi ---
-        Expanded(
-          child: Container(
-            color: CardWidget.colorFor(state.currentColor).withOpacity(0.12),
-            child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: 320,
+              child: Column(
                 children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Deste'),
-                      const SizedBox(height: 6),
-                      CardWidget(
-                        faceDown: true,
-                        width: 80,
-                        onTap: provider.isMyTurn ? provider.drawCard : null,
+                  for (final p in players)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: UnoColors.lobbyRowBg,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const SizedBox(height: 6),
-                      Text(provider.isMyTurn ? 'Çekmek için dokun' : ''),
-                    ],
-                  ),
-                  const SizedBox(width: 24),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Açık kart'),
-                      const SizedBox(height: 6),
-                      CardWidget(card: top, width: 80),
-                    ],
-                  ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(state.playerNames[p] ?? 'Oyuncu',
+                              style: const TextStyle(color: Colors.white)),
+                          Text(
+                            [
+                              if (players.isNotEmpty && players.first == p) 'kurucu',
+                              if (p == provider.playerId) 'sen',
+                            ].join(' · '),
+                            style: const TextStyle(color: UnoColors.muted, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
-          ),
-        ),
-
-        // --- Sıra göstergesi ---
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          color: provider.isMyTurn
-              ? Colors.green.shade100
-              : Colors.grey.shade200,
-          child: Text(
-            provider.isMyTurn ? '● Sıra sende' : '○ Rakibin sırası',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-        ),
-
-        // --- Kendi elin ---
-        Container(
-          height: 130,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            children: [
-              for (final card in provider.myHand)
-                CardWidget(
-                  card: card,
-                  width: 68,
-                  highlighted: provider.canPlay(card),
-                  onTap: () => _tryPlay(context, provider, card),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _tryPlay(
-    BuildContext context,
-    GameProvider provider,
-    UnoCard card,
-  ) async {
-    if (!provider.isMyTurn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sıra sende değil.')),
-      );
-      return;
-    }
-    if (!provider.canPlay(card)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bu kart oynanamaz.')),
-      );
-      return;
-    }
-
-    CardColor? chosen;
-    if (card.isWild) {
-      chosen = await _pickColor(context);
-      if (chosen == null) return; // iptal
-    }
-    await provider.playCard(card, chosenColor: chosen);
-  }
-
-  /// Joker sonrası renk seçtiren diyalog.
-  Future<CardColor?> _pickColor(BuildContext context) {
-    return showDialog<CardColor>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Renk seç'),
-        content: Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          alignment: WrapAlignment.center,
-          children: [
-            for (final c in [
-              CardColor.red,
-              CardColor.yellow,
-              CardColor.green,
-              CardColor.blue,
-            ])
-              GestureDetector(
-                onTap: () => Navigator.pop(ctx, c),
-                child: Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: CardWidget.colorFor(c),
-                    borderRadius: BorderRadius.circular(10),
+            const SizedBox(height: 8),
+            Text(
+              '${players.length}/${GameProvider.maxPlayers} oyuncu',
+              style: const TextStyle(color: UnoColors.muted, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            if (isHost) ...[
+              SizedBox(
+                width: 260,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: UnoColors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
+                  onPressed: players.length < 2 ? null : provider.startGame,
+                  child: const Text('Oyunu Başlat'),
                 ),
               ),
+              if (players.length < 2)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('En az 2 oyuncu gerekiyor',
+                      style: TextStyle(color: UnoColors.muted, fontSize: 13)),
+                ),
+            ] else ...[
+              const Text('Kurucu başlatınca oyun başlayacak...',
+                  style: TextStyle(color: UnoColors.muted, fontSize: 14)),
+              const SizedBox(height: 12),
+              const SizedBox(
+                width: 34,
+                height: 34,
+                child: CircularProgressIndicator(strokeWidth: 4, color: UnoColors.red),
+              ),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              width: 200,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                ),
+                onPressed: provider.leaveGame,
+                child: const Text('Çık'),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-

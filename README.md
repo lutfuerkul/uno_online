@@ -10,7 +10,7 @@ kendi telefonlarından bir oda kodu üzerinden buluşup oynar.
 | 🎴 Seçim ekranı | `docs/` | Siteyi açınca gördüğün ilk ekran — UNO ya da Pişti'yi seçersin. Ana ekrana eklenebilen tek uygulama burası. |
 | 🌐 **UNO** (2-4 kişi) | `docs/uno/` | Klasik UNO, oda koduyla online. |
 | 🃏 **Pişti** (2, 3 ya da 4 kişi, takım yok) | `docs/pisti/` | Klasik iskambil kağıtlarıyla Pişti, oda koduyla online. |
-| 📱 **Flutter** (UNO + Pişti uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler için: UNO (online + bilgisayara karşı) ve Pişti (şimdilik yalnızca bilgisayara karşı). |
+| 📱 **Flutter** (UNO + Pişti uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler için: UNO ve Pişti, ikisi de online (oda koduyla) ve bilgisayara karşı modlarla. |
 
 ---
 
@@ -110,15 +110,20 @@ içinde, internet ya da Firebase olmadan oynayabilirsin. Bot kartları basit
 kural tabanlı bir mantıkla seçer (rakip(ler)in eli azaldıkça saldırgan
 kartları öne çıkarır, jokerleri/valeyi mümkün olduğunca saklar).
 
-Pişti'nin Flutter'da şu an **yalnızca bu modu** var; online (oda koduyla) çok
-oyunculu Pişti henüz eklenmedi (web sürümünde `docs/pisti/` altında mevcut).
+### 🌐 Online (oda koduyla, 2-4 kişi)
+
+Hem UNO hem Pişti'de artık oda koduyla online çok oyuncululuk var: bir oyuncu
+"Yeni Oyun Kur" der, çıkan 5 haneli kodu paylaşır; diğerleri "Oyuna Katıl"
+ile aynı koda girer. 2-4 kişi katılınca **kurucu** "Oyunu Başlat" der ve oyun
+başlar. Görsel ve kurallar (UNO'da bloklama/reverse kilidi/hedef seçimi,
+Pişti'de pişti/vale yakalama, puanlama) web sürümüyle birebir aynıdır.
 
 ## Nasıl çalışır?
 
-**Online UNO** için tüm oyun durumu (desteler, eller, sıra, geçerli renk)
-Firestore'da **tek bir belgede** tutulur. İki telefon da bu belgeyi canlı
-dinler; biri kart oynayınca belge güncellenir ve değişiklik anında diğer
-telefona yansır. Ayrı bir sunucu kodu yoktur.
+**Online** modda tüm oyun durumu (desteler, eller, sıra, skorlar...)
+Firestore'da **tek bir belgede** tutulur. Her cihaz bu belgeyi canlı dinler;
+biri hamle yapınca belge güncellenir ve değişiklik anında diğerlerine
+yansır. Ayrı bir sunucu kodu yoktur.
 
 **Bilgisayara karşı** modlarda (hem UNO hem Pişti) aynı kurallar cihaz
 içinde, Firestore'a hiç dokunmadan çalışır; botların hamleleri kısa bir
@@ -138,13 +143,16 @@ gecikmeyle otomatik oynanır.
 lib/
 ├── main.dart                       # Uygulama girişi + oyun seçim ekranı
 ├── firebase_options.dart           # (flutterfire configure ile oluşturulur)
+├── theme/
+│   └── uno_theme.dart               # docs/uno CSS ile birebir eşleşen renkler
 ├── models/
-│   ├── uno_card.dart                # UNO kart modeli
-│   ├── game_state.dart              # Firestore belgesinin Dart karşılığı (online UNO)
-│   └── local_uno_state.dart         # Bilgisayara karşı (yerel) UNO durumu
+│   ├── uno_card.dart                 # UNO kart modeli
+│   ├── game_state.dart               # Oyun durumu (online + yerel ortak)
+│   └── uno_board_controller.dart     # Online/yerel tahtanın paylaştığı arayüz
 ├── services/
 │   ├── deck_service.dart            # 108 kartlık deste + oynama kuralları
-│   ├── game_service.dart            # Firestore işlemleri (kur/katıl/oyna/çek)
+│   ├── uno_engine.dart              # Tur/kural motoru (online ve yerel ortak)
+│   ├── game_service.dart            # Firestore işlemleri (kur/katıl/başlat/oyna/pas)
 │   └── uno_bot_service.dart         # UNO bot yapay zekası
 ├── providers/
 │   ├── game_provider.dart           # Online UNO: UI ↔ Firestore köprüsü
@@ -154,24 +162,38 @@ lib/
 │   ├── uno_root_screen.dart         # Online UNO: giriş/oyun ekranı yönlendirmesi
 │   ├── home_screen.dart             # Online UNO: kur / katıl / bilgisayara karşı
 │   ├── game_screen.dart             # Online UNO: bekleme odası + tahta + sonuç
-│   ├── uno_bot_screen.dart          # Bilgisayara karşı UNO: oyuncu sayısı seçimi
-│   └── local_uno_game_screen.dart   # Bilgisayara karşı UNO: oyun tahtası
+│   └── uno_bot_screen.dart          # Bilgisayara karşı UNO: oyuncu sayısı + tahta
 ├── widgets/
-│   └── card_widget.dart             # UNO kart görseli
-└── pisti/                           # Pişti (şu an yalnızca bilgisayara karşı)
+│   ├── card_widget.dart             # UNO kart görseli (web ile birebir)
+│   ├── uno_symbol_painter.dart      # Skip/Reverse/+2/Joker sembolleri (CustomPaint)
+│   ├── uno_board_view.dart          # Paylaşılan tahta (online + yerel ortak)
+│   └── uno_result_view.dart         # Paylaşılan sonuç ekranı
+└── pisti/                           # Pişti — online + bilgisayara karşı
+    ├── theme/
+    │   └── pisti_theme.dart          # docs/pisti CSS ile birebir eşleşen renkler
     ├── models/
     │   ├── pisti_card.dart
-    │   └── pisti_game_state.dart
+    │   ├── pisti_game_state.dart
+    │   └── pisti_board_controller.dart
     ├── services/
-    │   ├── pisti_deck_service.dart  # Deste, dağıtım, puanlama
-    │   └── pisti_bot_service.dart   # Pişti bot yapay zekası
+    │   ├── pisti_deck_service.dart   # Deste, dağıtım, puanlama
+    │   ├── pisti_engine.dart         # Tur/kural motoru (online ve yerel ortak)
+    │   ├── pisti_game_service.dart   # Firestore işlemleri
+    │   └── pisti_bot_service.dart    # Pişti bot yapay zekası
     ├── providers/
+    │   ├── pisti_online_provider.dart
     │   └── pisti_local_provider.dart
     ├── screens/
-    │   ├── pisti_home_screen.dart   # Oyuncu sayısı seçimi
-    │   └── pisti_game_screen.dart   # Oyun tahtası + sonuç
+    │   ├── pisti_root_screen.dart
+    │   ├── pisti_home_screen.dart    # kur / katıl / bilgisayara karşı
+    │   ├── pisti_game_screen.dart    # bekleme odası + tahta + sonuç (online)
+    │   └── pisti_bot_screen.dart     # oyuncu sayısı + tahta (bilgisayara karşı)
     └── widgets/
-        └── pisti_card_widget.dart
+        ├── pisti_card_widget.dart    # İskambil kağıdı görseli (web ile birebir)
+        ├── pisti_court_painter.dart  # Vale/Kız/Papaz figürü (CustomPaint)
+        ├── pisti_back_pattern_painter.dart
+        ├── pisti_board_view.dart     # Paylaşılan tahta (online + yerel ortak)
+        └── pisti_result_view.dart    # Paylaşılan puan tablosu ekranı
 ```
 
 ## Kurulum

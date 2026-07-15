@@ -60,4 +60,43 @@ class PistiCard {
         return '${rank.index + 1}';
     }
   }
+
+  String get suitNameTr {
+    switch (suit) {
+      case PistiSuit.spades:
+        return 'Maça';
+      case PistiSuit.hearts:
+        return 'Kupa';
+      case PistiSuit.diamonds:
+        return 'Karo';
+      case PistiSuit.clubs:
+        return 'Sinek';
+    }
+  }
+
+  String get rankNameTr {
+    switch (rank) {
+      case PistiRank.ace:
+        return 'As';
+      case PistiRank.jack:
+        return 'Vale';
+      case PistiRank.queen:
+        return 'Kız';
+      case PistiRank.king:
+        return 'Papaz';
+      default:
+        return rankLabel;
+    }
+  }
+
+  /// "Karo 7", "Maça Vale", "Kupa As" gibi Türkçe kart adı.
+  String get nameTr => '$suitNameTr $rankNameTr';
+
+  Map<String, dynamic> toMap() => {'suit': suit.name, 'rank': rank.name, 'id': id};
+
+  factory PistiCard.fromMap(Map<String, dynamic> map) => PistiCard(
+        suit: PistiSuit.values.byName(map['suit'] as String),
+        rank: PistiRank.values.byName(map['rank'] as String),
+        id: map['id'] as String,
+      );
 }
