@@ -108,7 +108,7 @@ class _PistiCardWidgetState extends State<PistiCardWidget> {
 
   Widget _buildCorner(PistiCard c, double width, Color color) {
     final rankSize = width * 0.19;
-    final suitSize = width * 0.17;
+    final suitSize = width * 0.19;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
