@@ -289,7 +289,7 @@ class _Board extends StatelessWidget {
       _toast(
         context,
         rc != null
-            ? '${_colorTr[rc] ?? ''} ya da özel kart yoksa çek/pas'
+            ? '${_colorTr[rc] ?? ''} ya da Joker / +4 yoksa çek/pas'
             : 'Bu kart oynanamaz.',
       );
       return;
@@ -545,7 +545,7 @@ class _TurnBanner extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                '↩️ ${_colorTr[reverseColor] ?? ''} ya da özel kart yoksa çek/pas',
+                '↩️ ${_colorTr[reverseColor] ?? ''} ya da Joker / +4 yoksa çek/pas',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
               ),
