@@ -154,9 +154,9 @@ function isWild(c) {
   return c.type === "wild" || c.type === "wildDrawFour";
 }
 
-// Reverse kilidi varken oynanabilir: aynı renk, başka reverse, +2, Joker ya da +4.
+// Reverse kilidi varken oynanabilir: aynı renk (+2 dahil), başka reverse, Joker ya da +4.
 function canPlayUnderReverseLock(card, reverseColor) {
-  return card.type === "reverse" || card.type === "drawTwo" || card.color === reverseColor || isWild(card);
+  return card.type === "reverse" || card.color === reverseColor || isWild(card);
 }
 
 function canPlay(card, top, currentColor) {
@@ -376,7 +376,7 @@ async function playCard(cardId, chosenColor, targetId) {
     const top = g.discardPile[g.discardPile.length - 1];
     const finisher = hand.length === 1; // son kart — renk/hedef seçimi ve ceza yok
 
-    // Reverse sonrası özel kısıt: aynı renk, başka reverse, +2, Joker ya da +4.
+    // Reverse sonrası özel kısıt: aynı renk (+2 dahil), başka reverse, Joker ya da +4.
     const inReverse = g.reverseColor != null;
     if (inReverse) {
       if (!canPlayUnderReverseLock(card, g.reverseColor)) return;
