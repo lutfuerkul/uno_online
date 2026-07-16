@@ -12,11 +12,10 @@ class UnoEngine {
   static const int startingHandSize = 7;
   static const int maxPlayers = 4;
 
-  /// Reverse kilidi varken oynanabilir: aynı renk, başka reverse, +2, joker
-  /// ya da +4.
+  /// Reverse kilidi varken oynanabilir: aynı renk (+2 dahil), başka reverse,
+  /// joker ya da +4.
   static bool canPlayUnderReverseLock(UnoCard card, CardColor reverseColor) {
     return card.type == CardType.reverse ||
-        card.type == CardType.drawTwo ||
         card.color == reverseColor ||
         card.isWild;
   }
