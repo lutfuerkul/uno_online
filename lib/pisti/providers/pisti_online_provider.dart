@@ -29,6 +29,7 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
   String? error;
 
   StreamSubscription<PistiGameState?>? _sub;
+  Timer? _collectTimer;
 
   @override
   bool get isMyTurn => state?.currentTurn == playerId && state?.pendingCapture == null;
@@ -94,16 +95,29 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     final id = gameId;
     if (id == null) return;
     await _service.playCard(gameId: id, playerId: playerId, cardId: card.id);
-    // Yakalama olduysa, oynanan kart masada kısa süre görünsün diye bir
-    // gecikmeden sonra masayı topla (bkz. PistiLocalProvider ile aynı desen).
-    if (state?.pendingCapture != null) {
-      final session = gameId;
-      final endsGame = state!.pendingCapture!.endsGame;
-      final delayMs = endsGame ? 2000 : 1200;
-      Future.delayed(Duration(milliseconds: delayMs), () {
-        if (gameId == session) _service.collectPile(id);
-      });
-    }
+    // Toplama, snapshot dinleyicisindeki _maybeScheduleCollect ile zamanlanır
+    // (web'deki maybeScheduleCollect ile aynı desen). Burada state'e bakmak
+    // güvenli değil: transaction'lar yerel önbelleği atladığı için await
+    // bittiğinde snapshot henüz gelmemiş olabilir ve toplama hiç zamanlanmaz
+    // (oyun "masa toplanıyor" fazında takılı kalırdı).
+  }
+
+  /// Masayı yakalayan bensem, oynanan kart masada kısa süre görünsün diye
+  /// bir gecikmeyle [PistiGameService.collectPile] çağırır. Her snapshot'ta
+  /// çağrılır; zamanlayıcı zaten kuruluysa ya da toplanacak bir şey yoksa
+  /// hiçbir şey yapmaz.
+  void _maybeScheduleCollect() {
+    if (_collectTimer != null) return;
+    final s = state;
+    final id = gameId;
+    if (id == null || s == null || s.status != 'playing') return;
+    final pending = s.pendingCapture;
+    if (pending == null || pending.by != playerId) return;
+    final delayMs = pending.endsGame ? 2000 : 1200;
+    _collectTimer = Timer(Duration(milliseconds: delayMs), () {
+      _collectTimer = null;
+      if (gameId == id) _service.collectPile(id);
+    });
   }
 
   Future<void> rematch() async {
@@ -120,6 +134,8 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     }
     _sub?.cancel();
     _sub = null;
+    _collectTimer?.cancel();
+    _collectTimer = null;
     gameId = null;
     state = null;
     error = null;
@@ -132,6 +148,7 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     _sub = _service.watchGame(id).listen((s) {
       state = s;
       notifyListeners();
+      _maybeScheduleCollect();
     });
     notifyListeners();
   }
@@ -146,6 +163,7 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
   @override
   void dispose() {
     _sub?.cancel();
+    _collectTimer?.cancel();
     super.dispose();
   }
 }

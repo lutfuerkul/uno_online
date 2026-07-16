@@ -15,6 +15,37 @@ const _colorTr = {
   CardColor.blue: 'Mavi',
 };
 
+// Eli renk gruplarına göre dizmek için sıra değerleri — `docs/uno/game.js`
+// `sortedHand()` ile aynı düzen (kırmızı, sarı, yeşil, mavi, jokerler en
+// sonda; renk içinde önce sayılar, sonra aksiyon kartları).
+const _handColorOrder = {
+  CardColor.red: 0,
+  CardColor.yellow: 1,
+  CardColor.green: 2,
+  CardColor.blue: 3,
+  CardColor.wild: 4,
+};
+const _handTypeOrder = {
+  CardType.number: 0,
+  CardType.skip: 1,
+  CardType.reverse: 2,
+  CardType.drawTwo: 3,
+  CardType.wild: 0,
+  CardType.wildDrawFour: 1,
+};
+
+/// Yalnızca görüntüleme sırası — oyun durumundaki el değişmez; açılışta ve
+/// sonradan çekilen kartlar hep kendi renk grubunun yanına oturur.
+List<UnoCard> sortedHand(List<UnoCard> hand) {
+  return [...hand]..sort((a, b) {
+      final byColor = _handColorOrder[a.color]!.compareTo(_handColorOrder[b.color]!);
+      if (byColor != 0) return byColor;
+      final byType = _handTypeOrder[a.type]!.compareTo(_handTypeOrder[b.type]!);
+      if (byType != 0) return byType;
+      return (a.value ?? 0).compareTo(b.value ?? 0);
+    });
+}
+
 /// UNO tahtası — `docs/uno/game.js`'teki `renderBoard()` ile birebir aynı
 /// görsel dili kullanır. Hem online (Firestore) hem de bilgisayara karşı
 /// (yerel) mod bu widget'ı [UnoBoardController] üzerinden paylaşır.
@@ -191,13 +222,13 @@ class _Board extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                for (var i = 0; i < controller.myHand.length; i++) ...[
+                for (final (i, card) in sortedHand(controller.myHand).indexed) ...[
                   if (i > 0) const SizedBox(width: 6),
                   CardWidget(
-                    card: controller.myHand[i],
+                    card: card,
                     width: 62,
-                    highlighted: !_finished && controller.canPlay(controller.myHand[i]),
-                    onTap: _finished ? null : () => _tryPlay(context, controller.myHand[i]),
+                    highlighted: !_finished && controller.canPlay(card),
+                    onTap: _finished ? null : () => _tryPlay(context, card),
                   ),
                 ],
               ],
@@ -295,27 +326,31 @@ class _Board extends StatelessWidget {
             children: [
               const Text('Renk seç', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
-              // Web'deki `.picker-row` gibi tek satır; dar ekranlarda da tek
-              // satır kalsın diye kutu boyutu 48'e küçültüldü.
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final c in [CardColor.red, CardColor.yellow, CardColor.green, CardColor.blue]) ...[
-                    if (c != CardColor.red) const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx, c),
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: UnoColors.forCard(c),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0x33FFFFFF), width: 2),
+              // Web'deki `.picker-row` gibi tek satır. FittedBox, satır
+              // dialoga sığmazsa (küçük ekran / büyük görüntü ölçeği) hepsini
+              // orantılı küçültür — taşma/sarma olmaz.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final c in [CardColor.red, CardColor.yellow, CardColor.green, CardColor.blue]) ...[
+                      if (c != CardColor.red) const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx, c),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: UnoColors.forCard(c),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0x33FFFFFF), width: 2),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
               const SizedBox(height: 16),
               TextButton(
