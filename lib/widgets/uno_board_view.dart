@@ -120,14 +120,19 @@ class _Board extends StatelessWidget {
           ),
         ),
 
-        // --- Rakipler ---
+        // --- Rakipler (sığmazsa yatay kaydır) ---
         Padding(
           padding: const EdgeInsets.all(10),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [for (final id in controller.opponents) _OpponentTile(id: id, controller: controller, state: state)],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final (i, id) in controller.opponents.indexed) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  _OpponentTile(id: id, controller: controller, state: state),
+                ],
+              ],
+            ),
           ),
         ),
 
