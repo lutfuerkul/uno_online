@@ -56,7 +56,7 @@ class GameSelectScreen extends StatelessWidget {
                 _GameCard(
                   iconAsset: 'assets/icons/pisti_icon.png',
                   title: 'Pişti',
-                  subtitle: '2 ya da 4 kişilik, oda koduyla online',
+                  subtitle: '2-4 kişilik, oda koduyla online',
                   borderColor: const Color(0x661565C0),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const PistiRootScreen()),
