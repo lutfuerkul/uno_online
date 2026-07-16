@@ -101,10 +101,16 @@ class _Board extends StatelessWidget {
         Expanded(
           child: Container(
             color: PistiColors.middle,
+            // FittedBox: kısa/dar ekranlarda (küçük telefon, büyük görüntü
+            // ölçeği) orta alan dikeyde sığmazsa taşmak yerine orantılı küçülür.
             child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -158,7 +164,9 @@ class _Board extends StatelessWidget {
                         ),
                     ],
                   ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
