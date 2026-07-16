@@ -1076,7 +1076,7 @@ function lastActionText() {
     case "skip": return `🚫 ${who} → ${tgt} bloklandı`;
     case "drawTwo": return `➕2 ${who} → ${tgt}'e 2 kart çektirdi`;
     case "wildDrawFour": return `➕4 ${who} → ${tgt}'e 4 kart çektirdi (renk seçti)`;
-    case "reverse": return `🔄 ${who} Reverse oynadı (tekrar oynuyor)`;
+    case "reverse": return `↩️ ${who} tekrar oynuyor`;
     case "wild": return `🎨 ${who} Joker oynadı (renk seçti)`;
     case "number": return `${who} ${COLOR_TR[la.cardColor] || ""} ${la.cardValue} oynadı`;
     case "pass": return `⏭️ ${who} pas geçti`;
@@ -1191,7 +1191,7 @@ function renderBoard() {
           ? finishBanner.text
           : (isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu"))}
         ${!finished && isMyTurn && reverseColor != null
-          ? `<div class="hint">↩️ Reverse! Sadece <b>${COLOR_TR[reverseColor] || reverseColor}</b>, başka bir Reverse, +2, Joker ya da +4 oyna — yoksa çek/pas.</div>`
+          ? `<div class="hint">↩️ ${COLOR_TR[reverseColor] || reverseColor} ya da özel kart yoksa çek/pas</div>`
           : ""}
       </div>
 
@@ -1251,7 +1251,7 @@ async function tryPlay(cardId) {
     : canPlay(card, top, state.currentColor);
   if (!ok) {
     return toast(reverseColor != null
-      ? `Reverse sonrası sadece ${COLOR_TR[reverseColor] || ""}, Reverse, +2, Joker ya da +4 oynayabilirsin.`
+      ? `${COLOR_TR[reverseColor] || ""} ya da özel kart yoksa çek/pas`
       : "Bu kart oynanamaz.");
   }
 
