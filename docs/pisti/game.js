@@ -365,11 +365,11 @@ async function playCard(cardId) {
 
     let captured = false;
     let isPisti = false;
-    if (card.rank === "J") {
-      captured = pileBefore.length > 0;
-    } else if (pileBefore.length > 0 && top.rank === card.rank) {
+    if (pileBefore.length > 0 && top.rank === card.rank) {
       captured = true;
       isPisti = pileBefore.length === 1;
+    } else if (card.rank === "J") {
+      captured = pileBefore.length > 0;
     }
 
     const hands = { ...g.hands, [playerId]: hand };

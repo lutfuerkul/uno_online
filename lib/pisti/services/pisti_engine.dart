@@ -75,11 +75,11 @@ class PistiEngine {
 
     var captured = false;
     var isPisti = false;
-    if (card.isJack) {
-      captured = pileBefore.isNotEmpty;
-    } else if (top != null && top.rank == card.rank) {
+    if (top != null && top.rank == card.rank) {
       captured = true;
       isPisti = pileBefore.length == 1;
+    } else if (card.isJack) {
+      captured = pileBefore.isNotEmpty;
     }
 
     final pile = [...pileBefore, card];
