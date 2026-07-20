@@ -112,7 +112,9 @@ class _ScoreRow extends StatelessWidget {
     if (d != null) {
       parts.add('${d.cardCount} kart');
       if (d.mostCards) parts.add('en çok kart +3');
-      if (d.pisti > 0) parts.add('${d.pisti} pişti +${d.pisti * 10}');
+      final normalPisti = d.pisti - d.jackPisti;
+      if (normalPisti > 0) parts.add('$normalPisti pişti +${normalPisti * 10}');
+      if (d.jackPisti > 0) parts.add('${d.jackPisti} vale pişti +${d.jackPisti * 15}');
       if (d.jackCount > 0) parts.add('${d.jackCount} vale +${d.jackCount}');
       if (d.aceCount > 0) parts.add('${d.aceCount} as +${d.aceCount}');
       if (d.clubTwoCount > 0) parts.add('sinek 2 +${d.clubTwoCount * 2}');

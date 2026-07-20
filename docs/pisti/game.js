@@ -229,6 +229,7 @@ async function createGame(name) {
         drawPile: [],
         won: {},
         pistiCount: {},
+        jackPistiCount: {},
         lastCapturer: null,
         lastAction: null,
         pendingCapture: null,
@@ -304,11 +305,11 @@ async function startGame() {
     const hands = dealHands(deck, players);
     const pile = dealTable(deck, tableSize);
 
-    const won = {}, pistiCount = {};
-    for (const p of players) { won[p] = []; pistiCount[p] = 0; }
+    const won = {}, pistiCount = {}, jackPistiCount = {};
+    for (const p of players) { won[p] = []; pistiCount[p] = 0; jackPistiCount[p] = 0; }
 
     tx.update(ref, {
-      hands, drawPile: deck, pile, won, pistiCount,
+      hands, drawPile: deck, pile, won, pistiCount, jackPistiCount,
       lastCapturer: null, lastAction: null, pendingCapture: null,
       currentTurn: randomPlayer(players),
       winner: null, winners: [], scores: {}, scoreDetail: {},
@@ -317,7 +318,7 @@ async function startGame() {
   });
 }
 
-function scoreGame(players, won, pistiCount) {
+function scoreGame(players, won, pistiCount, jackPistiCount) {
   let maxCards = -1;
   const cardCounts = {};
   for (const p of players) {
@@ -334,8 +335,10 @@ function scoreGame(players, won, pistiCount) {
     const diamondTenCount = cards.filter((c) => c.suit === "D" && c.rank === "10").length;
     const mostCards = cardCounts[p] === maxCards && maxCards > 0;
     const pisti = pistiCount[p] || 0;
-    const total = pisti * 10 + jackCount * 1 + aceCount * 1 + clubTwoCount * 2 + diamondTenCount * 3 + (mostCards ? 3 : 0);
-    detail[p] = { cardCount: cardCounts[p], jackCount, aceCount, clubTwoCount, diamondTenCount, mostCards, pisti, total };
+    const jackPisti = (jackPistiCount && jackPistiCount[p]) || 0;
+    const normalPisti = pisti - jackPisti;
+    const total = normalPisti * 10 + jackPisti * 15 + jackCount * 1 + aceCount * 1 + clubTwoCount * 2 + diamondTenCount * 3 + (mostCards ? 3 : 0);
+    detail[p] = { cardCount: cardCounts[p], jackCount, aceCount, clubTwoCount, diamondTenCount, mostCards, pisti, jackPisti, total };
     scores[p] = total;
   }
   let best = -1;
@@ -365,16 +368,18 @@ async function playCard(cardId) {
 
     let captured = false;
     let isPisti = false;
-    if (card.rank === "J") {
-      captured = pileBefore.length > 0;
-    } else if (pileBefore.length > 0 && top.rank === card.rank) {
+    let isJackPisti = false;
+    if (pileBefore.length > 0 && top.rank === card.rank) {
       captured = true;
       isPisti = pileBefore.length === 1;
+      isJackPisti = isPisti && card.rank === "J";
+    } else if (card.rank === "J") {
+      captured = pileBefore.length > 0;
     }
 
     const hands = { ...g.hands, [playerId]: hand };
     const pile = [...pileBefore, card]; // kart her durumda önce masaya konur (görünür)
-    const lastAction = { player: playerId, card, captured, isPisti };
+    const lastAction = { player: playerId, card, captured, isPisti, isJackPisti };
 
     if (captured) {
       const players = g.players;
@@ -384,7 +389,7 @@ async function playCard(cardId) {
       // yapılır (oyuncu attığı kartı masada görsün, sonra topluyor).
       tx.update(ref, {
         hands, pile, lastAction,
-        pendingCapture: { by: playerId, isPisti, endsGame },
+        pendingCapture: { by: playerId, isPisti, isJackPisti, endsGame },
       });
       return;
     }
@@ -392,6 +397,7 @@ async function playCard(cardId) {
     // Yakalama yok: sıra ilerler; gerekiyorsa yeni el dağıtılır / oyun biter.
     const won = { ...g.won };
     const pistiCount = { ...g.pistiCount };
+    const jackPistiCount = { ...g.jackPistiCount };
     const players = g.players;
     const curIdx = players.indexOf(playerId);
     let finalPile = pile;
@@ -410,7 +416,7 @@ async function playCard(cardId) {
           won[lastCapturer] = [...(won[lastCapturer] || []), ...finalPile];
           finalPile = [];
         }
-        const result = scoreGame(players, won, pistiCount);
+        const result = scoreGame(players, won, pistiCount, jackPistiCount);
         scores = result.scores; scoreDetail = result.detail; winners = result.winners;
         winner = winners.length === 1 ? winners[0] : null;
         status = "finished";
@@ -419,7 +425,7 @@ async function playCard(cardId) {
 
     const nextTurn = status === "finished" ? g.currentTurn : nextPlayerWithCards(players, hands, curIdx);
     tx.update(ref, {
-      hands, pile: finalPile, drawPile, won, pistiCount, lastCapturer, lastAction,
+      hands, pile: finalPile, drawPile, won, pistiCount, jackPistiCount, lastCapturer, lastAction,
       currentTurn: nextTurn, pendingCapture: null,
       status, winner, winners, scores, scoreDetail,
     });
@@ -441,7 +447,11 @@ async function collectPile() {
     const won = { ...g.won };
     won[by] = [...(won[by] || []), ...(g.pile || [])];
     const pistiCount = { ...g.pistiCount };
-    if (g.pendingCapture.isPisti) pistiCount[by] = (pistiCount[by] || 0) + 1;
+    const jackPistiCount = { ...g.jackPistiCount };
+    if (g.pendingCapture.isPisti) {
+      pistiCount[by] = (pistiCount[by] || 0) + 1;
+      if (g.pendingCapture.isJackPisti) jackPistiCount[by] = (jackPistiCount[by] || 0) + 1;
+    }
 
     const players = g.players;
     const hands = { ...g.hands };
@@ -456,7 +466,7 @@ async function collectPile() {
       if (drawPile.length > 0) {
         dealRound(hands, players, drawPile);
       } else {
-        const result = scoreGame(players, won, pistiCount);
+        const result = scoreGame(players, won, pistiCount, jackPistiCount);
         scores = result.scores; scoreDetail = result.detail; winners = result.winners;
         winner = winners.length === 1 ? winners[0] : null;
         status = "finished";
@@ -465,7 +475,7 @@ async function collectPile() {
 
     const nextTurn = status === "finished" ? g.currentTurn : nextPlayerWithCards(players, hands, curIdx);
     tx.update(ref, {
-      won, pistiCount, pile, hands, drawPile, lastCapturer: by,
+      won, pistiCount, jackPistiCount, pile, hands, drawPile, lastCapturer: by,
       currentTurn: nextTurn, pendingCapture: null,
       status, winner, winners, scores, scoreDetail,
       skipResultDelay: status === "finished" && endsGame,
@@ -547,7 +557,7 @@ async function rematch() {
     if (g.status !== "finished") return;
     tx.update(ref, {
       status: "waiting",
-      hands: {}, pile: [], drawPile: [], won: {}, pistiCount: {},
+      hands: {}, pile: [], drawPile: [], won: {}, pistiCount: {}, jackPistiCount: {},
       lastCapturer: null, lastAction: null, pendingCapture: null, currentTurn: "",
       winner: null, winners: [], scores: {}, scoreDetail: {}, skipResultDelay: null,
     });
@@ -574,7 +584,7 @@ async function leaveRoom() {
       if (g.status === "playing") {
         if (players.length < MIN_PLAYERS) {
           // yeterli oyuncu kalmadı → kalan(lar) yakaladıkları kartlarla kazanır
-          const result = scoreGame(players, g.won || {}, g.pistiCount || {});
+          const result = scoreGame(players, g.won || {}, g.pistiCount || {}, g.jackPistiCount || {});
           updates.status = "finished";
           updates.scores = result.scores;
           updates.scoreDetail = result.detail;
@@ -617,12 +627,12 @@ function startLocalGame(numPlayers) {
   const deck = shuffle(buildDeck(numDecks));
   const hands = dealHands(deck, players);
   const pile = dealTable(deck, tableSize);
-  const won = {}, pistiCount = {};
-  for (const p of players) { won[p] = []; pistiCount[p] = 0; }
+  const won = {}, pistiCount = {}, jackPistiCount = {};
+  for (const p of players) { won[p] = []; pistiCount[p] = 0; jackPistiCount[p] = 0; }
 
   LOCAL = {
     status: "playing", players, playerNames: names, hands, pile, drawPile: deck,
-    won, pistiCount, lastCapturer: null, lastAction: null, pendingCapture: null,
+    won, pistiCount, jackPistiCount, lastCapturer: null, lastAction: null, pendingCapture: null,
     currentTurn: randomPlayer(players),
     winner: null, winners: [], scores: {}, scoreDetail: {}, local: true, createdAt: Date.now(),
   };
@@ -929,7 +939,7 @@ function renderBoard() {
   const lastAction = state.lastAction;
   const lastActionHtml = lastAction
     ? (lastAction.isPisti
-        ? `<div class="last-action pisti-banner">🎉 ${escapeHtml(state.playerNames[lastAction.player] || "Oyuncu")} PİŞTİ yaptı! (${cardName(lastAction.card)})</div>`
+        ? `<div class="last-action pisti-banner">🎉 ${escapeHtml(state.playerNames[lastAction.player] || "Oyuncu")} ${lastAction.isJackPisti ? "VALE PİŞTİ yaptı! (+15)" : `PİŞTİ yaptı! (${cardName(lastAction.card)})`}</div>`
         : `<div class="last-action">${escapeHtml(state.playerNames[lastAction.player] || "Oyuncu")}
             <b>${cardName(lastAction.card)}</b> oynadı${lastAction.captured ? " — yaktı! 🔥" : ""}</div>`)
     : "";
@@ -1000,7 +1010,8 @@ function renderResult() {
         <div class="score-breakdown muted">
           ${d.cardCount ?? 0} kart
           ${d.mostCards ? " · en çok kart +3" : ""}
-          ${d.pisti ? ` · ${d.pisti} pişti +${d.pisti * 10}` : ""}
+          ${(d.pisti || 0) - (d.jackPisti || 0) > 0 ? ` · ${(d.pisti || 0) - (d.jackPisti || 0)} pişti +${((d.pisti || 0) - (d.jackPisti || 0)) * 10}` : ""}
+          ${d.jackPisti ? ` · ${d.jackPisti} vale pişti +${d.jackPisti * 15}` : ""}
           ${d.jackCount ? ` · ${d.jackCount} vale +${d.jackCount}` : ""}
           ${d.aceCount ? ` · ${d.aceCount} as +${d.aceCount}` : ""}
           ${d.clubTwoCount ? ` · sinek 2 +${d.clubTwoCount * 2}` : ""}

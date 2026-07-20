@@ -448,7 +448,9 @@ class _LastActionBannerState extends State<_LastActionBanner>
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
-            '🎉 ${widget.playerName} PİŞTİ yaptı! (${widget.action.card.nameTr})',
+            widget.action.isJackPisti
+                ? '🎉 ${widget.playerName} VALE PİŞTİ yaptı! (+15)'
+                : '🎉 ${widget.playerName} PİŞTİ yaptı! (${widget.action.card.nameTr})',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: PistiColors.pistiBannerText,

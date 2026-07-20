@@ -86,12 +86,14 @@ class PistiDeckService {
     }
   }
 
-  /// Her Pişti +10, yakalanan her As +1, Sinek 2'li +2, Karo 10'lu +3,
-  /// yakalanan her Vale +1, en çok kart toplayan +3.
+  /// Her normal Pişti +10, vale üstüne vale ile yapılan pişti +15, yakalanan
+  /// her As +1, Sinek 2'li +2, Karo 10'lu +3, yakalanan her Vale +1, en çok
+  /// kart toplayan +3.
   static PistiScoreResult scoreGame(
     List<String> players,
     Map<String, List<PistiCard>> won,
     Map<String, int> pistiCount,
+    Map<String, int> jackPistiCount,
   ) {
     var maxCards = -1;
     final cardCounts = <String, int>{};
@@ -110,7 +112,10 @@ class PistiDeckService {
       final diamondTenCount = cards.where((c) => c.isDiamondTen).length;
       final mostCards = cardCounts[p] == maxCards && maxCards > 0;
       final pisti = pistiCount[p] ?? 0;
-      final total = pisti * 10 +
+      final jackPisti = jackPistiCount[p] ?? 0;
+      final normalPisti = pisti - jackPisti;
+      final total = normalPisti * 10 +
+          jackPisti * 15 +
           jackCount +
           aceCount +
           clubTwoCount * 2 +
@@ -124,6 +129,7 @@ class PistiDeckService {
         diamondTenCount: diamondTenCount,
         mostCards: mostCards,
         pisti: pisti,
+        jackPisti: jackPisti,
         total: total,
       );
       scores[p] = total;
