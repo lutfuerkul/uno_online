@@ -22,6 +22,10 @@ class PistiGameState {
   /// Oyuncu kimliği -> o oyuncunun yakaladığı kartlar.
   final Map<String, List<PistiCard>> won;
   final Map<String, int> pistiCount;
+
+  /// [pistiCount]'un alt kümesi: vale üstüne vale ile yapılan pişti sayısı
+  /// (normal pişti +10 yerine +15 puan eder).
+  final Map<String, int> jackPistiCount;
   final String? lastCapturer;
   final String currentTurn;
 
@@ -48,6 +52,7 @@ class PistiGameState {
     required this.drawPile,
     required this.won,
     required this.pistiCount,
+    required this.jackPistiCount,
     required this.lastCapturer,
     required this.currentTurn,
     required this.winner,
@@ -69,6 +74,7 @@ class PistiGameState {
     List<PistiCard>? drawPile,
     Map<String, List<PistiCard>>? won,
     Map<String, int>? pistiCount,
+    Map<String, int>? jackPistiCount,
     String? lastCapturer,
     String? currentTurn,
     bool clearWinner = false,
@@ -91,6 +97,7 @@ class PistiGameState {
       drawPile: drawPile ?? this.drawPile,
       won: won ?? this.won,
       pistiCount: pistiCount ?? this.pistiCount,
+      jackPistiCount: jackPistiCount ?? this.jackPistiCount,
       lastCapturer: lastCapturer ?? this.lastCapturer,
       currentTurn: currentTurn ?? this.currentTurn,
       winner: clearWinner ? null : (winner ?? this.winner),
@@ -124,6 +131,7 @@ class PistiGameState {
       drawPile: parseCards(map['drawPile']),
       won: parseHandLike(map['won']),
       pistiCount: Map<String, int>.from(map['pistiCount'] as Map? ?? {}),
+      jackPistiCount: Map<String, int>.from(map['jackPistiCount'] as Map? ?? {}),
       lastCapturer: map['lastCapturer'] as String?,
       currentTurn: map['currentTurn'] as String? ?? '',
       winner: map['winner'] as String?,
@@ -146,6 +154,7 @@ class PistiGameState {
         'drawPile': drawPile.map((c) => c.toMap()).toList(),
         'won': won.map((k, v) => MapEntry(k, v.map((c) => c.toMap()).toList())),
         'pistiCount': pistiCount,
+        'jackPistiCount': jackPistiCount,
         'lastCapturer': lastCapturer,
         'currentTurn': currentTurn,
         'winner': winner,
@@ -160,21 +169,27 @@ class PistiGameState {
 class PendingCapture {
   final String by;
   final bool isPisti;
+
+  /// Vale üstüne vale ile yapılan pişti (+15 puan; normal pişti +10).
+  final bool isJackPisti;
   final bool endsGame;
 
   const PendingCapture({
     required this.by,
     required this.isPisti,
+    required this.isJackPisti,
     required this.endsGame,
   });
 
-  Map<String, dynamic> toMap() => {'by': by, 'isPisti': isPisti, 'endsGame': endsGame};
+  Map<String, dynamic> toMap() =>
+      {'by': by, 'isPisti': isPisti, 'isJackPisti': isJackPisti, 'endsGame': endsGame};
 
   static PendingCapture? fromMap(Map? map) {
     if (map == null) return null;
     return PendingCapture(
       by: map['by'] as String? ?? '',
       isPisti: map['isPisti'] as bool? ?? false,
+      isJackPisti: map['isJackPisti'] as bool? ?? false,
       endsGame: map['endsGame'] as bool? ?? false,
     );
   }
@@ -187,12 +202,14 @@ class PistiLastAction {
   final PistiCard card;
   final bool captured;
   final bool isPisti;
+  final bool isJackPisti;
 
   const PistiLastAction({
     required this.player,
     required this.card,
     required this.captured,
     required this.isPisti,
+    required this.isJackPisti,
   });
 
   Map<String, dynamic> toMap() => {
@@ -200,6 +217,7 @@ class PistiLastAction {
         'card': card.toMap(),
         'captured': captured,
         'isPisti': isPisti,
+        'isJackPisti': isJackPisti,
       };
 
   static PistiLastAction? fromMap(Map? map) {
@@ -211,6 +229,7 @@ class PistiLastAction {
       card: PistiCard.fromMap(Map<String, dynamic>.from(cardMap)),
       captured: map['captured'] as bool? ?? false,
       isPisti: map['isPisti'] as bool? ?? false,
+      isJackPisti: map['isJackPisti'] as bool? ?? false,
     );
   }
 }
@@ -222,7 +241,13 @@ class PistiScoreDetail {
   final int clubTwoCount;
   final int diamondTenCount;
   final bool mostCards;
+
+  /// Toplam pişti sayısı (normal + vale pişti).
   final int pisti;
+
+  /// [pisti]'nin alt kümesi: vale üstüne vale ile yapılan pişti sayısı
+  /// (+15'ten hesaba katılır; kalanı +10'dan).
+  final int jackPisti;
   final int total;
 
   const PistiScoreDetail({
@@ -233,6 +258,7 @@ class PistiScoreDetail {
     required this.diamondTenCount,
     required this.mostCards,
     required this.pisti,
+    required this.jackPisti,
     required this.total,
   });
 
@@ -244,6 +270,7 @@ class PistiScoreDetail {
         'diamondTenCount': diamondTenCount,
         'mostCards': mostCards,
         'pisti': pisti,
+        'jackPisti': jackPisti,
         'total': total,
       };
 
@@ -255,6 +282,7 @@ class PistiScoreDetail {
         diamondTenCount: (map['diamondTenCount'] as num?)?.toInt() ?? 0,
         mostCards: map['mostCards'] as bool? ?? false,
         pisti: (map['pisti'] as num?)?.toInt() ?? 0,
+        jackPisti: (map['jackPisti'] as num?)?.toInt() ?? 0,
         total: (map['total'] as num?)?.toInt() ?? 0,
       );
 }

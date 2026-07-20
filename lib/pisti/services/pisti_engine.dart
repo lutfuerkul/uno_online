@@ -38,6 +38,7 @@ class PistiEngine {
       drawPile: deck,
       won: {for (final p in players) p: <PistiCard>[]},
       pistiCount: {for (final p in players) p: 0},
+      jackPistiCount: {for (final p in players) p: 0},
       lastCapturer: null,
       currentTurn: players[Random().nextInt(players.length)],
       winner: null,
@@ -75,16 +76,23 @@ class PistiEngine {
 
     var captured = false;
     var isPisti = false;
+    var isJackPisti = false;
     if (top != null && top.rank == card.rank) {
       captured = true;
       isPisti = pileBefore.length == 1;
+      isJackPisti = isPisti && card.isJack;
     } else if (card.isJack) {
       captured = pileBefore.isNotEmpty;
     }
 
     final pile = [...pileBefore, card];
-    final lastAction =
-        PistiLastAction(player: playerId, card: card, captured: captured, isPisti: isPisti);
+    final lastAction = PistiLastAction(
+      player: playerId,
+      card: card,
+      captured: captured,
+      isPisti: isPisti,
+      isJackPisti: isJackPisti,
+    );
 
     if (captured) {
       final allEmpty = state.players.every((p) => (hands[p]?.length ?? 0) == 0);
@@ -93,7 +101,12 @@ class PistiEngine {
         hands: hands,
         pile: pile,
         lastAction: lastAction,
-        pendingCapture: PendingCapture(by: playerId, isPisti: isPisti, endsGame: endsGame),
+        pendingCapture: PendingCapture(
+          by: playerId,
+          isPisti: isPisti,
+          isJackPisti: isJackPisti,
+          endsGame: endsGame,
+        ),
       );
     }
 
@@ -121,7 +134,11 @@ class PistiEngine {
     };
     won[by] = [...(won[by] ?? []), ...state.pile];
     final pistiCount = Map<String, int>.from(state.pistiCount);
-    if (pending.isPisti) pistiCount[by] = (pistiCount[by] ?? 0) + 1;
+    final jackPistiCount = Map<String, int>.from(state.jackPistiCount);
+    if (pending.isPisti) {
+      pistiCount[by] = (pistiCount[by] ?? 0) + 1;
+      if (pending.isJackPisti) jackPistiCount[by] = (jackPistiCount[by] ?? 0) + 1;
+    }
 
     final hands = {
       for (final e in state.hands.entries) e.key: List<PistiCard>.from(e.value),
@@ -135,6 +152,7 @@ class PistiEngine {
       curPlayerId: by,
       wonOverride: won,
       pistiCountOverride: pistiCount,
+      jackPistiCountOverride: jackPistiCount,
     );
   }
 
@@ -146,12 +164,15 @@ class PistiEngine {
     required String curPlayerId,
     Map<String, List<PistiCard>>? wonOverride,
     Map<String, int>? pistiCountOverride,
+    Map<String, int>? jackPistiCountOverride,
     PistiLastAction? lastAction,
   }) {
     final players = state.players;
     final won = wonOverride ??
         {for (final e in state.won.entries) e.key: List<PistiCard>.from(e.value)};
     final pistiCount = pistiCountOverride ?? Map<String, int>.from(state.pistiCount);
+    final jackPistiCount =
+        jackPistiCountOverride ?? Map<String, int>.from(state.jackPistiCount);
     final drawPile = List<PistiCard>.from(state.drawPile);
     var finalPile = pile;
     final lastCapturer = capturerId ?? state.lastCapturer;
@@ -170,7 +191,7 @@ class PistiEngine {
           won[lastCapturer] = [...(won[lastCapturer] ?? []), ...finalPile];
           finalPile = const [];
         }
-        final result = PistiDeckService.scoreGame(players, won, pistiCount);
+        final result = PistiDeckService.scoreGame(players, won, pistiCount, jackPistiCount);
         scores = result.scores;
         scoreDetail = result.detail;
         winners = result.winners;
@@ -190,6 +211,7 @@ class PistiEngine {
       drawPile: drawPile,
       won: won,
       pistiCount: pistiCount,
+      jackPistiCount: jackPistiCount,
       lastCapturer: lastCapturer,
       currentTurn: nextTurn,
       status: status,
@@ -231,7 +253,12 @@ class PistiEngine {
       return state.copyWith(players: players, playerNames: names, hands: hands);
     }
     if (players.length < minPlayers) {
-      final result = PistiDeckService.scoreGame(players, state.won, state.pistiCount);
+      final result = PistiDeckService.scoreGame(
+        players,
+        state.won,
+        state.pistiCount,
+        state.jackPistiCount,
+      );
       return state.copyWith(
         players: players,
         playerNames: names,
