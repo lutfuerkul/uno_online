@@ -1,4 +1,4 @@
-import 'okey_tile.dart';
+import '../models/okey_tile.dart';
 
 /// Okey el (per) çözümleyicisi: bir taş kümesinin geçerli gruplara (perlere)
 /// bölünüp bölünemeyeceğini belirler.
