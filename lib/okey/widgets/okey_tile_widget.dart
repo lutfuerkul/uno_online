@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../models/okey_tile.dart';
 import '../theme/okey_theme.dart';
 
-/// Bir Okey taşını (ya da kapalı arka yüzünü) çizer. Fildişi zemin, renkli
-/// sayı ve alttaki küçük çentik ekteki gerçek taşlara benzer görünür. Sahte
-/// okey bir yıldızla gösterilir.
+/// Bir Okey taşını çizer. Taş yüzleri gerçek taş fotoğrafından kesilmiş
+/// görsellerden gelir (`assets/okey/tiles/`, ör. `red_7.png`, `joker.png`).
+/// Kapalı arka yüz (deste / rakip taşları) programatik çizilir.
 class OkeyTileWidget extends StatelessWidget {
   final OkeyTile? tile;
   final bool faceDown;
@@ -28,58 +28,83 @@ class OkeyTileWidget extends StatelessWidget {
     this.width = 42,
   });
 
+  /// Gerçek taş fotoğrafının en-boy oranı (56×74 kesim).
+  static const double aspect = 74 / 56;
+
   bool get _isFaceDown => faceDown || tile == null;
+
+  static String _assetFor(OkeyTile t) => t.isFakeJoker
+      ? 'assets/okey/tiles/joker.png'
+      : 'assets/okey/tiles/${t.color.name}_${t.number}.png';
 
   @override
   Widget build(BuildContext context) {
-    final height = width * 1.5;
-    final radius = width * 0.16;
+    final height = width * aspect;
+    final radius = width * 0.14;
+
+    Widget face;
+    if (_isFaceDown) {
+      face = _buildBack(width, radius);
+    } else {
+      face = Image.asset(
+        _assetFor(tile!),
+        width: width,
+        height: height,
+        fit: BoxFit.fill,
+        filterQuality: FilterQuality.medium,
+        semanticLabel: tile!.nameTr,
+      );
+    }
 
     Widget body = Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        gradient: _isFaceDown
-            ? null
-            : const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [OkeyColors.tileFaceHi, OkeyColors.tileFace],
-              ),
-        color: _isFaceDown ? OkeyColors.tileBackBg : null,
-        border: Border.all(
-          color: isOkey
-              ? OkeyColors.okeyGlow
-              : (_isFaceDown
-                  ? OkeyColors.tileBackBorder
-                  : const Color(0x22000000)),
-          width: isOkey ? width * 0.08 : width * 0.04,
-        ),
         boxShadow: const [
           BoxShadow(color: Color(0x66000000), blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: _isFaceDown ? _buildBack(width) : _buildFace(tile!, width, height),
+      child: Stack(
+        children: [
+          face,
+          // Okey (joker) vurgusu: altın çerçeve.
+          if (isOkey && !_isFaceDown)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(radius),
+                  border: Border.all(
+                    color: OkeyColors.okeyGlow,
+                    width: width * 0.09,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
 
     if (dimmed && !_isFaceDown) {
-      body = Opacity(opacity: 0.5, child: body);
+      body = Opacity(opacity: 0.55, child: body);
     }
-
     if (selected) {
-      body = Transform.translate(offset: Offset(0, -width * 0.22), child: body);
+      body = Transform.translate(offset: Offset(0, -width * 0.24), child: body);
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      child: body,
-    );
+    return GestureDetector(onTap: onTap, child: body);
   }
 
-  Widget _buildBack(double width) {
-    return Center(
+  Widget _buildBack(double width, double radius) {
+    return Container(
+      width: width,
+      height: width * aspect,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        color: OkeyColors.tileBackBg,
+        border: Border.all(color: OkeyColors.tileBackBorder, width: width * 0.05),
+      ),
+      alignment: Alignment.center,
       child: Container(
         width: width * 0.5,
         height: width * 0.5,
@@ -87,56 +112,6 @@ class OkeyTileWidget extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(color: const Color(0x66FFFFFF), width: width * 0.03),
         ),
-      ),
-    );
-  }
-
-  Widget _buildFace(OkeyTile t, double width, double height) {
-    if (t.isFakeJoker) {
-      return Center(
-        child: Text(
-          '★',
-          style: TextStyle(
-            fontSize: width * 0.7,
-            height: 1,
-            color: const Color(0xFFC62828),
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      );
-    }
-
-    final numberColor = OkeyColors.tileNumberColor(t.color);
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: height * 0.06),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: Text(
-                  '${t.number}',
-                  style: TextStyle(
-                    color: numberColor,
-                    fontWeight: FontWeight.w900,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Alt çentik (gerçek taşlardaki oval oyuk).
-          Container(
-            width: width * 0.26,
-            height: width * 0.26,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: OkeyColors.tileNub,
-            ),
-          ),
-        ],
       ),
     );
   }
