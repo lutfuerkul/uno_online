@@ -27,6 +27,15 @@ service cloud.firestore {
       allow update: if isValidPistiGame(request.resource.data);
     }
 
+    match /okey_games/{gameId} {
+      allow read: if true;
+      allow delete: if false;
+      allow create: if gameId.matches('^[A-Z0-9]{5}$') && isValidOkeyGame(request.resource.data)
+                     && request.resource.data.players.size() == 1
+                     && request.resource.data.status == 'waiting';
+      allow update: if isValidOkeyGame(request.resource.data);
+    }
+
     function isValidUnoGame(d) {
       return d.keys().hasOnly([
         'status', 'players', 'playerNames', 'hands', 'drawPile', 'discardPile',
@@ -45,6 +54,25 @@ service cloud.firestore {
       && d.hasDrawn is bool
       && d.unoSafe is list
       && d.blockedPlayers is list
+      && d.createdAt is number;
+    }
+
+    function isValidOkeyGame(d) {
+      return d.keys().hasOnly([
+        'status', 'players', 'playerNames', 'hands', 'drawPile', 'discards',
+        'indicator', 'currentTurn', 'hasDrawn', 'drawnFromDiscardId',
+        'lastAction', 'winner', 'winners', 'finishedByOkey', 'scores', 'createdAt'
+      ])
+      && d.status is string
+      && d.players is list && d.players.size() <= 4
+      && d.playerNames is map
+      && d.hands is map
+      && d.drawPile is list
+      && d.discards is map
+      && d.currentTurn is string
+      && d.hasDrawn is bool
+      && d.winners is list
+      && d.scores is map
       && d.createdAt is number;
     }
 

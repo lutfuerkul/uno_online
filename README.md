@@ -10,7 +10,8 @@ kendi telefonlarından bir oda kodu üzerinden buluşup oynar.
 | 🎴 Seçim ekranı | `docs/` | Siteyi açınca gördüğün ilk ekran — UNO ya da Pişti'yi seçersin. Ana ekrana eklenebilen tek uygulama burası. |
 | 🌐 **UNO** (2-4 kişi) | `docs/uno/` | Klasik UNO, oda koduyla online. |
 | 🃏 **Pişti** (2, 3 ya da 4 kişi, takım yok) | `docs/pisti/` | Klasik iskambil kağıtlarıyla Pişti, oda koduyla online. |
-| 📱 **Flutter** (UNO + Pişti uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler için: UNO ve Pişti, ikisi de online (oda koduyla) ve bilgisayara karşı modlarla. |
+| 🀄 **Okey** (2-4 kişi) | `lib/okey/` | İstakalı klasik Okey — yalnızca Flutter uygulamasında; online ve bilgisayara karşı. |
+| 📱 **Flutter** (UNO + Pişti + Okey uygulaması) | `lib/` | Bilgisayarı olup APK derleyebilenler için: UNO, Pişti ve Okey; hepsi online (oda koduyla) ve bilgisayara karşı modlarla. |
 
 ---
 
@@ -95,6 +96,34 @@ yok, herkes kendi başına) Pişti.
   Karo 10'lu +3 · yakalanan her Vale +1 · en çok kart toplayan +3 (3 ve 4
   kişilik oyunda bu özel kartlardan ikişer tane olabilir, her biri ayrı puan
   getirir). En yüksek puan kazanır.
+
+---
+
+## 🀄 Okey kuralları (yalnızca Flutter uygulaması)
+
+İstakalı (ahşap raf) klasik **Okey**, 2–4 kişi — online (oda koduyla) ya da
+bilgisayara karşı. Taşlar ve ıstaka uygulama içinde çizilir; ayrı görsel
+dosyası gerekmez.
+
+### Kurallar (özet)
+
+- **106 taş:** 4 renk (sarı, kırmızı, siyah, mavi) × 1–13, her taştan iki
+  kopya (104) + iki **sahte okey** (joker).
+- **Gösterge & okey:** Bir taş açılır (gösterge). **Okey**, göstergeyle aynı
+  renkte bir büyük sayıdır (13'ten sonra 1'e döner). O sayıdaki iki gerçek taş
+  ve iki sahte okey **joker**dir; her taşın yerini tutabilir.
+- **Dağıtım:** Eli ilk açan oyuncu **15**, diğerleri **14** taş alır. İlk
+  oyuncu çekmeden, elinden bir taş atarak başlar.
+- **Sıra:** Sıradaki oyuncu ya kapalı **desteden** çeker ya da **solundaki**
+  oyuncunun attığı taşı yerden alır; sonra elinden bir taş atar.
+- **Per (geçerli grup):** *Seri* — aynı renkten ardışık 3+ taş (1 hem 1-2-3
+  hem 12-13-1 olabilir). *Grup/set* — aynı sayıda, farklı renklerden 3 ya da 4
+  taş.
+- **El açma (bitirme):** 14 taşın tamamı geçerli perlere bölünecek şekilde
+  15. taşı attığında el açılır, o el kazanılır. Okey (joker) atarak bitirmek
+  **çifte** puandır. Deste biterse el **berabere** sonlanır.
+- **İstaka:** Elindeki taşlar ahşap ıstakada dizili durur; **Renk sırala** ve
+  **Grupla** düğmeleriyle otomatik dizebilirsin.
 
 ---
 
