@@ -43,3 +43,6 @@ flutter:
     # Pişti kart görselleri — web (docs/pisti/) ile ortak dosyalar; iki
     # platformda kartların birebir aynı görünmesi için tek kaynak.
     - docs/pisti/cards/
+    # Okey: gerçek taş fotoğrafından kesilmiş taşlar ve ahşap ıstaka görseli.
+    - assets/okey/istaka.png
+    - assets/okey/tiles/

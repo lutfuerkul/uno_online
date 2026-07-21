@@ -6,7 +6,6 @@ import '../models/okey_board_controller.dart';
 import '../models/okey_game_state.dart';
 import '../models/okey_tile.dart';
 import '../theme/okey_theme.dart';
-import 'okey_rack_painter.dart';
 import 'okey_tile_widget.dart';
 
 /// Okey tahtası. Hem online (Firestore) hem de bilgisayara karşı (yerel) mod
@@ -345,7 +344,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   Widget _emptySlot(double width) {
     return Container(
       width: width,
-      height: width * 1.5,
+      height: width * OkeyTileWidget.aspect,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(width * 0.16),
@@ -450,48 +449,66 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
+  /// Elimdeki taşları ahşap ıstakaya (2 sıralı) dizer. Taşlar iki satıra
+  /// bölünür; ıstaka görseli arka planda esneyerek satırları taşır.
   Widget _rackWithTiles(BuildContext context, OkeyGameState state,
       List<OkeyTile> myHand, bool canDiscard) {
-    const tileW = 40.0;
-    const gap = 3.0;
-    final tileH = tileW * 1.5;
-    final rackH = tileH + 30;
-    final contentW = myHand.length * (tileW + gap) + 24;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final n = myHand.length;
+        final perRow = n <= 1 ? 1 : ((n + 1) ~/ 2); // üst satır ceil(n/2)
+        const gap = 3.0;
+        final hPad = width * 0.05; // ıstakanın kavisli uçlarına taş koyma
+        final avail = width - hPad * 2 - gap * (perRow - 1);
+        var tileW = perRow > 0 ? avail / perRow : 40.0;
+        tileW = tileW.clamp(22.0, 46.0);
+        final tileH = tileW * OkeyTileWidget.aspect;
 
-    return SizedBox(
-      height: rackH,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: math.max(contentW, MediaQuery.of(context).size.width - 16),
-          height: rackH,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CustomPaint(painter: const OkeyRackPainter()),
+        final topTiles = myHand.sublist(0, math.min(perRow, n));
+        final bottomTiles = perRow < n ? myHand.sublist(perRow) : <OkeyTile>[];
+
+        Widget buildRow(List<OkeyTile> tiles) {
+          if (tiles.isEmpty) return SizedBox(height: tileH);
+          return FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final tile in tiles) ...[
+                  OkeyTileWidget(
+                    tile: tile,
+                    width: tileW,
+                    isOkey: state.isOkey(tile),
+                    selected: tile.id == _selectedId,
+                    onTap: () => _onTileTap(tile, canDiscard),
+                  ),
+                  const SizedBox(width: gap),
+                ],
+              ],
+            ),
+          );
+        }
+
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset('assets/okey/istaka.png', fit: BoxFit.fill),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(hPad, tileH * 0.14, hPad, tileH * 0.12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  buildRow(topTiles),
+                  SizedBox(height: gap + 2),
+                  buildRow(bottomTiles),
+                ],
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 12, top: 10, bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    for (final tile in myHand) ...[
-                      OkeyTileWidget(
-                        tile: tile,
-                        width: tileW,
-                        isOkey: state.isOkey(tile),
-                        selected: tile.id == _selectedId,
-                        onTap: () => _onTileTap(tile, canDiscard),
-                      ),
-                      const SizedBox(width: gap),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 
