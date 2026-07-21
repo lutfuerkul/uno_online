@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../okey/screens/okey_root_screen.dart';
 import '../pisti/screens/pisti_root_screen.dart';
 import 'uno_root_screen.dart';
 
@@ -29,9 +30,9 @@ class GameSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Uno & Pisti',
+                  'Uno · Pişti · Okey',
                   style: TextStyle(
-                    fontSize: 34,
+                    fontSize: 30,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     letterSpacing: 1,
@@ -62,9 +63,19 @@ class GameSelectScreen extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => const PistiRootScreen()),
                   ),
                 ),
+                const SizedBox(height: 16),
+                _GameCard(
+                  emoji: '🀄',
+                  title: 'Okey',
+                  subtitle: 'İstakalı klasik okey · 2-4 kişilik online',
+                  borderColor: const Color(0x6600796B),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const OkeyRootScreen()),
+                  ),
+                ),
                 const SizedBox(height: 28),
                 const Text(
-                  'Her iki oyun da gerçek zamanlı, oda koduyla oynanır.',
+                  'Her oyun gerçek zamanlı, oda koduyla oynanır.',
                   style: TextStyle(color: Color(0x66FFFFFF), fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
@@ -78,14 +89,16 @@ class GameSelectScreen extends StatelessWidget {
 }
 
 class _GameCard extends StatelessWidget {
-  final String iconAsset;
+  final String? iconAsset;
+  final String? emoji;
   final String title;
   final String subtitle;
   final Color borderColor;
   final VoidCallback onTap;
 
   const _GameCard({
-    required this.iconAsset,
+    this.iconAsset,
+    this.emoji,
     required this.title,
     required this.subtitle,
     required this.borderColor,
@@ -112,7 +125,16 @@ class _GameCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: Image.asset(iconAsset, width: 52, height: 52),
+                  child: iconAsset != null
+                      ? Image.asset(iconAsset!, width: 52, height: 52)
+                      : Container(
+                          width: 52,
+                          height: 52,
+                          alignment: Alignment.center,
+                          color: const Color(0x2200796B),
+                          child: Text(emoji ?? '🎲',
+                              style: const TextStyle(fontSize: 30)),
+                        ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

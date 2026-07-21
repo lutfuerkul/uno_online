@@ -5,13 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PlayerNameStore {
   static const String unoKey = 'uno_name';
   static const String pistiKey = 'pisti_name';
+  static const String okeyKey = 'okey_name';
   static const int maxLength = 8;
 
   static Future<String> loadUnoName() => _load(unoKey);
   static Future<String> loadPistiName() => _load(pistiKey);
+  static Future<String> loadOkeyName() => _load(okeyKey);
 
   static Future<void> saveUnoName(String name) => _save(unoKey, name);
   static Future<void> savePistiName(String name) => _save(pistiKey, name);
+  static Future<void> saveOkeyName(String name) => _save(okeyKey, name);
 
   static Future<String> _load(String key) async {
     final prefs = await SharedPreferences.getInstance();
