@@ -44,7 +44,14 @@ abstract class OkeyBoardController implements Listenable {
 
   Future<void> drawFromStack();
   Future<void> drawFromDiscard();
+
+  /// Normal atış ("Attığım" alanına bırakılınca). Eli otomatik bitirmez;
+  /// sıra bir sonrakine geçer.
   Future<void> discard(OkeyTile tile);
+
+  /// Eli bitirme atışı (göstergenin üzerine bırakılınca). Kalan taşlar
+  /// geçerli gruplara bölünmüyorsa hiçbir şey yapmaz (taş elde kalır).
+  Future<void> finishDiscard(OkeyTile tile);
 
   /// Elimi otomatik dizer: [byGroups] true ise sayıya (grup/set) göre, aksi
   /// halde renk+sıraya (seri) göre. Yalnızca görsel diziliştir.

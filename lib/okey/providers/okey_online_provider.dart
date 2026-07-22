@@ -180,6 +180,13 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     await _service.discard(gameId: id, playerId: playerId, tileId: tile.id);
   }
 
+  @override
+  Future<void> finishDiscard(OkeyTile tile) async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.finishDiscard(gameId: id, playerId: playerId, tileId: tile.id);
+  }
+
   Future<void> rematch() async {
     final id = gameId;
     if (id == null) return;

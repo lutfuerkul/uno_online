@@ -174,6 +174,17 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
     _scheduleBotLoop(_session);
   }
 
+  @override
+  Future<void> finishDiscard(OkeyTile tile) async {
+    final s = state;
+    if (s == null) return;
+    final result =
+        OkeyEngine.finishDiscard(state: s, playerId: humanId, tile: tile);
+    if (result == null) return;
+    state = result;
+    notifyListeners();
+  }
+
   /// Sıradaki oyuncu(lar) bot olduğu sürece kısa gecikmelerle çeker+atar;
   /// insanın sırası gelince ya da oyun bitince durur.
   Future<void> _scheduleBotLoop(int session) async {
@@ -215,8 +226,11 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
         final decision = OkeyBotService.decide(cur, botId);
         final tile = decision.tile;
         if (tile == null) break;
+        // Önce eli bitirip bitiremeyeceğini dener (göstergeye atış); olmazsa
+        // normal atış (Attığım'a atış) yapar.
         final result =
-            OkeyEngine.discard(state: cur, playerId: botId, tile: tile);
+            OkeyEngine.finishDiscard(state: cur, playerId: botId, tile: tile) ??
+                OkeyEngine.discard(state: cur, playerId: botId, tile: tile);
         if (result == null) break;
         state = result;
         notifyListeners();
