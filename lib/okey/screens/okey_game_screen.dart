@@ -8,6 +8,7 @@ import '../providers/okey_online_provider.dart';
 import '../services/okey_engine.dart';
 import '../theme/okey_theme.dart';
 import '../widgets/okey_board_view.dart';
+import '../widgets/okey_exit_dialog.dart';
 import '../widgets/okey_result_view.dart';
 
 /// Online oyun ekranı: bekleme odası, oyun tahtası ve bitiş durumu.
@@ -19,14 +20,24 @@ class OkeyGameScreen extends StatelessWidget {
     final provider = context.watch<OkeyOnlineProvider>();
     final state = provider.state;
 
-    return Scaffold(
-      backgroundColor: OkeyColors.background,
-      body: SafeArea(
-        child: state == null
-            ? const Center(child: CircularProgressIndicator())
-            : state.status == 'waiting'
-                ? const _Lobby()
-                : const _GameBody(),
+    // Bu ekran zaten bir oda/oyun içindeyken gösterilir; sistem geri tuşu
+    // doğrudan çıkmasın, onay istesin.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final leave = await confirmLeaveOkeyGame(context);
+        if (leave) await provider.leaveGame();
+      },
+      child: Scaffold(
+        backgroundColor: OkeyColors.background,
+        body: SafeArea(
+          child: state == null
+              ? const Center(child: CircularProgressIndicator())
+              : state.status == 'waiting'
+                  ? const _Lobby()
+                  : const _GameBody(),
+        ),
       ),
     );
   }

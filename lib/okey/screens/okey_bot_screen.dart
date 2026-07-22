@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/okey_local_provider.dart';
 import '../theme/okey_theme.dart';
 import '../widgets/okey_board_view.dart';
+import '../widgets/okey_exit_dialog.dart';
 import '../widgets/okey_result_view.dart';
 
 /// "Bilgisayara Karşı Oyna" akışı: önce oyuncu sayısı seçilir, sonra tahta
@@ -19,11 +20,26 @@ class OkeyBotScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => OkeyLocalProvider(),
-      child: Scaffold(
-        backgroundColor: OkeyColors.background,
-        body: SafeArea(
-          child: _OkeyBotRoot(initialPlayerName: initialPlayerName),
-        ),
+      child: Consumer<OkeyLocalProvider>(
+        builder: (context, provider, _) {
+          // Bir oyun başladıysa sistem geri tuşu doğrudan çıkmasın; onay
+          // ister. Henüz kurulum ekranındaysa (oyun yok) normal geri çalışır.
+          final inGame = provider.state != null;
+          return PopScope(
+            canPop: !inGame,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              final leave = await confirmLeaveOkeyGame(context);
+              if (leave) provider.leaveGame();
+            },
+            child: Scaffold(
+              backgroundColor: OkeyColors.background,
+              body: SafeArea(
+                child: _OkeyBotRoot(initialPlayerName: initialPlayerName),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
