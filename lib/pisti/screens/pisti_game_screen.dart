@@ -8,6 +8,7 @@ import '../providers/pisti_online_provider.dart';
 import '../services/pisti_engine.dart';
 import '../theme/pisti_theme.dart';
 import '../widgets/pisti_board_view.dart';
+import '../widgets/pisti_exit_dialog.dart';
 import '../widgets/pisti_result_view.dart';
 
 /// Oyun ekranı: bekleme odası, oyun tahtası ve bitiş durumunu yönetir.
@@ -21,14 +22,24 @@ class PistiGameScreen extends StatelessWidget {
     final provider = context.watch<PistiOnlineProvider>();
     final state = provider.state;
 
-    return Scaffold(
-      backgroundColor: PistiColors.background,
-      body: SafeArea(
-        child: state == null
-            ? const Center(child: CircularProgressIndicator())
-            : state.status == 'waiting'
-                ? const _Lobby()
-                : const _GameBody(),
+    // Bu ekran zaten bir oda/oyun içindeyken gösterilir; sistem geri tuşu
+    // doğrudan çıkmasın, onay istesin.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final leave = await confirmLeavePistiGame(context);
+        if (leave) await provider.leaveGame();
+      },
+      child: Scaffold(
+        backgroundColor: PistiColors.background,
+        body: SafeArea(
+          child: state == null
+              ? const Center(child: CircularProgressIndicator())
+              : state.status == 'waiting'
+                  ? const _Lobby()
+                  : const _GameBody(),
+        ),
       ),
     );
   }

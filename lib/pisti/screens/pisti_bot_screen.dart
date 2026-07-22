@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/pisti_local_provider.dart';
 import '../theme/pisti_theme.dart';
 import '../widgets/pisti_board_view.dart';
+import '../widgets/pisti_exit_dialog.dart';
 import '../widgets/pisti_result_view.dart';
 
 /// "Bilgisayara Karşı Oyna" akışını yönetir: önce oyuncu sayısı seçilir
@@ -21,9 +22,25 @@ class PistiBotScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => PistiLocalProvider(),
-      child: Scaffold(
-        backgroundColor: PistiColors.background,
-        body: SafeArea(child: _PistiBotRoot(initialPlayerName: initialPlayerName)),
+      child: Consumer<PistiLocalProvider>(
+        builder: (context, provider, _) {
+          // Bir oyun başladıysa sistem geri tuşu doğrudan çıkmasın; onay
+          // ister. Henüz kurulum ekranındaysa (oyun yok) normal geri çalışır.
+          final inGame = provider.state != null;
+          return PopScope(
+            canPop: !inGame,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              final leave = await confirmLeavePistiGame(context);
+              if (leave) provider.leaveGame();
+            },
+            child: Scaffold(
+              backgroundColor: PistiColors.background,
+              body: SafeArea(
+                  child: _PistiBotRoot(initialPlayerName: initialPlayerName)),
+            ),
+          );
+        },
       ),
     );
   }
