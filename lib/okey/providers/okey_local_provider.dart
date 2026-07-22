@@ -90,7 +90,7 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
     if (s == null || !isMyTurn || !s.hasDrawn) return false;
     final hand = s.hands[humanId] ?? const [];
     if (hand.length != 15) return false;
-    return OkeyMeldSolver.winningDiscard(hand, s.isOkey) != null;
+    return OkeyMeldSolver.winningDiscard(hand, s.okeyColor, s.okeyNumber) != null;
   }
 
   String _lastPlayerName = '';

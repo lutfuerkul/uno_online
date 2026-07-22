@@ -8,7 +8,11 @@ import '../models/okey_tile.dart';
 ///    altta (1-2-3) hem de 13'ten sonra (12-13-1) kullanılabilir.
 ///  - Grup (set): aynı sayıda, farklı renklerden 3 ya da 4 taş.
 ///
-/// Okey (joker) taşları herhangi bir taşın yerini tutabilir.
+/// Okey (joker) iki türlüdür:
+///  - Göstergeyle aynı renkte, bir büyük sayıdaki **gerçek** taş: herhangi bir
+///    taşın yerini tutabilen gerçek bir jokerdir (evrensel wild).
+///  - **Sahte okey**: gerçek gibi kullanılamaz; yalnızca elin okey taşının
+///    (rengi+sayısı) yerine, o taşın ekstra bir kopyası gibi geçer.
 ///
 /// Bölümleme, en küçük taşı "soyarak" (peel) ve onu içerebilecek tüm grup
 /// biçimlerini deneyerek yapılır. Bir grup için bir yuvaya karar verildiğinde
@@ -20,18 +24,37 @@ class OkeyMeldSolver {
   static const int _colors = 4;
   static const int _numbers = 13;
 
-  /// 14 taş tam olarak geçerli gruplara bölünüyor mu (el açılabilir mi)?
-  static bool isWinningHand(List<OkeyTile> tiles, bool Function(OkeyTile) isOkey) {
-    if (tiles.length != 14) return false;
+  /// Taşları sayaç dizisine ve evrensel joker sayısına ayırır. Sahte okeyler
+  /// evrensel joker havuzuna değil, doğrudan (okeyColor, okeyNumber)
+  /// yuvasına gerçek bir taş gibi eklenir — yalnızca göstergeyle aynı renkte
+  /// bir büyük sayıdaki **gerçek** taş evrensel jokerdir.
+  static (List<int>, int) _classify(
+    List<OkeyTile> tiles,
+    OkeyColor okeyColor,
+    int okeyNumber,
+  ) {
     final counts = List<int>.filled(_colors * _numbers, 0);
     var wilds = 0;
     for (final t in tiles) {
-      if (isOkey(t)) {
+      if (t.isFakeJoker) {
+        counts[okeyColor.index * _numbers + (okeyNumber - 1)]++;
+      } else if (t.color == okeyColor && t.number == okeyNumber) {
         wilds++;
       } else {
         counts[t.color.index * _numbers + (t.number - 1)]++;
       }
     }
+    return (counts, wilds);
+  }
+
+  /// 14 taş tam olarak geçerli gruplara bölünüyor mu (el açılabilir mi)?
+  static bool isWinningHand(
+    List<OkeyTile> tiles,
+    OkeyColor okeyColor,
+    int okeyNumber,
+  ) {
+    if (tiles.length != 14) return false;
+    final (counts, wilds) = _classify(tiles, okeyColor, okeyNumber);
     return _canPartition(counts, wilds, <String, bool>{});
   }
 
@@ -40,18 +63,23 @@ class OkeyMeldSolver {
   /// seçilir. Açılamıyorsa null.
   static OkeyTile? winningDiscard(
     List<OkeyTile> tiles,
-    bool Function(OkeyTile) isOkey, {
+    OkeyColor okeyColor,
+    int okeyNumber, {
     bool preferOkey = false,
   }) {
     if (tiles.length != 15) return null;
+    bool isRealOkey(OkeyTile t) =>
+        !t.isFakeJoker && t.color == okeyColor && t.number == okeyNumber;
     OkeyTile? fallback;
     // Aynı taştan birden fazla varsa gereksiz tekrar denemeyi önlemek için
     // denenen taş imzalarını izleriz.
     final tried = <String>{};
     for (final candidate in tiles) {
-      final sig = isOkey(candidate)
-          ? 'okey'
-          : '${candidate.color.index}-${candidate.number}';
+      final sig = candidate.isFakeJoker
+          ? 'fake'
+          : isRealOkey(candidate)
+              ? 'okey'
+              : '${candidate.color.index}-${candidate.number}';
       if (!tried.add(sig)) continue;
       final rest = <OkeyTile>[];
       var removed = false;
@@ -62,8 +90,8 @@ class OkeyMeldSolver {
         }
         rest.add(t);
       }
-      if (isWinningHand(rest, isOkey)) {
-        if (isOkey(candidate)) {
+      if (isWinningHand(rest, okeyColor, okeyNumber)) {
+        if (isRealOkey(candidate)) {
           if (preferOkey) return candidate;
           fallback ??= candidate;
         } else {
@@ -77,16 +105,12 @@ class OkeyMeldSolver {
 
   /// Bot sezgisi: gruplara yerleştirilebilecek en fazla taş sayısı (kaplanan).
   /// Kalan = boşta taş. Küçük değer = daha iyi el.
-  static int maxCovered(List<OkeyTile> tiles, bool Function(OkeyTile) isOkey) {
-    final counts = List<int>.filled(_colors * _numbers, 0);
-    var wilds = 0;
-    for (final t in tiles) {
-      if (isOkey(t)) {
-        wilds++;
-      } else {
-        counts[t.color.index * _numbers + (t.number - 1)]++;
-      }
-    }
+  static int maxCovered(
+    List<OkeyTile> tiles,
+    OkeyColor okeyColor,
+    int okeyNumber,
+  ) {
+    final (counts, wilds) = _classify(tiles, okeyColor, okeyNumber);
     return _bestCover(counts, wilds, <String, int>{});
   }
 
