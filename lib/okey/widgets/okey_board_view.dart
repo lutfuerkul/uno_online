@@ -29,11 +29,6 @@ class OkeyBoardView extends StatefulWidget {
 class _OkeyBoardViewState extends State<OkeyBoardView> {
   String? _selectedId;
 
-  /// Sürüklerken hedef taşın konumunu ölçmek için taş kimliği -> GlobalKey.
-  final Map<String, GlobalKey> _tileKeys = {};
-
-  GlobalKey _keyFor(String id) => _tileKeys.putIfAbsent(id, () => GlobalKey());
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -467,25 +462,31 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  /// Elimdeki taşları ıstakaya dizer. Taş boyutu, bir sıraya ~13 taş sığacak
-  /// şekilde ekran genişliğinden hesaplanır (telefonda okunaklı, kompakt);
-  /// sığmayan taşlar alt sıraya sarar. Sürükle-bırakla yeniden dizilebilir.
+  /// Elimi ıstakaya yuva-ızgarası olarak dizer. Her hücre bir bırakma
+  /// hedefidir; taşı boş yuvaya bırakırsan oraya gider, eski yeri boş kalır
+  /// (serbest yerleşim + boşluk bırakma). Boş yuvalar soluk gösterilir.
   Widget _rackWithTiles(BuildContext context, OkeyGameState state,
       List<OkeyTile> myHand, bool canDiscard) {
+    final byId = {for (final t in myHand) t.id: t};
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         const gap = 3.0;
         const hPad = 8.0;
-        const targetPerRow = 12; // bir sıraya sığması istenen taş sayısı
+        const targetPerRow = 11; // sıra başına hedef taş sayısı (boyut ayarı)
         final inner = width - hPad * 2;
         var tileW = (inner - (targetPerRow - 1) * gap) / targetPerRow;
-        tileW = tileW.clamp(16.0, 38.0);
+        tileW = tileW.clamp(16.0, 42.0);
         final tileH = tileW * OkeyTileWidget.aspect;
+        final perRow = ((inner + gap) / (tileW + gap)).floor().clamp(1, 30);
+
+        final slots = widget.controller.handSlots;
+        // En az 2 satır; taşlar sığmıyorsa daha fazla. Kalan hücreler boş yuva.
+        final rowsNeeded = (slots.length + perRow - 1) ~/ perRow;
+        final rows = math.max(2, rowsNeeded);
 
         return Container(
           width: double.infinity,
-          constraints: BoxConstraints(minHeight: tileH + 16),
           decoration: BoxDecoration(
             color: OkeyColors.rackDark,
             borderRadius: BorderRadius.circular(10),
@@ -495,13 +496,26 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: gap,
-            runSpacing: gap,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (final tile in myHand)
-                _draggableTile(tile, tileW, canDiscard, state),
+              for (var r = 0; r < rows; r++) ...[
+                if (r > 0) const SizedBox(height: gap + 2),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var col = 0; col < perRow; col++) ...[
+                      if (col > 0) const SizedBox(width: gap),
+                      Builder(builder: (_) {
+                        final i = r * perRow + col;
+                        final id = i < slots.length ? slots[i] : null;
+                        return _slotCell(
+                            i, id, byId[id], tileW, tileH, canDiscard, state);
+                      }),
+                    ],
+                  ],
+                ),
+              ],
             ],
           ),
         );
@@ -509,57 +523,74 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  /// Sürüklenebilir + hedef alınabilir taş. Uzun basıp sürükleyince yeri
-  /// değişir; kısa dokunuşta seçilir/atılır.
-  Widget _draggableTile(
-      OkeyTile tile, double w, bool canDiscard, OkeyGameState state) {
-    final tileKey = _keyFor(tile.id);
-    final tileWidget = OkeyTileWidget(
-      tile: tile,
-      width: w,
-      isOkey: state.isOkey(tile),
-      selected: tile.id == _selectedId,
-      onTap: () => _onTileTap(tile, canDiscard),
-    );
+  /// Bir ıstaka hücresi: taş varsa sürüklenebilir taşı, yoksa soluk boş yuvayı
+  /// gösterir. Her hücre bir DragTarget'tır; taş bırakılınca o yuvaya konur.
+  Widget _slotCell(int index, String? tileId, OkeyTile? tile, double w,
+      double h, bool canDiscard, OkeyGameState state) {
     return DragTarget<String>(
-      onWillAcceptWithDetails: (d) => d.data != tile.id,
-      onAcceptWithDetails: (d) {
-        // Bırakma noktası hedefin sol yarısındaysa soluna, sağ yarısındaysa
-        // sağına yerleştir (sağa/sola taşıma sezgisel olsun).
-        var after = false;
-        final box = tileKey.currentContext?.findRenderObject() as RenderBox?;
-        if (box != null && box.hasSize) {
-          final local = box.globalToLocal(d.offset);
-          after = local.dx > box.size.width / 2;
-        }
-        widget.controller.moveTile(d.data, tile.id, after: after);
-      },
+      onWillAcceptWithDetails: (d) => d.data != tileId,
+      onAcceptWithDetails: (d) => widget.controller.placeTile(d.data, index),
       builder: (ctx, cand, rej) {
-        final highlight = cand.isNotEmpty;
-        return Container(
-          key: tileKey,
-          decoration: highlight
-              ? const BoxDecoration(
-                  border: Border(
-                      left: BorderSide(color: OkeyColors.okeyGlow, width: 3)))
-              : null,
-          child: LongPressDraggable<String>(
-            data: tile.id,
-            delay: const Duration(milliseconds: 150),
-            hapticFeedbackOnStart: true,
-            feedback: Material(
-              color: Colors.transparent,
-              child: OkeyTileWidget(
-                tile: tile,
-                width: w * 1.15,
-                isOkey: state.isOkey(tile),
-              ),
+        final hl = cand.isNotEmpty;
+        if (tile == null) {
+          return _emptyRackSlot(w, h, hl);
+        }
+        final tileWidget = OkeyTileWidget(
+          tile: tile,
+          width: w,
+          isOkey: state.isOkey(tile),
+          selected: tile.id == _selectedId,
+          onTap: () => _onTileTap(tile, canDiscard),
+        );
+        return LongPressDraggable<String>(
+          data: tile.id,
+          delay: const Duration(milliseconds: 150),
+          hapticFeedbackOnStart: true,
+          feedback: Material(
+            color: Colors.transparent,
+            child: OkeyTileWidget(
+                tile: tile, width: w * 1.12, isOkey: state.isOkey(tile)),
+          ),
+          childWhenDragging: _emptyRackSlot(w, h, false),
+          child: SizedBox(
+            width: w,
+            height: h,
+            child: Stack(
+              children: [
+                Positioned.fill(child: tileWidget),
+                if (hl)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(w * 0.14),
+                          border: Border.all(
+                              color: OkeyColors.okeyGlow, width: 2),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            childWhenDragging: Opacity(opacity: 0.3, child: tileWidget),
-            child: tileWidget,
           ),
         );
       },
+    );
+  }
+
+  /// Boş yuva (soluk çerçeve). Üzerine taş sürüklenince vurgulanır.
+  Widget _emptyRackSlot(double w, double h, bool highlight) {
+    return Container(
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(w * 0.14),
+        color: const Color(0x14000000),
+        border: Border.all(
+          color: highlight ? OkeyColors.okeyGlow : const Color(0x2E000000),
+          width: highlight ? 2 : 1,
+        ),
+      ),
     );
   }
 
