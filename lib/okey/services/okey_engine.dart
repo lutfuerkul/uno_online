@@ -202,7 +202,8 @@ class OkeyEngine {
     if (handIdx == -1) return null;
 
     final rest = List<OkeyTile>.of(hand)..removeAt(handIdx);
-    if (rest.length != 14 || !OkeyMeldSolver.isWinningHand(rest, state.isOkey)) {
+    if (rest.length != 14 ||
+        !OkeyMeldSolver.isWinningHand(rest, state.okeyColor, state.okeyNumber)) {
       return null;
     }
 

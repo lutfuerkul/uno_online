@@ -691,7 +691,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     }
     final hand = widget.controller.myHand;
     final rest = [for (final t in hand) if (t.id != tileId) t];
-    if (rest.length != 14 || !OkeyMeldSolver.isWinningHand(rest, state.isOkey)) {
+    if (rest.length != 14 ||
+        !OkeyMeldSolver.isWinningHand(rest, state.okeyColor, state.okeyNumber)) {
       _toast('Bu taşla eli bitiremezsin.');
       return;
     }

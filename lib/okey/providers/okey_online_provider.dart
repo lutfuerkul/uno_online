@@ -107,7 +107,7 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     if (s == null || !isMyTurn || !s.hasDrawn) return false;
     final hand = s.hands[playerId] ?? const [];
     if (hand.length != 15) return false;
-    return OkeyMeldSolver.winningDiscard(hand, s.isOkey) != null;
+    return OkeyMeldSolver.winningDiscard(hand, s.okeyColor, s.okeyNumber) != null;
   }
 
   Future<void> createGame(String name) async {

@@ -18,7 +18,8 @@ class OkeyBotService {
     // 15 taş: önce el açmayı dene (çifte için okey atmayı tercih et).
     final winTile = OkeyMeldSolver.winningDiscard(
       hand,
-      state.isOkey,
+      state.okeyColor,
+      state.okeyNumber,
       preferOkey: true,
     );
     if (winTile != null) {
@@ -40,9 +41,11 @@ class OkeyBotService {
     if (state.isOkey(tile)) return true;
 
     final hand = state.hands[botId] ?? const <OkeyTile>[];
-    final baseCover = OkeyMeldSolver.maxCovered(hand, state.isOkey);
+    final baseCover =
+        OkeyMeldSolver.maxCovered(hand, state.okeyColor, state.okeyNumber);
     final withTile = [...hand, tile];
-    final coverWith = OkeyMeldSolver.maxCovered(withTile, state.isOkey);
+    final coverWith = OkeyMeldSolver.maxCovered(
+        withTile, state.okeyColor, state.okeyNumber);
     // Alınan taş doğrudan bir pere katkı yapıyorsa değerlidir.
     return coverWith > baseCover + 1;
   }
@@ -60,7 +63,8 @@ class OkeyBotService {
         for (final t in hand)
           if (t.id != tile.id) t,
       ];
-      final cover = OkeyMeldSolver.maxCovered(rest, state.isOkey);
+      final cover =
+          OkeyMeldSolver.maxCovered(rest, state.okeyColor, state.okeyNumber);
       if (cover > bestCover) {
         bestCover = cover;
         best = tile;
