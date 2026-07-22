@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/local_uno_provider.dart';
 import '../theme/uno_theme.dart';
 import '../widgets/uno_board_view.dart';
+import '../widgets/uno_exit_dialog.dart';
 import '../widgets/uno_result_view.dart';
 
 /// "Bilgisayara Karşı Oyna" akışını yönetir: önce oyuncu sayısı seçilir
@@ -21,9 +22,25 @@ class UnoBotScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => LocalUnoProvider(),
-      child: Scaffold(
-        backgroundColor: UnoColors.background,
-        body: SafeArea(child: _UnoBotRoot(initialPlayerName: initialPlayerName)),
+      child: Consumer<LocalUnoProvider>(
+        builder: (context, provider, _) {
+          // Bir oyun başladıysa sistem geri tuşu doğrudan çıkmasın; onay
+          // ister. Henüz kurulum ekranındaysa (oyun yok) normal geri çalışır.
+          final inGame = provider.state != null;
+          return PopScope(
+            canPop: !inGame,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              final leave = await confirmLeaveUnoGame(context);
+              if (leave) provider.leaveGame();
+            },
+            child: Scaffold(
+              backgroundColor: UnoColors.background,
+              body: SafeArea(
+                  child: _UnoBotRoot(initialPlayerName: initialPlayerName)),
+            ),
+          );
+        },
       ),
     );
   }

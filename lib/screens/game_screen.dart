@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../providers/game_provider.dart';
 import '../theme/uno_theme.dart';
 import '../widgets/uno_board_view.dart';
+import '../widgets/uno_exit_dialog.dart';
 import '../widgets/uno_result_view.dart';
 
 /// Oyun ekranı: bekleme odası, oyun tahtası ve bitiş durumunu yönetir.
@@ -20,14 +21,24 @@ class GameScreen extends StatelessWidget {
     final provider = context.watch<GameProvider>();
     final state = provider.state;
 
-    return Scaffold(
-      backgroundColor: UnoColors.background,
-      body: SafeArea(
-        child: state == null
-            ? const Center(child: CircularProgressIndicator())
-            : state.status == 'waiting'
-                ? const _Lobby()
-                : const _GameBody(),
+    // Bu ekran zaten bir oda/oyun içindeyken gösterilir; sistem geri tuşu
+    // doğrudan çıkmasın, onay istesin.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final leave = await confirmLeaveUnoGame(context);
+        if (leave) await provider.leaveGame();
+      },
+      child: Scaffold(
+        backgroundColor: UnoColors.background,
+        body: SafeArea(
+          child: state == null
+              ? const Center(child: CircularProgressIndicator())
+              : state.status == 'waiting'
+                  ? const _Lobby()
+                  : const _GameBody(),
+        ),
       ),
     );
   }
