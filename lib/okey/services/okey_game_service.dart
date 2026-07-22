@@ -120,6 +120,20 @@ class OkeyGameService {
     });
   }
 
+  Future<void> finishDiscard({
+    required String gameId,
+    required String playerId,
+    required String tileId,
+  }) async {
+    await _mutate(gameId, (game) {
+      final hand = game.hands[playerId] ?? const <OkeyTile>[];
+      final idx = hand.indexWhere((t) => t.id == tileId);
+      if (idx == -1) return null;
+      return OkeyEngine.finishDiscard(
+          state: game, playerId: playerId, tile: hand[idx]);
+    });
+  }
+
   Future<void> _mutate(
     String gameId,
     OkeyGameState? Function(OkeyGameState game) apply,

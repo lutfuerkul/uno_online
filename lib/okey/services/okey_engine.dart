@@ -120,9 +120,10 @@ class OkeyEngine {
     );
   }
 
-  /// Taş atar. Atıştan sonra elde 14 taş kalır; bunlar geçerli gruplara
-  /// bölünüyorsa oyuncu eli açar (kazanır). Aksi halde sıra bir sonrakine
-  /// geçer. Deste bittiyse el berabere sonlanır.
+  /// Normal taş atar (taş "Attığım" alanına bırakılınca). Eli açıp
+  /// açamayacağına bakmaz — elin geçerli gruplara bölünmesi bu atışı asla
+  /// otomatik bitirmez; sıra bir sonrakine geçer (deste bittiyse el
+  /// berabere sonlanır). Eli bitirmek için [finishDiscard] kullanılır.
   static OkeyGameState? discard({
     required OkeyGameState state,
     required String playerId,
@@ -154,25 +155,6 @@ class OkeyEngine {
       tile: discarded,
     );
 
-    // El açma kontrolü: kalan 14 taş geçerli gruplara bölünüyor mu?
-    if (hand.length == 14 &&
-        OkeyMeldSolver.isWinningHand(hand, state.isOkey)) {
-      final byOkey = state.isOkey(discarded);
-      final points = byOkey ? okeyWinPoints : winPoints;
-      return state.copyWith(
-        status: 'finished',
-        hands: hands,
-        discards: discards,
-        hasDrawn: false,
-        clearDrawnFromDiscard: true,
-        lastAction: lastAction,
-        winner: playerId,
-        winners: [playerId],
-        finishedByOkey: byOkey,
-        scores: {for (final p in state.players) p: p == playerId ? points : 0},
-      );
-    }
-
     // Deste bittiyse el berabere sonlanır.
     if (state.drawPile.isEmpty) {
       return state.copyWith(
@@ -196,6 +178,61 @@ class OkeyEngine {
       hasDrawn: false,
       clearDrawnFromDiscard: true,
       lastAction: lastAction,
+    );
+  }
+
+  /// Eli bitirme atışı (taş göstergenin üzerine bırakılınca). [tile]
+  /// atıldığında kalan 14 taş geçerli gruplara bölünüyorsa el açılır
+  /// (kazanılır) — okey atarak bitirmek çifte puandır. Bölünmüyorsa (geçersiz
+  /// bitiş girişimi) null döner; hiçbir şey değişmez, taş elde kalır.
+  static OkeyGameState? finishDiscard({
+    required OkeyGameState state,
+    required String playerId,
+    required OkeyTile tile,
+  }) {
+    if (state.status != 'playing' || state.currentTurn != playerId) return null;
+    if (!state.hasDrawn) return null;
+    if (state.drawnFromDiscardId != null &&
+        state.drawnFromDiscardId == tile.id) {
+      return null;
+    }
+
+    final hand = List<OkeyTile>.of(state.hands[playerId] ?? const []);
+    final handIdx = hand.indexWhere((t) => t.id == tile.id);
+    if (handIdx == -1) return null;
+
+    final rest = List<OkeyTile>.of(hand)..removeAt(handIdx);
+    if (rest.length != 14 || !OkeyMeldSolver.isWinningHand(rest, state.isOkey)) {
+      return null;
+    }
+
+    final discarded = hand[handIdx];
+    final hands = _cloneHands(state.hands);
+    hands[playerId] = rest;
+
+    final discards = _cloneHands(state.discards);
+    discards[playerId] = [...discards[playerId]!, discarded];
+
+    final lastAction = OkeyLastAction(
+      player: playerId,
+      type: 'discard',
+      fromDiscard: false,
+      tile: discarded,
+    );
+
+    final byOkey = state.isOkey(discarded);
+    final points = byOkey ? okeyWinPoints : winPoints;
+    return state.copyWith(
+      status: 'finished',
+      hands: hands,
+      discards: discards,
+      hasDrawn: false,
+      clearDrawnFromDiscard: true,
+      lastAction: lastAction,
+      winner: playerId,
+      winners: [playerId],
+      finishedByOkey: byOkey,
+      scores: {for (final p in state.players) p: p == playerId ? points : 0},
     );
   }
 

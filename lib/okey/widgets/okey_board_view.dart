@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/okey_board_controller.dart';
 import '../models/okey_game_state.dart';
 import '../models/okey_tile.dart';
+import '../services/okey_meld_solver.dart';
 import '../theme/okey_theme.dart';
 import 'okey_tile_widget.dart';
 
@@ -202,6 +203,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     final c = widget.controller;
     final isMyTurn = c.isMyTurn;
     final canDraw = isMyTurn && !c.hasDrawn && state.status == 'playing';
+    final canDiscard = isMyTurn && c.hasDrawn && state.status == 'playing';
     final deckCount = state.drawPile.length;
     final leftDiscard = c.takeableDiscard;
     final myDiscard = c.myLastDiscard;
@@ -216,7 +218,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _indicatorCard(state),
+                _indicatorCard(context, state, canDiscard),
                 const SizedBox(height: 16),
                 // FittedBox: dar telefonlarda orta satır taşmasın diye orantılı
                 // küçülür.
@@ -226,16 +228,29 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Kendi en son attığım taş (solda, bilgi amaçlı).
+                      // Kendi en son attığım taş — atılacak taş buraya
+                      // sürüklenip bırakılır (normal atış, sıra geçer).
                       _pileColumn(
                         label: 'Attığım',
-                        child: myDiscard != null
-                            ? OkeyTileWidget(
-                                tile: myDiscard,
-                                width: _tileSize,
-                                isOkey: state.isOkey(myDiscard),
-                              )
-                            : _emptySlot(_tileSize),
+                        highlight: canDiscard,
+                        hint: canDiscard ? 'atmak için sürükle' : null,
+                        child: DragTarget<String>(
+                          onWillAcceptWithDetails: (d) => canDiscard,
+                          onAcceptWithDetails: (d) =>
+                              _handleDiscardDrop(context, d.data),
+                          builder: (ctx, cand, rej) {
+                            final tile = myDiscard != null
+                                ? OkeyTileWidget(
+                                    tile: myDiscard,
+                                    width: _tileSize,
+                                    isOkey: state.isOkey(myDiscard),
+                                  )
+                                : _emptySlot(_tileSize);
+                            return cand.isNotEmpty
+                                ? _dropHighlight(tile, _tileSize)
+                                : tile;
+                          },
+                        ),
                       ),
                       const SizedBox(width: 20),
                       _pileColumn(
@@ -277,7 +292,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  Widget _indicatorCard(OkeyGameState state) {
+  Widget _indicatorCard(
+      BuildContext context, OkeyGameState state, bool canDiscard) {
     final ind = state.indicator;
     final okeyColorName = OkeyTile(
       color: state.okeyColor,
@@ -291,7 +307,10 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       decoration: BoxDecoration(
         color: const Color(0x22000000),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x33FFFFFF)),
+        border: Border.all(
+          color: canDiscard ? OkeyColors.okeyGlow : const Color(0x33FFFFFF),
+          width: canDiscard ? 2 : 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -301,7 +320,26 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               const Text('Gösterge',
                   style: TextStyle(color: OkeyColors.label, fontSize: 11)),
               const SizedBox(height: 4),
-              OkeyTileWidget(tile: ind, width: _tileSize),
+              // Eli bitirmek için: göndereceğin taşı bu gösterge taşının
+              // üzerine sürükleyip bırak. Geçerli bitişse el açılır; değilse
+              // hiçbir şey olmaz (taş elde kalır).
+              DragTarget<String>(
+                onWillAcceptWithDetails: (d) => canDiscard,
+                onAcceptWithDetails: (d) =>
+                    _handleFinishDrop(context, state, d.data),
+                builder: (ctx, cand, rej) {
+                  final tile = OkeyTileWidget(tile: ind, width: _tileSize);
+                  return cand.isNotEmpty
+                      ? _dropHighlight(tile, _tileSize)
+                      : tile;
+                },
+              ),
+              if (canDiscard)
+                const Padding(
+                  padding: EdgeInsets.only(top: 3),
+                  child: Text('bitirmek için sürükle',
+                      style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 10)),
+                ),
             ],
           ),
           const SizedBox(width: 14),
@@ -332,6 +370,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     required Widget child,
     String? hint,
     VoidCallback? onTap,
+    bool highlight = false,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -347,7 +386,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: onTap != null
+                color: (onTap != null || highlight)
                     ? OkeyColors.okeyGlow
                     : Colors.transparent,
                 width: 2,
@@ -366,6 +405,18 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               : null,
         ),
       ],
+    );
+  }
+
+  /// Sürüklenen bir taş bu bırakma hedefinin üzerindeyken [child]'ı sarıp
+  /// vurgular (parlak kenarlık).
+  Widget _dropHighlight(Widget child, double width) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(width * 0.2),
+        border: Border.all(color: OkeyColors.okeyGlow, width: 3),
+      ),
+      child: child,
     );
   }
 
@@ -438,7 +489,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     final isMyTurn = c.isMyTurn;
     final canDiscard = isMyTurn && c.hasDrawn && state.status == 'playing';
     final myHand = c.myHand;
-    final selected = _selectedTile(myHand);
 
     return Container(
       color: OkeyColors.topbar,
@@ -446,36 +496,22 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              // "Renk sırala" / "Grupla" düğmeleri gizlendi (serbest yerleşim
-              // geldiğinden gereksiz kaldılar); kod korunuyor, gerekirse
-              // _showArrangeButtons true yapılıp geri açılabilir.
-              if (_showArrangeButtons) ...[
+          // "Renk sırala" / "Grupla" düğmeleri gizlendi (serbest yerleşim
+          // geldiğinden gereksiz kaldılar); "Seçili taşı at" düğmesi de
+          // kaldırıldı — atış artık taşı "Attığım" ya da göstergeye
+          // sürükleyip bırakarak yapılıyor. Kod korunuyor, gerekirse
+          // _showArrangeButtons true yapılıp geri açılabilir.
+          if (_showArrangeButtons) ...[
+            Row(
+              children: [
                 _smallButton('↔ Renk sırala',
                     () => c.arrangeHand(byGroups: false)),
                 const SizedBox(width: 6),
                 _smallButton('# Grupla', () => c.arrangeHand(byGroups: true)),
               ],
-              const Spacer(),
-              if (canDiscard && selected != null)
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: c.canFinish
-                        ? OkeyColors.accent
-                        : OkeyColors.primary,
-                    foregroundColor:
-                        c.canFinish ? Colors.black : Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  onPressed: () => _discardSelected(context, selected),
-                  child: Text(c.canFinish ? '🎉 Seçili taşı at' : 'Seçili taşı at',
-                      style: const TextStyle(fontWeight: FontWeight.w800)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
+            ),
+            const SizedBox(height: 8),
+          ],
           _rackWithTiles(context, state, myHand, canDiscard),
         ],
       ),
@@ -615,14 +651,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  OkeyTile? _selectedTile(List<OkeyTile> hand) {
-    if (_selectedId == null) return null;
-    for (final t in hand) {
-      if (t.id == _selectedId) return t;
-    }
-    return null;
-  }
-
+  /// Taşa dokununca hafifçe kaldırıp seçili gösterir (yalnızca görsel);
+  /// atış artık taşı "Attığım" ya da göstergeye sürükleyerek yapılıyor.
   void _onTileTap(OkeyTile tile, bool canDiscard) {
     if (!canDiscard) {
       // Çekme fazında taşı seçmek yerine bilgi ver.
@@ -636,9 +666,46 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     });
   }
 
-  Future<void> _discardSelected(BuildContext context, OkeyTile tile) async {
+  /// "Attığım" alanına bırakılan taşı normal atış olarak oynar.
+  Future<void> _handleDiscardDrop(BuildContext context, String tileId) async {
+    final tile = _tileInHand(tileId);
+    if (tile == null) return;
+    final s = widget.controller.state;
+    if (s != null && s.drawnFromDiscardId == tile.id) {
+      _toast('Bu taşı hemen geri atamazsın.');
+      return;
+    }
     setState(() => _selectedId = null);
     await widget.controller.discard(tile);
+  }
+
+  /// Göstergeye bırakılan taşla eli bitirmeyi dener. Kalan taşların geçerli
+  /// gruplara bölünüp bölünmediği burada (istemci tarafında, motorla aynı
+  /// çözücüyle) önceden kontrol edilir; bölünmüyorsa hiçbir şey gönderilmez
+  /// ve kullanıcıya bilgi verilir — taş elde kalır.
+  Future<void> _handleFinishDrop(
+      BuildContext context, OkeyGameState state, String tileId) async {
+    final tile = _tileInHand(tileId);
+    if (tile == null) return;
+    if (state.drawnFromDiscardId == tile.id) {
+      _toast('Bu taşı hemen geri atamazsın.');
+      return;
+    }
+    final hand = widget.controller.myHand;
+    final rest = [for (final t in hand) if (t.id != tileId) t];
+    if (rest.length != 14 || !OkeyMeldSolver.isWinningHand(rest, state.isOkey)) {
+      _toast('Bu taşla eli bitiremezsin.');
+      return;
+    }
+    setState(() => _selectedId = null);
+    await widget.controller.finishDiscard(tile);
+  }
+
+  OkeyTile? _tileInHand(String tileId) {
+    for (final t in widget.controller.myHand) {
+      if (t.id == tileId) return t;
+    }
+    return null;
   }
 
   Widget _smallButton(String label, VoidCallback onTap) {
