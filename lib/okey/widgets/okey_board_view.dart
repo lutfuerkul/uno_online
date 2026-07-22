@@ -195,6 +195,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     final canDraw = isMyTurn && !c.hasDrawn && state.status == 'playing';
     final deckCount = state.drawPile.length;
     final leftDiscard = c.takeableDiscard;
+    final myDiscard = c.myLastDiscard;
 
     return Container(
       color: OkeyColors.middle,
@@ -212,26 +213,38 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Kendi en son attığım taş (solda, bilgi amaçlı).
+                    _pileColumn(
+                      label: 'Attığım',
+                      child: myDiscard != null
+                          ? OkeyTileWidget(
+                              tile: myDiscard,
+                              width: 46,
+                              isOkey: state.isOkey(myDiscard),
+                            )
+                          : _emptySlot(46),
+                    ),
+                    const SizedBox(width: 20),
                     _pileColumn(
                       label: 'Deste ($deckCount)',
                       child: deckCount > 0
-                          ? const OkeyTileWidget(faceDown: true, width: 58)
-                          : _emptySlot(58),
+                          ? const OkeyTileWidget(faceDown: true, width: 46)
+                          : _emptySlot(46),
                       hint: canDraw && deckCount > 0 ? 'çekmek için dokun' : null,
                       onTap: canDraw && deckCount > 0
                           ? () => c.drawFromStack()
                           : null,
                     ),
-                    const SizedBox(width: 28),
+                    const SizedBox(width: 20),
                     _pileColumn(
                       label: 'Yerde (sol)',
                       child: leftDiscard != null
                           ? OkeyTileWidget(
                               tile: leftDiscard,
-                              width: 58,
+                              width: 46,
                               isOkey: state.isOkey(leftDiscard),
                             )
-                          : _emptySlot(58),
+                          : _emptySlot(46),
                       hint: canDraw && leftDiscard != null
                           ? 'almak için dokun'
                           : null,
@@ -273,7 +286,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               const Text('Gösterge',
                   style: TextStyle(color: OkeyColors.label, fontSize: 11)),
               const SizedBox(height: 4),
-              OkeyTileWidget(tile: ind, width: 40),
+              OkeyTileWidget(tile: ind, width: 34),
             ],
           ),
           const SizedBox(width: 14),
@@ -449,8 +462,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  /// Elimdeki taşları ahşap ıstakaya (2 sıralı) dizer. Taşlar iki satıra
-  /// bölünür; ıstaka görseli arka planda esneyerek satırları taşır.
+  /// Elimdeki taşları 2 sıralı sade ıstakaya dizer. Taşlar sürükle-bırakla
+  /// yeniden dizilebilir; taşa dokunmak seçer/atar.
   Widget _rackWithTiles(BuildContext context, OkeyGameState state,
       List<OkeyTile> myHand, bool canDiscard) {
     return LayoutBuilder(
@@ -459,10 +472,10 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         final n = myHand.length;
         final perRow = n <= 1 ? 1 : ((n + 1) ~/ 2); // üst satır ceil(n/2)
         const gap = 3.0;
-        final hPad = width * 0.05; // ıstakanın kavisli uçlarına taş koyma
+        const hPad = 8.0;
         final avail = width - hPad * 2 - gap * (perRow - 1);
-        var tileW = perRow > 0 ? avail / perRow : 40.0;
-        tileW = tileW.clamp(22.0, 46.0);
+        var tileW = perRow > 0 ? avail / perRow : 34.0;
+        tileW = tileW.clamp(20.0, 40.0);
         final tileH = tileW * OkeyTileWidget.aspect;
 
         final topTiles = myHand.sublist(0, math.min(perRow, n));
@@ -470,43 +483,81 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
 
         Widget buildRow(List<OkeyTile> tiles) {
           if (tiles.isEmpty) return SizedBox(height: tileH);
-          return FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final tile in tiles) ...[
-                  OkeyTileWidget(
-                    tile: tile,
-                    width: tileW,
-                    isOkey: state.isOkey(tile),
-                    selected: tile.id == _selectedId,
-                    onTap: () => _onTileTap(tile, canDiscard),
-                  ),
-                  const SizedBox(width: gap),
-                ],
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < tiles.length; i++) ...[
+                if (i > 0) const SizedBox(width: gap),
+                _draggableTile(tiles[i], tileW, canDiscard, state),
               ],
-            ),
+            ],
           );
         }
 
-        return Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset('assets/okey/istaka.png', fit: BoxFit.fill),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(hPad, tileH * 0.14, hPad, tileH * 0.12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  buildRow(topTiles),
-                  SizedBox(height: gap + 2),
-                  buildRow(bottomTiles),
-                ],
+        return Container(
+          decoration: BoxDecoration(
+            color: OkeyColors.rackDark,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0x55000000), width: 2),
+            boxShadow: const [
+              BoxShadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 2)),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              buildRow(topTiles),
+              // İki sırayı ayıran ince raf çizgisi.
+              Container(
+                height: 2,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                color: const Color(0x33000000),
+              ),
+              buildRow(bottomTiles),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Sürüklenebilir + hedef alınabilir taş. Uzun basıp sürükleyince yeri
+  /// değişir; kısa dokunuşta seçilir/atılır.
+  Widget _draggableTile(
+      OkeyTile tile, double w, bool canDiscard, OkeyGameState state) {
+    final tileWidget = OkeyTileWidget(
+      tile: tile,
+      width: w,
+      isOkey: state.isOkey(tile),
+      selected: tile.id == _selectedId,
+      onTap: () => _onTileTap(tile, canDiscard),
+    );
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (d) => d.data != tile.id,
+      onAcceptWithDetails: (d) => widget.controller.moveTile(d.data, tile.id),
+      builder: (ctx, cand, rej) {
+        final highlight = cand.isNotEmpty;
+        return Container(
+          decoration: highlight
+              ? const BoxDecoration(
+                  border: Border(
+                      left: BorderSide(color: OkeyColors.okeyGlow, width: 3)))
+              : null,
+          child: LongPressDraggable<String>(
+            data: tile.id,
+            hapticFeedbackOnStart: true,
+            feedback: Material(
+              color: Colors.transparent,
+              child: OkeyTileWidget(
+                tile: tile,
+                width: w * 1.15,
+                isOkey: state.isOkey(tile),
               ),
             ),
-          ],
+            childWhenDragging: Opacity(opacity: 0.3, child: tileWidget),
+            child: tileWidget,
+          ),
         );
       },
     );

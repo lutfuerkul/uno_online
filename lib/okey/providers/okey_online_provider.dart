@@ -81,6 +81,9 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   OkeyTile? get takeableDiscard => topDiscardOf(leftPlayerId);
 
   @override
+  OkeyTile? get myLastDiscard => topDiscardOf(playerId);
+
+  @override
   bool get canFinish {
     final s = state;
     if (s == null || !isMyTurn || !s.hasDrawn) return false;
@@ -129,6 +132,22 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
       byGroups: byGroups,
       isOkey: s.isOkey,
     );
+    notifyListeners();
+  }
+
+  @override
+  void moveTile(String draggedId, String targetId) {
+    if (draggedId == targetId) return;
+    final ids = myHand.map((t) => t.id).toList();
+    if (!ids.contains(draggedId)) return;
+    ids.remove(draggedId);
+    final ti = ids.indexOf(targetId);
+    if (ti < 0) {
+      ids.add(draggedId);
+    } else {
+      ids.insert(ti, draggedId);
+    }
+    _order = ids;
     notifyListeners();
   }
 
