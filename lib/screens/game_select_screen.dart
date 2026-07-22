@@ -65,9 +65,9 @@ class GameSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _GameCard(
-                  emoji: '🀄',
+                  iconAsset: 'assets/icons/okey_icon.png',
                   title: 'Okey',
-                  subtitle: 'İstakalı klasik okey · 2-4 kişilik online',
+                  subtitle: '2-4 kişilik, oda koduyla online',
                   borderColor: const Color(0x6600796B),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const OkeyRootScreen()),

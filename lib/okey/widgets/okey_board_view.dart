@@ -266,7 +266,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                       ),
                       const SizedBox(width: 20),
                       _pileColumn(
-                        label: 'Yerde (sol)',
+                        label: 'Yerde',
                         child: leftDiscard != null
                             ? OkeyTileWidget(
                                 tile: leftDiscard,
@@ -356,8 +356,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               Text('$okeyColorName ${state.okeyNumber}',
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.w700)),
-              const Text('ve iki sahte okey joker',
-                  style: TextStyle(color: OkeyColors.muted, fontSize: 11)),
             ],
           ),
         ],
