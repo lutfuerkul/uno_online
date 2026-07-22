@@ -29,6 +29,15 @@ class OkeyBoardView extends StatefulWidget {
 class _OkeyBoardViewState extends State<OkeyBoardView> {
   String? _selectedId;
 
+  /// Tüm taşların ortak ebadı — "oyuncuların yere attığı taş" boyutu. Masa
+  /// ortasındaki taşlar (gösterge, deste, yerdeki, attığım) ve ıstakadaki
+  /// taşlar bu boyutta çizilir; ıstakada ekrana sığmazsa otomatik küçülür.
+  static const double _tileSize = 26;
+
+  /// Renk sırala/Grupla düğmeleri serbest yerleşimle gereksiz kaldı;
+  /// gerekirse tekrar açmak için burayı true yap.
+  static const bool _showArrangeButtons = false;
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -143,12 +152,12 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                   discard != null
                       ? OkeyTileWidget(
                           tile: discard,
-                          width: 26,
+                          width: _tileSize,
                           isOkey: state.isOkey(discard),
                         )
                       : SizedBox(
-                          width: 26,
-                          height: 26 * 1.5,
+                          width: _tileSize,
+                          height: _tileSize * OkeyTileWidget.aspect,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               border: Border.all(color: const Color(0x33FFFFFF)),
@@ -209,50 +218,56 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               children: [
                 _indicatorCard(state),
                 const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Kendi en son attığım taş (solda, bilgi amaçlı).
-                    _pileColumn(
-                      label: 'Attığım',
-                      child: myDiscard != null
-                          ? OkeyTileWidget(
-                              tile: myDiscard,
-                              width: 46,
-                              isOkey: state.isOkey(myDiscard),
-                            )
-                          : _emptySlot(46),
-                    ),
-                    const SizedBox(width: 20),
-                    _pileColumn(
-                      label: 'Deste ($deckCount)',
-                      child: deckCount > 0
-                          ? const OkeyTileWidget(faceDown: true, width: 46)
-                          : _emptySlot(46),
-                      hint: canDraw && deckCount > 0 ? 'çekmek için dokun' : null,
-                      onTap: canDraw && deckCount > 0
-                          ? () => c.drawFromStack()
-                          : null,
-                    ),
-                    const SizedBox(width: 20),
-                    _pileColumn(
-                      label: 'Yerde (sol)',
-                      child: leftDiscard != null
-                          ? OkeyTileWidget(
-                              tile: leftDiscard,
-                              width: 46,
-                              isOkey: state.isOkey(leftDiscard),
-                            )
-                          : _emptySlot(46),
-                      hint: canDraw && leftDiscard != null
-                          ? 'almak için dokun'
-                          : null,
-                      onTap: canDraw && leftDiscard != null
-                          ? () => c.drawFromDiscard()
-                          : null,
-                    ),
-                  ],
+                // FittedBox: dar telefonlarda orta satır taşmasın diye orantılı
+                // küçülür.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Kendi en son attığım taş (solda, bilgi amaçlı).
+                      _pileColumn(
+                        label: 'Attığım',
+                        child: myDiscard != null
+                            ? OkeyTileWidget(
+                                tile: myDiscard,
+                                width: _tileSize,
+                                isOkey: state.isOkey(myDiscard),
+                              )
+                            : _emptySlot(_tileSize),
+                      ),
+                      const SizedBox(width: 20),
+                      _pileColumn(
+                        label: 'Deste ($deckCount)',
+                        child: deckCount > 0
+                            ? const OkeyTileWidget(faceDown: true, width: _tileSize)
+                            : _emptySlot(_tileSize),
+                        hint:
+                            canDraw && deckCount > 0 ? 'çekmek için dokun' : null,
+                        onTap: canDraw && deckCount > 0
+                            ? () => c.drawFromStack()
+                            : null,
+                      ),
+                      const SizedBox(width: 20),
+                      _pileColumn(
+                        label: 'Yerde (sol)',
+                        child: leftDiscard != null
+                            ? OkeyTileWidget(
+                                tile: leftDiscard,
+                                width: _tileSize,
+                                isOkey: state.isOkey(leftDiscard),
+                              )
+                            : _emptySlot(_tileSize),
+                        hint: canDraw && leftDiscard != null
+                            ? 'almak için dokun'
+                            : null,
+                        onTap: canDraw && leftDiscard != null
+                            ? () => c.drawFromDiscard()
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -286,7 +301,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               const Text('Gösterge',
                   style: TextStyle(color: OkeyColors.label, fontSize: 11)),
               const SizedBox(height: 4),
-              OkeyTileWidget(tile: ind, width: 34),
+              OkeyTileWidget(tile: ind, width: _tileSize),
             ],
           ),
           const SizedBox(width: 14),
@@ -433,10 +448,15 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         children: [
           Row(
             children: [
-              _smallButton('↔ Renk sırala',
-                  () => c.arrangeHand(byGroups: false)),
-              const SizedBox(width: 6),
-              _smallButton('# Grupla', () => c.arrangeHand(byGroups: true)),
+              // "Renk sırala" / "Grupla" düğmeleri gizlendi (serbest yerleşim
+              // geldiğinden gereksiz kaldılar); kod korunuyor, gerekirse
+              // _showArrangeButtons true yapılıp geri açılabilir.
+              if (_showArrangeButtons) ...[
+                _smallButton('↔ Renk sırala',
+                    () => c.arrangeHand(byGroups: false)),
+                const SizedBox(width: 6),
+                _smallButton('# Grupla', () => c.arrangeHand(byGroups: true)),
+              ],
               const Spacer(),
               if (canDiscard && selected != null)
                 ElevatedButton(
@@ -473,12 +493,15 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         final width = constraints.maxWidth;
         const gap = 3.0;
         const hPad = 8.0;
-        const targetPerRow = 11; // sıra başına hedef taş sayısı (boyut ayarı)
-        final inner = width - hPad * 2;
-        var tileW = (inner - (targetPerRow - 1) * gap) / targetPerRow;
-        tileW = tileW.clamp(16.0, 42.0);
+        const borderW = 2.0; // rafın kenarlığı (taşmayı önlemek için düşülür)
+        // Taşlar "yere atılan taş" ebatında (_tileSize); ekrana sığmazsa
+        // otomatik küçülür (Honor vb. dar telefonlarda taşma olmaz).
+        final inner = width - hPad * 2 - borderW * 2;
+        var perRow = ((inner + gap) / (_tileSize + gap)).floor();
+        perRow = perRow.clamp(1, 30);
+        var tileW = (inner - (perRow - 1) * gap) / perRow;
+        tileW = tileW.clamp(18.0, _tileSize);
         final tileH = tileW * OkeyTileWidget.aspect;
-        final perRow = ((inner + gap) / (tileW + gap)).floor().clamp(1, 30);
 
         final slots = widget.controller.handSlots;
         // En az 2 satır; taşlar sığmıyorsa daha fazla. Kalan hücreler boş yuva.
@@ -542,10 +565,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           selected: tile.id == _selectedId,
           onTap: () => _onTileTap(tile, canDiscard),
         );
-        return LongPressDraggable<String>(
+        return Draggable<String>(
           data: tile.id,
-          delay: const Duration(milliseconds: 150),
-          hapticFeedbackOnStart: true,
           feedback: Material(
             color: Colors.transparent,
             child: OkeyTileWidget(
