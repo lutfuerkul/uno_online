@@ -462,39 +462,25 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  /// Elimdeki taşları 2 sıralı sade ıstakaya dizer. Taşlar sürükle-bırakla
-  /// yeniden dizilebilir; taşa dokunmak seçer/atar.
+  /// Elimdeki taşları ıstakaya dizer. Taş boyutu, bir sıraya ~13 taş sığacak
+  /// şekilde ekran genişliğinden hesaplanır (telefonda okunaklı, kompakt);
+  /// sığmayan taşlar alt sıraya sarar. Sürükle-bırakla yeniden dizilebilir.
   Widget _rackWithTiles(BuildContext context, OkeyGameState state,
       List<OkeyTile> myHand, bool canDiscard) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final n = myHand.length;
-        final perRow = n <= 1 ? 1 : ((n + 1) ~/ 2); // üst satır ceil(n/2)
         const gap = 3.0;
         const hPad = 8.0;
-        final avail = width - hPad * 2 - gap * (perRow - 1);
-        var tileW = perRow > 0 ? avail / perRow : 34.0;
-        tileW = tileW.clamp(20.0, 40.0);
+        const targetPerRow = 13; // bir sıraya sığması istenen taş sayısı
+        final inner = width - hPad * 2;
+        var tileW = (inner - (targetPerRow - 1) * gap) / targetPerRow;
+        tileW = tileW.clamp(16.0, 34.0);
         final tileH = tileW * OkeyTileWidget.aspect;
 
-        final topTiles = myHand.sublist(0, math.min(perRow, n));
-        final bottomTiles = perRow < n ? myHand.sublist(perRow) : <OkeyTile>[];
-
-        Widget buildRow(List<OkeyTile> tiles) {
-          if (tiles.isEmpty) return SizedBox(height: tileH);
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < tiles.length; i++) ...[
-                if (i > 0) const SizedBox(width: gap),
-                _draggableTile(tiles[i], tileW, canDiscard, state),
-              ],
-            ],
-          );
-        }
-
         return Container(
+          width: double.infinity,
+          constraints: BoxConstraints(minHeight: tileH + 16),
           decoration: BoxDecoration(
             color: OkeyColors.rackDark,
             borderRadius: BorderRadius.circular(10),
@@ -504,17 +490,13 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: gap,
+            runSpacing: gap,
             children: [
-              buildRow(topTiles),
-              // İki sırayı ayıran ince raf çizgisi.
-              Container(
-                height: 2,
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                color: const Color(0x33000000),
-              ),
-              buildRow(bottomTiles),
+              for (final tile in myHand)
+                _draggableTile(tile, tileW, canDiscard, state),
             ],
           ),
         );
