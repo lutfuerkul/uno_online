@@ -120,7 +120,7 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
   }
 
   @override
-  void moveTile(String draggedId, String targetId) {
+  void moveTile(String draggedId, String targetId, {bool after = false}) {
     if (draggedId == targetId) return;
     final ids = myHand.map((t) => t.id).toList();
     if (!ids.contains(draggedId)) return;
@@ -129,7 +129,7 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
     if (ti < 0) {
       ids.add(draggedId);
     } else {
-      ids.insert(ti, draggedId);
+      ids.insert(after ? ti + 1 : ti, draggedId);
     }
     _order = ids;
     notifyListeners();

@@ -29,6 +29,11 @@ class OkeyBoardView extends StatefulWidget {
 class _OkeyBoardViewState extends State<OkeyBoardView> {
   String? _selectedId;
 
+  /// Sürüklerken hedef taşın konumunu ölçmek için taş kimliği -> GlobalKey.
+  final Map<String, GlobalKey> _tileKeys = {};
+
+  GlobalKey _keyFor(String id) => _tileKeys.putIfAbsent(id, () => GlobalKey());
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -472,10 +477,10 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         final width = constraints.maxWidth;
         const gap = 3.0;
         const hPad = 8.0;
-        const targetPerRow = 13; // bir sıraya sığması istenen taş sayısı
+        const targetPerRow = 12; // bir sıraya sığması istenen taş sayısı
         final inner = width - hPad * 2;
         var tileW = (inner - (targetPerRow - 1) * gap) / targetPerRow;
-        tileW = tileW.clamp(16.0, 34.0);
+        tileW = tileW.clamp(16.0, 38.0);
         final tileH = tileW * OkeyTileWidget.aspect;
 
         return Container(
@@ -508,6 +513,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// değişir; kısa dokunuşta seçilir/atılır.
   Widget _draggableTile(
       OkeyTile tile, double w, bool canDiscard, OkeyGameState state) {
+    final tileKey = _keyFor(tile.id);
     final tileWidget = OkeyTileWidget(
       tile: tile,
       width: w,
@@ -517,10 +523,21 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
     return DragTarget<String>(
       onWillAcceptWithDetails: (d) => d.data != tile.id,
-      onAcceptWithDetails: (d) => widget.controller.moveTile(d.data, tile.id),
+      onAcceptWithDetails: (d) {
+        // Bırakma noktası hedefin sol yarısındaysa soluna, sağ yarısındaysa
+        // sağına yerleştir (sağa/sola taşıma sezgisel olsun).
+        var after = false;
+        final box = tileKey.currentContext?.findRenderObject() as RenderBox?;
+        if (box != null && box.hasSize) {
+          final local = box.globalToLocal(d.offset);
+          after = local.dx > box.size.width / 2;
+        }
+        widget.controller.moveTile(d.data, tile.id, after: after);
+      },
       builder: (ctx, cand, rej) {
         final highlight = cand.isNotEmpty;
         return Container(
+          key: tileKey,
           decoration: highlight
               ? const BoxDecoration(
                   border: Border(
@@ -528,6 +545,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               : null,
           child: LongPressDraggable<String>(
             data: tile.id,
+            delay: const Duration(milliseconds: 150),
             hapticFeedbackOnStart: true,
             feedback: Material(
               color: Colors.transparent,

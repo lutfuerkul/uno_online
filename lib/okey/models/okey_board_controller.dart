@@ -46,9 +46,10 @@ abstract class OkeyBoardController implements Listenable {
   /// halde renk+sıraya (seri) göre. Yalnızca görsel diziliştir.
   void arrangeHand({required bool byGroups});
 
-  /// Sürükle-bırak: [draggedId] taşını [targetId] taşının olduğu yere taşır
-  /// (elin görsel dizilişini değiştirir; oyun durumunu etkilemez).
-  void moveTile(String draggedId, String targetId);
+  /// Sürükle-bırak: [draggedId] taşını [targetId] taşının olduğu yere taşır.
+  /// [after] true ise hedefin sağına, değilse soluna yerleştirir. Yalnızca
+  /// görsel dizilişi değiştirir; oyun durumunu etkilemez.
+  void moveTile(String draggedId, String targetId, {bool after = false});
 
   /// Elimde el açmayı sağlayan bir atış var mı (kullanıcıya ipucu için).
   bool get canFinish;
