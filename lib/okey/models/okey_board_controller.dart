@@ -17,8 +17,12 @@ abstract class OkeyBoardController implements Listenable {
   /// Sıradaki oyuncu bu turda çekti mi (bu cihaz için).
   bool get hasDrawn;
 
-  /// Elimdeki taşlar — kullanıcının seçtiği diziliş sırasında.
+  /// Elimdeki taşlar — yuva sırasına göre (boşluklar atlanmış, sıkıştırılmış).
   List<OkeyTile> get myHand;
+
+  /// Istakadaki yuva düzeni: her eleman bir taş kimliği ya da boş yuva (null).
+  /// Serbest yerleşim/boşluk bırakma için kullanılır.
+  List<String?> get handSlots;
 
   /// Sıra yönünde (soldan sağa) diğer oyuncular.
   List<String> get opponents;
@@ -46,10 +50,10 @@ abstract class OkeyBoardController implements Listenable {
   /// halde renk+sıraya (seri) göre. Yalnızca görsel diziliştir.
   void arrangeHand({required bool byGroups});
 
-  /// Sürükle-bırak: [draggedId] taşını [targetId] taşının olduğu yere taşır.
-  /// [after] true ise hedefin sağına, değilse soluna yerleştirir. Yalnızca
-  /// görsel dizilişi değiştirir; oyun durumunu etkilemez.
-  void moveTile(String draggedId, String targetId, {bool after = false});
+  /// Sürükle-bırak: [tileId] taşını [slotIndex] yuvasına koyar. Hedef yuva
+  /// boşsa taş oraya gider ve eski yeri boş kalır (boşluk); doluysa oradaki
+  /// taşla yer değiştirir. Yalnızca görsel dizilişi değiştirir.
+  void placeTile(String tileId, int slotIndex);
 
   /// Elimde el açmayı sağlayan bir atış var mı (kullanıcıya ipucu için).
   bool get canFinish;

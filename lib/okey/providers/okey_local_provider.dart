@@ -21,7 +21,7 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
 
   int _session = 0;
   bool _botLoopRunning = false;
-  List<String> _order = const [];
+  List<String?> _slots = const [];
 
   @override
   String get selfId => humanId;
@@ -31,9 +31,27 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
   @override
   bool get hasDrawn => state?.hasDrawn ?? false;
 
+  List<String> get _handIds =>
+      (state?.hands[humanId] ?? const []).map((t) => t.id).toList();
+
   @override
-  List<OkeyTile> get myHand =>
-      OkeyHandOrder.apply(state?.hands[humanId] ?? const [], _order);
+  List<String?> get handSlots {
+    _slots = OkeySlots.sync(_slots, _handIds);
+    return _slots;
+  }
+
+  @override
+  List<OkeyTile> get myHand {
+    final hand = state?.hands[humanId] ?? const [];
+    final byId = {for (final t in hand) t.id: t};
+    final result = <OkeyTile>[];
+    for (final id in handSlots) {
+      if (id == null) continue;
+      final t = byId[id];
+      if (t != null) result.add(t);
+    }
+    return result;
+  }
 
   @override
   List<String> get opponents =>
@@ -82,7 +100,7 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
     _lastPlayerName = playerName;
     _lastTotalPlayers = totalPlayers;
     _session++;
-    _order = const [];
+    _slots = const [];
 
     final players = ['you', for (var i = 1; i < totalPlayers; i++) 'bot$i'];
     final names = <String, String>{
@@ -103,7 +121,7 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
   Future<void> leaveGame() async {
     _session++;
     state = null;
-    _order = const [];
+    _slots = const [];
     notifyListeners();
   }
 
@@ -111,27 +129,17 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
   void arrangeHand({required bool byGroups}) {
     final s = state;
     if (s == null) return;
-    _order = OkeyHandOrder.sorted(
+    _slots = List<String?>.from(OkeyHandOrder.sorted(
       s.hands[humanId] ?? const [],
       byGroups: byGroups,
       isOkey: s.isOkey,
-    );
+    ));
     notifyListeners();
   }
 
   @override
-  void moveTile(String draggedId, String targetId, {bool after = false}) {
-    if (draggedId == targetId) return;
-    final ids = myHand.map((t) => t.id).toList();
-    if (!ids.contains(draggedId)) return;
-    ids.remove(draggedId);
-    final ti = ids.indexOf(targetId);
-    if (ti < 0) {
-      ids.add(draggedId);
-    } else {
-      ids.insert(after ? ti + 1 : ti, draggedId);
-    }
-    _order = ids;
+  void placeTile(String tileId, int slotIndex) {
+    _slots = OkeySlots.place(_slots, _handIds, tileId, slotIndex);
     notifyListeners();
   }
 

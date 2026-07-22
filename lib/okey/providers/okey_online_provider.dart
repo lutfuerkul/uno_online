@@ -28,7 +28,7 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   @override
   OkeyGameState? state;
   String? error;
-  List<String> _order = const [];
+  List<String?> _slots = const [];
 
   StreamSubscription<OkeyGameState?>? _sub;
 
@@ -38,9 +38,27 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   @override
   bool get hasDrawn => state?.hasDrawn ?? false;
 
+  List<String> get _handIds =>
+      (state?.hands[playerId] ?? const []).map((t) => t.id).toList();
+
   @override
-  List<OkeyTile> get myHand =>
-      OkeyHandOrder.apply(state?.hands[playerId] ?? const [], _order);
+  List<String?> get handSlots {
+    _slots = OkeySlots.sync(_slots, _handIds);
+    return _slots;
+  }
+
+  @override
+  List<OkeyTile> get myHand {
+    final hand = state?.hands[playerId] ?? const [];
+    final byId = {for (final t in hand) t.id: t};
+    final result = <OkeyTile>[];
+    for (final id in handSlots) {
+      if (id == null) continue;
+      final t = byId[id];
+      if (t != null) result.add(t);
+    }
+    return result;
+  }
 
   bool get isHost =>
       state != null && state!.players.isNotEmpty && state!.players.first == playerId;
@@ -127,27 +145,17 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   void arrangeHand({required bool byGroups}) {
     final s = state;
     if (s == null) return;
-    _order = OkeyHandOrder.sorted(
+    _slots = List<String?>.from(OkeyHandOrder.sorted(
       s.hands[playerId] ?? const [],
       byGroups: byGroups,
       isOkey: s.isOkey,
-    );
+    ));
     notifyListeners();
   }
 
   @override
-  void moveTile(String draggedId, String targetId, {bool after = false}) {
-    if (draggedId == targetId) return;
-    final ids = myHand.map((t) => t.id).toList();
-    if (!ids.contains(draggedId)) return;
-    ids.remove(draggedId);
-    final ti = ids.indexOf(targetId);
-    if (ti < 0) {
-      ids.add(draggedId);
-    } else {
-      ids.insert(after ? ti + 1 : ti, draggedId);
-    }
-    _order = ids;
+  void placeTile(String tileId, int slotIndex) {
+    _slots = OkeySlots.place(_slots, _handIds, tileId, slotIndex);
     notifyListeners();
   }
 
@@ -189,7 +197,7 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     gameId = null;
     state = null;
     error = null;
-    _order = const [];
+    _slots = const [];
     notifyListeners();
   }
 

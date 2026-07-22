@@ -49,3 +49,51 @@ class OkeyHandOrder {
     return [for (final t in tiles) t.id];
   }
 }
+
+/// Istaka yuva düzeni yardımcıları. Yuva listesi (`List<String?>`) her elemanı
+/// bir taş kimliği ya da boş yuva (null) olan görsel düzeni tutar; boşluk
+/// bırakmaya ve serbest yerleşime izin verir.
+class OkeySlots {
+  /// [slots]'u güncel el ([handIds]) ile eşitler: elde olmayan (atılan) taşlar
+  /// yuvadan çıkarılır (yeri boş kalır); yuvada olmayan yeni taşlar ilk boş
+  /// yuvaya, yoksa sona eklenir. Yeni bir liste döndürür.
+  static List<String?> sync(List<String?> slots, List<String> handIds) {
+    final handSet = handIds.toSet();
+    final out = List<String?>.from(slots);
+    for (var i = 0; i < out.length; i++) {
+      if (out[i] != null && !handSet.contains(out[i])) out[i] = null;
+    }
+    final present = out.whereType<String>().toSet();
+    for (final id in handIds) {
+      if (present.contains(id)) continue;
+      final empty = out.indexOf(null);
+      if (empty >= 0) {
+        out[empty] = id;
+      } else {
+        out.add(id);
+      }
+      present.add(id);
+    }
+    return out;
+  }
+
+  /// [tileId] taşını [slotIndex] yuvasına koyar. Hedef doluysa yer değiştirir,
+  /// boşsa taşın eski yeri boş kalır. Önce [handIds] ile eşitlenir.
+  static List<String?> place(
+    List<String?> slots,
+    List<String> handIds,
+    String tileId,
+    int slotIndex,
+  ) {
+    final out = sync(slots, handIds);
+    if (slotIndex < 0) return out;
+    if (slotIndex >= out.length) {
+      out.addAll(List<String?>.filled(slotIndex - out.length + 1, null));
+    }
+    final from = out.indexOf(tileId);
+    if (from == -1 || from == slotIndex) return out;
+    out[from] = out[slotIndex];
+    out[slotIndex] = tileId;
+    return out;
+  }
+}
