@@ -9,6 +9,7 @@ import '../services/okey_engine.dart';
 import '../theme/okey_theme.dart';
 import '../widgets/okey_board_view.dart';
 import '../widgets/okey_exit_dialog.dart';
+import '../widgets/okey_hand_reveal_view.dart';
 import '../widgets/okey_result_view.dart';
 
 /// Online oyun ekranı: bekleme odası, oyun tahtası ve bitiş durumu.
@@ -51,6 +52,11 @@ class _GameBody extends StatefulWidget {
 }
 
 class _GameBodyState extends State<_GameBody> {
+  /// Kazanan varsa eli birkaç saniye gösterilir; berabere ise kısa gecikmeyle
+  /// doğrudan skor ekranına geçilir.
+  static const _handRevealDuration = Duration(milliseconds: 5500);
+  static const _drawDelay = Duration(milliseconds: 1600);
+
   Timer? _resultTimer;
   bool _showResult = false;
 
@@ -63,10 +69,14 @@ class _GameBodyState extends State<_GameBody> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<OkeyOnlineProvider>();
-    final finished = provider.state?.status == 'finished';
+    final state = provider.state;
+    final finished = state?.status == 'finished';
 
     if (finished) {
-      _resultTimer ??= Timer(const Duration(milliseconds: 1600), () {
+      final s = state!;
+      final hasWinner = s.winner != null || s.winners.isNotEmpty;
+      _resultTimer ??=
+          Timer(hasWinner ? _handRevealDuration : _drawDelay, () {
         if (mounted) setState(() => _showResult = true);
       });
       if (_showResult) {
@@ -75,6 +85,9 @@ class _GameBodyState extends State<_GameBody> {
           onRematch: provider.rematch,
           onLeave: provider.leaveGame,
         );
+      }
+      if (hasWinner) {
+        return OkeyHandRevealView(controller: provider, state: s);
       }
     } else {
       _resultTimer?.cancel();
