@@ -7,6 +7,7 @@ import '../providers/okey_local_provider.dart';
 import '../theme/okey_theme.dart';
 import '../widgets/okey_board_view.dart';
 import '../widgets/okey_exit_dialog.dart';
+import '../widgets/okey_hand_reveal_view.dart';
 import '../widgets/okey_result_view.dart';
 
 /// "Bilgisayara Karşı Oyna" akışı: önce oyuncu sayısı seçilir, sonra tahta
@@ -68,6 +69,11 @@ class _LocalGameBody extends StatefulWidget {
 }
 
 class _LocalGameBodyState extends State<_LocalGameBody> {
+  /// Kazanan varsa eli birkaç saniye gösterilir; berabere ise kısa gecikmeyle
+  /// doğrudan skor ekranına geçilir.
+  static const _handRevealDuration = Duration(milliseconds: 5500);
+  static const _drawDelay = Duration(milliseconds: 1600);
+
   Timer? _resultTimer;
   bool _showResult = false;
 
@@ -80,10 +86,14 @@ class _LocalGameBodyState extends State<_LocalGameBody> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<OkeyLocalProvider>();
-    final finished = provider.state?.status == 'finished';
+    final state = provider.state;
+    final finished = state?.status == 'finished';
 
     if (finished) {
-      _resultTimer ??= Timer(const Duration(milliseconds: 1600), () {
+      final s = state!;
+      final hasWinner = s.winner != null || s.winners.isNotEmpty;
+      _resultTimer ??=
+          Timer(hasWinner ? _handRevealDuration : _drawDelay, () {
         if (mounted) setState(() => _showResult = true);
       });
       if (_showResult) {
@@ -92,6 +102,9 @@ class _LocalGameBodyState extends State<_LocalGameBody> {
           onRematch: provider.rematch,
           onLeave: () => provider.leaveGame(),
         );
+      }
+      if (hasWinner) {
+        return OkeyHandRevealView(controller: provider, state: s);
       }
     } else {
       _resultTimer?.cancel();
