@@ -32,6 +32,9 @@ abstract class OkeyBoardController implements Listenable {
   /// Solumdaki oyuncunun alabileceğim en üstteki ıskarta taşı (yoksa null).
   OkeyTile? get takeableDiscard;
 
+  /// Kendi en son attığım (ıskartaya bıraktığım) taş (yoksa null).
+  OkeyTile? get myLastDiscard;
+
   /// Solumdaki oyuncunun kimliği.
   String get leftPlayerId;
 
@@ -42,6 +45,11 @@ abstract class OkeyBoardController implements Listenable {
   /// Elimi otomatik dizer: [byGroups] true ise sayıya (grup/set) göre, aksi
   /// halde renk+sıraya (seri) göre. Yalnızca görsel diziliştir.
   void arrangeHand({required bool byGroups});
+
+  /// Sürükle-bırak: [draggedId] taşını [targetId] taşının olduğu yere taşır.
+  /// [after] true ise hedefin sağına, değilse soluna yerleştirir. Yalnızca
+  /// görsel dizilişi değiştirir; oyun durumunu etkilemez.
+  void moveTile(String draggedId, String targetId, {bool after = false});
 
   /// Elimde el açmayı sağlayan bir atış var mı (kullanıcıya ipucu için).
   bool get canFinish;

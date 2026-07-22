@@ -28,8 +28,8 @@ class OkeyTileWidget extends StatelessWidget {
     this.width = 42,
   });
 
-  /// Gerçek taş fotoğrafının en-boy oranı (56×74 kesim).
-  static const double aspect = 74 / 56;
+  /// Gerçek taş fotoğrafının en-boy oranı (56×76 kesim).
+  static const double aspect = 76 / 56;
 
   bool get _isFaceDown => faceDown || tile == null;
 
