@@ -227,9 +227,10 @@ class _Board extends StatelessWidget {
           ),
         ),
 
-        if (_shouldShowLastAction()) _LastActionBanner(text: _lastActionText()),
-        if (state.blockedPlayers.contains(controller.selfId))
-          const _LastActionBanner(text: '🚫 Bloklandın', color: UnoColors.blockedTag),
+        // Her zaman aynı slotta kalır (yazı yokken de boş satır olarak) —
+        // aksi halde metin görünüp kaybolunca orta alan (FittedBox) sürekli
+        // yeniden ölçeklenip ekranı zıplatıyordu.
+        _LastActionBanner(text: _infoBannerText(), color: _infoBannerColor()),
 
         _TurnBanner(controller: controller, state: state),
 
@@ -273,6 +274,17 @@ class _Board extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _infoBannerText() {
+    if (state.blockedPlayers.contains(controller.selfId)) return '🚫 Bloklandın';
+    if (_shouldShowLastAction()) return _lastActionText();
+    return '';
+  }
+
+  Color _infoBannerColor() {
+    if (state.blockedPlayers.contains(controller.selfId)) return UnoColors.blockedTag;
+    return UnoColors.lastAction;
   }
 
   bool _shouldShowLastAction() {
@@ -518,10 +530,17 @@ class _LastActionBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: TextStyle(color: color, fontSize: 16.5, fontWeight: FontWeight.w700),
+      // FittedBox: satıra sığmayan uzun metinler (satır kaymadan/2 satıra
+      // geçip yükseklik değiştirmeden) küçültülerek tek satırda kalır.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(color: color, fontSize: 16.5, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }
@@ -571,18 +590,28 @@ class _TurnBanner extends StatelessWidget {
       color: bg,
       child: Column(
         children: [
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 16),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 16),
+            ),
           ),
           if (reverseColor != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '↩️ ${_colorTr[reverseColor] ?? ''} ya da Joker / +4 yoksa çek/pas',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '↩️ ${_colorTr[reverseColor] ?? ''} ya da Joker / +4 yoksa çek/pas',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
         ],

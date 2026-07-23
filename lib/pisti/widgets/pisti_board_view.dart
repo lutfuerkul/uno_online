@@ -195,25 +195,36 @@ class _Board extends StatelessWidget {
           ),
         ),
 
-        if (state.lastAction != null && state.status == 'playing')
-          _LastActionBanner(
-            action: state.lastAction!,
-            playerName: controller.opponentName(state.lastAction!.player),
-          ),
+        // Her zaman aynı slotta kalır (yazı yokken de boş satır olarak) —
+        // aksi halde banner görünüp kaybolunca orta alan (FittedBox) sürekli
+        // yeniden ölçeklenip ekranı zıplatıyordu.
+        _LastActionBanner(
+          action: state.status == 'playing' ? state.lastAction : null,
+          playerName: state.lastAction != null
+              ? controller.opponentName(state.lastAction!.player)
+              : '',
+        ),
 
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(10),
           color: _isMyTurn ? PistiColors.turnMine : PistiColors.turnTheirs,
-          child: Text(
-            _collecting
-                ? '🧹 ${controller.opponentName(state.pendingCapture!.by)} masayı topluyor...'
-                : (_isMyTurn ? '● Sıra sende — bir kart oyna' : '○ Sıra: ${controller.opponentName(state.currentTurn)}'),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: _isMyTurn ? Colors.white : PistiColors.turnTheirsText,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
+          // FittedBox: satıra sığmayan uzun metinler (2 satıra geçip
+          // yükseklik değiştirmeden) küçültülerek tek satırda kalır.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _collecting
+                  ? '🧹 ${controller.opponentName(state.pendingCapture!.by)} masayı topluyor...'
+                  : (_isMyTurn ? '● Sıra sende — bir kart oyna' : '○ Sıra: ${controller.opponentName(state.currentTurn)}'),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                color: _isMyTurn ? Colors.white : PistiColors.turnTheirsText,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
             ),
           ),
         ),
@@ -422,7 +433,9 @@ class _OpponentTile extends StatelessWidget {
 }
 
 class _LastActionBanner extends StatefulWidget {
-  final PistiLastAction action;
+  /// null ise gösterilecek bir şey yok — yine de aynı boş satır yüksekliği
+  /// korunur (bkz. çağıran yerdeki yorum).
+  final PistiLastAction? action;
   final String playerName;
   const _LastActionBanner({required this.action, required this.playerName});
 
@@ -445,7 +458,20 @@ class _LastActionBannerState extends State<_LastActionBanner>
     _scale = Tween<double>(begin: 1, end: 1.05).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-    if (widget.action.isPisti) {
+    if (widget.action?.isPisti ?? false) {
+      _runPistiPulse();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _LastActionBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Widget artık her zaman aynı yuvada kalıyor (bkz. çağıran yer); bu
+    // yüzden yeni bir pişti olduğunda pulse animasyonunu burada tetikliyoruz
+    // (eskiden widget her seferinde yeniden oluşturulduğu için initState
+    // yeterliydi).
+    final a = widget.action;
+    if (a != null && a.isPisti && a != oldWidget.action) {
       _runPistiPulse();
     }
   }
@@ -467,7 +493,19 @@ class _LastActionBannerState extends State<_LastActionBanner>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.action.isPisti) {
+    final action = widget.action;
+    if (action == null) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+        child: Text(
+          '',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              color: PistiColors.lastAction, fontSize: 16.5, fontWeight: FontWeight.w700),
+        ),
+      );
+    }
+    if (action.isPisti) {
       return ScaleTransition(
         scale: _scale,
         child: Container(
@@ -477,15 +515,20 @@ class _LastActionBannerState extends State<_LastActionBanner>
             color: PistiColors.pistiBannerBg,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Text(
-            widget.action.isJackPisti
-                ? '🎉 ${widget.playerName} VALE PİŞTİ yaptı! (+15)'
-                : '🎉 ${widget.playerName} PİŞTİ yaptı! (${widget.action.card.nameTr})',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: PistiColors.pistiBannerText,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              action.isJackPisti
+                  ? '🎉 ${widget.playerName} VALE PİŞTİ yaptı! (+15)'
+                  : '🎉 ${widget.playerName} PİŞTİ yaptı! (${action.card.nameTr})',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(
+                color: PistiColors.pistiBannerText,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ),
@@ -493,24 +536,31 @@ class _LastActionBannerState extends State<_LastActionBanner>
     }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-      child: RichText(
-        textAlign: TextAlign.center,
-        text: TextSpan(
-          style: const TextStyle(
-            color: PistiColors.lastAction,
-            fontSize: 16.5,
-            fontWeight: FontWeight.w700,
+      // FittedBox: satıra sığmayan uzun metinler (2 satıra geçip yükseklik
+      // değiştirmeden) küçültülerek tek satırda kalır.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: RichText(
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.clip,
+          text: TextSpan(
+            style: const TextStyle(
+              color: PistiColors.lastAction,
+              fontSize: 16.5,
+              fontWeight: FontWeight.w700,
+            ),
+            children: [
+              TextSpan(text: '${widget.playerName} '),
+              TextSpan(
+                text: action.card.nameTr,
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+              TextSpan(
+                text: action.captured ? ' oynadı — yaktı! 🔥' : ' oynadı',
+              ),
+            ],
           ),
-          children: [
-            TextSpan(text: '${widget.playerName} '),
-            TextSpan(
-              text: widget.action.card.nameTr,
-              style: const TextStyle(fontWeight: FontWeight.w900),
-            ),
-            TextSpan(
-              text: widget.action.captured ? ' oynadı — yaktı! 🔥' : ' oynadı',
-            ),
-          ],
         ),
       ),
     );
