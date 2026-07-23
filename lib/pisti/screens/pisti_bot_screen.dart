@@ -146,7 +146,11 @@ class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    // Bu kurulum ekranının zemin tonu UNO'nunkiyle aynı (#1B2430) —
+    // yalnızca bu ekran için; oyun içi renkler (PistiColors) değişmedi.
+    return Container(
+      color: const Color(0xFF1B2430),
+      child: Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -233,6 +237,7 @@ class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

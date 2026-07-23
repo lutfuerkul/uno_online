@@ -101,7 +101,9 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
     final provider = context.watch<PistiOnlineProvider>();
 
     return Scaffold(
-      backgroundColor: PistiColors.background,
+      // Bu kurulum ekranının zemin tonu UNO'nunkiyle aynı (#1B2430) —
+      // yalnızca bu ekran için; oyun içi renkler (PistiColors) değişmedi.
+      backgroundColor: const Color(0xFF1B2430),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

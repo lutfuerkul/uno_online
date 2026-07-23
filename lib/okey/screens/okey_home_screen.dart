@@ -100,7 +100,9 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
     final provider = context.watch<OkeyOnlineProvider>();
 
     return Scaffold(
-      backgroundColor: OkeyColors.background,
+      // Bu kurulum ekranının zemin tonu UNO'nunkiyle aynı (#1B2430) —
+      // yalnızca bu ekran için; oyun içi renkler (OkeyColors) değişmedi.
+      backgroundColor: const Color(0xFF1B2430),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
