@@ -6,10 +6,9 @@ import '../models/okey_tile.dart';
 class OkeyColors {
   OkeyColors._();
 
-  // Pişti ile aynı (oyun ekranındaki arka plan tüm oyunlarda tutarlı olsun).
-  static const background = Color(0xFF0D3B26);
-  static const topbar = Color(0xFF08281A);
-  static const middle = Color(0xFF0F4A2E);
+  static const background = Color(0xFF0E3A2A);
+  static const topbar = Color(0xFF08281C);
+  static const middle = Color(0xFF124a34);
   static const felt = Color(0xFF0F4230);
 
   static const primary = Color(0xFF00796B);

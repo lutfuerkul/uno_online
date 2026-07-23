@@ -6,10 +6,9 @@ import '../models/uno_card.dart';
 class UnoColors {
   UnoColors._();
 
-  // Pişti ile aynı (oyun ekranındaki arka plan tüm oyunlarda tutarlı olsun).
-  static const background = Color(0xFF0D3B26);
-  static const topbar = Color(0xFF08281A);
-  static const hand = Color(0xFF08281A);
+  static const background = Color(0xFF1B2430);
+  static const topbar = Color(0xFF131A24);
+  static const hand = Color(0xFF131A24);
 
   static const red = Color(0xFFD32F2F);
   static const yellow = Color(0xFFF9A825);
