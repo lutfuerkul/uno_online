@@ -257,18 +257,23 @@ class _Board extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final (i, card) in sortedHand(controller.myHand).indexed) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  CardWidget(
-                    card: card,
-                    width: 62,
-                    highlighted: !_finished && controller.canPlay(card),
-                    onTap: _finished ? null : () => _tryPlay(context, card),
-                  ),
+            // SizedBox: elde hiç kart kalmadığında Row boş kalıp yüksekliği
+            // sıfırlanmasın diye kart yüksekliği kadar sabit yer ayrılıyor.
+            child: SizedBox(
+              height: 62 * 1.5,
+              child: Row(
+                children: [
+                  for (final (i, card) in sortedHand(controller.myHand).indexed) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    CardWidget(
+                      card: card,
+                      width: 62,
+                      highlighted: !_finished && controller.canPlay(card),
+                      onTap: _finished ? null : () => _tryPlay(context, card),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

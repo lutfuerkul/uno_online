@@ -72,7 +72,7 @@ class _LocalGameBody extends StatefulWidget {
 class _LocalGameBodyState extends State<_LocalGameBody> {
   /// Kazanan varsa eli birkaç saniye gösterilir; berabere ise kısa gecikmeyle
   /// doğrudan skor ekranına geçilir.
-  static const _handRevealDuration = Duration(seconds: 10);
+  static const _handRevealDuration = Duration(seconds: 7);
   static const _drawDelay = Duration(milliseconds: 1600);
 
   Timer? _resultTimer;
