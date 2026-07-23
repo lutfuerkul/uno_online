@@ -372,7 +372,7 @@ class _OpponentTile extends StatelessWidget {
           const SizedBox(height: 4),
           PlayerPhotoFrame(
             base64Photo: controller.opponentPhoto(id),
-            size: 28,
+            size: 70,
             borderColor: PistiColors.primary,
             backgroundColor: PistiColors.hand,
           ),
