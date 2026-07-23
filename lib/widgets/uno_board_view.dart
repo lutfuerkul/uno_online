@@ -6,6 +6,7 @@ import '../models/game_state.dart';
 import '../models/uno_board_controller.dart';
 import '../models/uno_card.dart';
 import '../theme/uno_theme.dart';
+import '../widgets/player_photo_frame.dart';
 import 'card_widget.dart';
 
 const _colorTr = {
@@ -457,6 +458,13 @@ class _OpponentTile extends StatelessWidget {
           Text(
             controller.opponentName(id),
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          PlayerPhotoFrame(
+            base64Photo: controller.opponentPhoto(id),
+            size: 28,
+            borderColor: UnoColors.yellow,
+            backgroundColor: UnoColors.wildCard,
           ),
           const SizedBox(height: 4),
           _OverlappingOpponentCards(

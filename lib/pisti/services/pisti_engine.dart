@@ -21,6 +21,7 @@ class PistiEngine {
     required String id,
     required List<String> players,
     required Map<String, String> playerNames,
+    Map<String, String> playerPhotos = const {},
   }) {
     final numDecks = players.length > 2 ? 2 : 1;
     final tableSize = players.length == 3 ? 5 : 4;
@@ -33,6 +34,7 @@ class PistiEngine {
       status: 'playing',
       players: players,
       playerNames: playerNames,
+      playerPhotos: playerPhotos,
       hands: hands,
       pile: pile,
       drawPile: deck,
@@ -244,13 +246,16 @@ class PistiEngine {
   static PistiGameState leavePlayer({required PistiGameState state, required String playerId}) {
     final players = state.players.where((p) => p != playerId).toList();
     final names = Map<String, String>.from(state.playerNames)..remove(playerId);
+    final photos = Map<String, String>.from(state.playerPhotos)
+      ..remove(playerId);
     final hands = {
       for (final e in state.hands.entries)
         if (e.key != playerId) e.key: e.value,
     };
 
     if (state.status != 'playing') {
-      return state.copyWith(players: players, playerNames: names, hands: hands);
+      return state.copyWith(
+          players: players, playerNames: names, playerPhotos: photos, hands: hands);
     }
     if (players.length < minPlayers) {
       final result = PistiDeckService.scoreGame(
@@ -262,6 +267,7 @@ class PistiEngine {
       return state.copyWith(
         players: players,
         playerNames: names,
+        playerPhotos: photos,
         hands: hands,
         status: 'finished',
         scores: result.scores,
@@ -285,10 +291,12 @@ class PistiEngine {
       return state.copyWith(
         players: players,
         playerNames: names,
+        playerPhotos: photos,
         hands: hands,
         currentTurn: afterPlayer ?? players.first,
       );
     }
-    return state.copyWith(players: players, playerNames: names, hands: hands);
+    return state.copyWith(
+          players: players, playerNames: names, playerPhotos: photos, hands: hands);
   }
 }

@@ -45,6 +45,11 @@ class LocalUnoProvider extends ChangeNotifier implements UnoBoardController {
   int opponentCardCount(String id) => state?.hands[id]?.length ?? 0;
   @override
   int blockedCount(String id) => state?.blockedPlayers.where((p) => p == id).length ?? 0;
+  @override
+  String? opponentPhoto(String id) {
+    final photo = state?.playerPhotos[id];
+    return (photo != null && photo.isNotEmpty) ? photo : null;
+  }
 
   @override
   bool canPlay(UnoCard card) {
@@ -55,10 +60,16 @@ class LocalUnoProvider extends ChangeNotifier implements UnoBoardController {
 
   String _lastPlayerName = '';
   int _lastTotalPlayers = 2;
+  String? _lastPhoto;
 
-  void startGame({required String playerName, required int totalPlayers}) {
+  void startGame({
+    required String playerName,
+    required int totalPlayers,
+    String? photo,
+  }) {
     _lastPlayerName = playerName;
     _lastTotalPlayers = totalPlayers;
+    _lastPhoto = photo;
     _session++;
     final session = _session;
 
@@ -67,8 +78,16 @@ class LocalUnoProvider extends ChangeNotifier implements UnoBoardController {
       'you': playerName.isEmpty ? 'Sen' : playerName,
       for (var i = 1; i < totalPlayers; i++) 'bot$i': '🤖 Oyuncu $i',
     };
+    final photos = <String, String>{
+      if (photo != null && photo.isNotEmpty) 'you': photo,
+    };
 
-    state = UnoEngine.dealNewGame(id: 'local', players: players, playerNames: names);
+    state = UnoEngine.dealNewGame(
+      id: 'local',
+      players: players,
+      playerNames: names,
+      playerPhotos: photos,
+    );
     notifyListeners();
     _scheduleBotLoop(session);
   }
@@ -76,7 +95,11 @@ class LocalUnoProvider extends ChangeNotifier implements UnoBoardController {
   /// Aynı oyuncu sayısıyla yeni bir yerel oyun başlatır (web'deki `rematch()`
   /// fonksiyonunun yerel dal karşılığı).
   void rematch() {
-    startGame(playerName: _lastPlayerName, totalPlayers: _lastTotalPlayers);
+    startGame(
+      playerName: _lastPlayerName,
+      totalPlayers: _lastTotalPlayers,
+      photo: _lastPhoto,
+    );
   }
 
   @override

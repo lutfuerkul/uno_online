@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 
 import '../providers/pisti_online_provider.dart';
 import '../../services/player_name_store.dart';
+import '../../services/player_photo_store.dart';
 import '../theme/pisti_theme.dart';
+import '../../widgets/player_photo_picker.dart';
 import 'pisti_bot_screen.dart';
 
 /// Pişti giriş ekranı: ad gir, oyun kur, oda koduyla katıl ya da
@@ -21,6 +23,7 @@ class PistiHomeScreen extends StatefulWidget {
 class _PistiHomeScreenState extends State<PistiHomeScreen> {
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
+  String? _photo;
 
   @override
   void initState() {
@@ -122,6 +125,21 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                   style: TextStyle(fontSize: 18, letterSpacing: 10, color: Color(0xCCFFFFFF)),
                 ),
                 const SizedBox(height: 24),
+                PlayerPhotoPicker(
+                  onChanged: (photo) => _photo = photo,
+                  loadSaved: PlayerPhotoStore.loadPistiPhoto,
+                  saveNew: PlayerPhotoStore.savePistiPhoto,
+                  borderColor: PistiColors.primary,
+                  backgroundColor: PistiColors.hand,
+                  badgeColor: PistiColors.primary,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Profil fotoğrafın (isteğe bağlı) — diğer oyuncular görür',
+                  style: TextStyle(color: PistiColors.muted, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 14),
                 TextField(
                   controller: _nameController,
                   textAlign: TextAlign.center,
@@ -165,7 +183,7 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                     ),
                     onPressed: () {
                       final name = _validateName();
-                      if (name != null) provider.createGame(name);
+                      if (name != null) provider.createGame(name, photo: _photo);
                     },
                     child: const Text('Yeni Oyun Kur', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
@@ -194,7 +212,7 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                         _toast('Oda kodunu gir.');
                         return;
                       }
-                      provider.joinGame(_codeController.text, name);
+                      provider.joinGame(_codeController.text, name, photo: _photo);
                     },
                     child: const Text('Oyuna Katıl', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),

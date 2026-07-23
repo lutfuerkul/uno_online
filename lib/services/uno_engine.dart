@@ -88,6 +88,7 @@ class UnoEngine {
     required String id,
     required List<String> players,
     required Map<String, String> playerNames,
+    Map<String, String> playerPhotos = const {},
   }) {
     final deck = DeckService.buildDeck()..shuffle();
     final hands = <String, List<UnoCard>>{
@@ -104,6 +105,7 @@ class UnoEngine {
       status: 'playing',
       players: players,
       playerNames: playerNames,
+      playerPhotos: playerPhotos,
       hands: hands,
       drawPile: deck,
       discardPile: [first],
@@ -272,18 +274,25 @@ class UnoEngine {
   static GameState leavePlayer({required GameState state, required String playerId}) {
     final players = state.players.where((p) => p != playerId).toList();
     final names = Map<String, String>.from(state.playerNames)..remove(playerId);
+    final photos = Map<String, String>.from(state.playerPhotos)
+      ..remove(playerId);
     final hands = {
       for (final e in state.hands.entries)
         if (e.key != playerId) e.key: e.value,
     };
 
     if (players.isEmpty || state.status != 'playing') {
-      return state.copyWith(players: players, playerNames: names, hands: hands);
+      return state.copyWith(
+          players: players,
+          playerNames: names,
+          playerPhotos: photos,
+          hands: hands);
     }
     if (players.length < 2) {
       return state.copyWith(
         players: players,
         playerNames: names,
+        playerPhotos: photos,
         hands: hands,
         status: 'finished',
         winner: players.first,
@@ -295,12 +304,17 @@ class UnoEngine {
       return state.copyWith(
         players: players,
         playerNames: names,
+        playerPhotos: photos,
         hands: hands,
         currentTurn: nextTurn,
         hasDrawn: false,
         clearReverseColor: true,
       );
     }
-    return state.copyWith(players: players, playerNames: names, hands: hands);
+    return state.copyWith(
+        players: players,
+        playerNames: names,
+        playerPhotos: photos,
+        hands: hands);
   }
 }

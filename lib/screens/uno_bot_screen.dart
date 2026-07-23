@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/local_uno_provider.dart';
+import '../services/player_photo_store.dart';
 import '../theme/uno_theme.dart';
+import '../widgets/player_photo_picker.dart';
 import '../widgets/uno_board_view.dart';
 import '../widgets/uno_exit_dialog.dart';
 import '../widgets/uno_result_view.dart';
@@ -124,6 +126,7 @@ class _UnoBotSetupForm extends StatefulWidget {
 
 class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
   late final TextEditingController _nameController;
+  String? _photo;
 
   @override
   void initState() {
@@ -143,6 +146,7 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
     context.read<LocalUnoProvider>().startGame(
           playerName: _nameController.text.trim(),
           totalPlayers: total,
+          photo: _photo,
         );
   }
 
@@ -159,6 +163,15 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
             const Text(
               'Bilgisayara Karşı',
               style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            PlayerPhotoPicker(
+              onChanged: (photo) => _photo = photo,
+              loadSaved: PlayerPhotoStore.loadUnoPhoto,
+              saveNew: PlayerPhotoStore.saveUnoPhoto,
+              borderColor: UnoColors.yellow,
+              backgroundColor: UnoColors.wildCard,
+              badgeColor: UnoColors.yellow,
             ),
             const SizedBox(height: 16),
             const Text(

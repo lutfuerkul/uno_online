@@ -24,6 +24,9 @@ abstract class PistiBoardController implements Listenable {
   int wonCount(String id);
   int pistiCountFor(String id);
 
+  /// Oyuncunun yüklediği profil fotoğrafı (base64 jpeg), yoksa null.
+  String? opponentPhoto(String id);
+
   Future<void> playCard(PistiCard card);
   Future<void> leaveGame();
 }

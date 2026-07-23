@@ -26,6 +26,9 @@ abstract class UnoBoardController implements Listenable {
   int opponentCardCount(String id);
   int blockedCount(String id);
 
+  /// Oyuncunun yüklediği profil fotoğrafı (base64 jpeg), yoksa null.
+  String? opponentPhoto(String id);
+
   bool canPlay(UnoCard card);
 
   Future<void> playCard(UnoCard card, {CardColor? chosenColor, String? targetId});

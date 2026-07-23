@@ -17,6 +17,10 @@ class GameState {
   /// Oyuncu kimliği -> görünen ad.
   final Map<String, String> playerNames;
 
+  /// Oyuncu kimliği -> yüklediği profil fotoğrafı (base64 jpeg). Fotoğrafı
+  /// olmayan oyuncular haritada yer almaz.
+  final Map<String, String> playerPhotos;
+
   /// Oyuncu kimliği -> elindeki kartlar.
   final Map<String, List<UnoCard>> hands;
 
@@ -56,6 +60,7 @@ class GameState {
     required this.status,
     required this.players,
     required this.playerNames,
+    required this.playerPhotos,
     required this.hands,
     required this.drawPile,
     required this.discardPile,
@@ -75,6 +80,7 @@ class GameState {
     String? status,
     List<String>? players,
     Map<String, String>? playerNames,
+    Map<String, String>? playerPhotos,
     Map<String, List<UnoCard>>? hands,
     List<UnoCard>? drawPile,
     List<UnoCard>? discardPile,
@@ -95,6 +101,7 @@ class GameState {
       status: status ?? this.status,
       players: players ?? this.players,
       playerNames: playerNames ?? this.playerNames,
+      playerPhotos: playerPhotos ?? this.playerPhotos,
       hands: hands ?? this.hands,
       drawPile: drawPile ?? this.drawPile,
       discardPile: discardPile ?? this.discardPile,
@@ -121,6 +128,8 @@ class GameState {
       status: map['status'] as String? ?? 'waiting',
       players: List<String>.from(map['players'] as List? ?? []),
       playerNames: Map<String, String>.from(map['playerNames'] as Map? ?? {}),
+      playerPhotos:
+          Map<String, String>.from(map['playerPhotos'] as Map? ?? {}),
       hands: handsRaw.map((k, v) => MapEntry(k, parseCards(v))),
       drawPile: parseCards(map['drawPile']),
       discardPile: parseCards(map['discardPile']),
@@ -144,6 +153,7 @@ class GameState {
         'status': status,
         'players': players,
         'playerNames': playerNames,
+        'playerPhotos': playerPhotos,
         'hands': hands.map((k, v) => MapEntry(k, v.map((c) => c.toMap()).toList())),
         'drawPile': drawPile.map((c) => c.toMap()).toList(),
         'discardPile': discardPile.map((c) => c.toMap()).toList(),

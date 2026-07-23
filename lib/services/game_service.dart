@@ -23,12 +23,13 @@ class GameService {
 
   /// Yeni oda kurar ve oda kodunu döndürür. Kurucu, 2-4 kişi katılınca
   /// [startGame] ile oyunu başlatır.
-  Future<String> createGame(String playerId, String name) async {
+  Future<String> createGame(String playerId, String name, {String? photo}) async {
     final code = _generateCode();
     await _games.doc(code).set({
       'status': 'waiting',
       'players': [playerId],
       'playerNames': {playerId: name},
+      'playerPhotos': {if (photo != null && photo.isNotEmpty) playerId: photo},
       'hands': <String, dynamic>{},
       'drawPile': <dynamic>[],
       'discardPile': <dynamic>[],
@@ -50,7 +51,8 @@ class GameService {
   }
 
   /// Var olan (bekleme aşamasındaki) odaya katılır. En fazla 4 kişi.
-  Future<void> joinGame(String gameId, String playerId, String name) async {
+  Future<void> joinGame(String gameId, String playerId, String name,
+      {String? photo}) async {
     final ref = _games.doc(gameId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
@@ -63,6 +65,8 @@ class GameService {
       }
       final players = List<String>.from(data['players'] as List? ?? []);
       final names = Map<String, dynamic>.from(data['playerNames'] as Map? ?? {});
+      final photos =
+          Map<String, dynamic>.from(data['playerPhotos'] as Map? ?? {});
 
       if (players.contains(playerId)) return; // yeniden bağlanma
       if (players.length >= UnoEngine.maxPlayers) {
@@ -76,8 +80,10 @@ class GameService {
 
       players.add(playerId);
       names[playerId] = normalized;
+      if (photo != null && photo.isNotEmpty) photos[playerId] = photo;
 
-      tx.update(ref, {'players': players, 'playerNames': names});
+      tx.update(ref,
+          {'players': players, 'playerNames': names, 'playerPhotos': photos});
     });
   }
 
@@ -96,7 +102,16 @@ class GameService {
       final names = Map<String, String>.from(
         (data['playerNames'] as Map? ?? {}).map((k, v) => MapEntry(k.toString(), v.toString())),
       );
-      final fresh = UnoEngine.dealNewGame(id: gameId, players: players, playerNames: names);
+      final photos = Map<String, String>.from(
+        (data['playerPhotos'] as Map? ?? {})
+            .map((k, v) => MapEntry(k.toString(), v.toString())),
+      );
+      final fresh = UnoEngine.dealNewGame(
+        id: gameId,
+        players: players,
+        playerNames: names,
+        playerPhotos: photos,
+      );
       tx.update(ref, fresh.toMap());
     });
   }
