@@ -38,13 +38,15 @@ service cloud.firestore {
 
     function isValidUnoGame(d) {
       return d.keys().hasOnly([
-        'status', 'players', 'playerNames', 'hands', 'drawPile', 'discardPile',
-        'currentColor', 'currentTurn', 'direction', 'hasDrawn', 'unoSafe',
-        'reverseColor', 'blockedPlayers', 'winner', 'lastAction', 'createdAt'
+        'status', 'players', 'playerNames', 'playerPhotos', 'hands', 'drawPile',
+        'discardPile', 'currentColor', 'currentTurn', 'direction', 'hasDrawn',
+        'unoSafe', 'reverseColor', 'blockedPlayers', 'winner', 'lastAction',
+        'createdAt'
       ])
       && d.status is string
       && d.players is list && d.players.size() <= 4
       && d.playerNames is map
+      && d.playerPhotos is map
       && d.hands is map
       && d.drawPile is list
       && d.discardPile is list
@@ -59,13 +61,14 @@ service cloud.firestore {
 
     function isValidOkeyGame(d) {
       return d.keys().hasOnly([
-        'status', 'players', 'playerNames', 'hands', 'drawPile', 'discards',
-        'indicator', 'currentTurn', 'hasDrawn', 'drawnFromDiscardId',
+        'status', 'players', 'playerNames', 'playerPhotos', 'hands', 'drawPile',
+        'discards', 'indicator', 'currentTurn', 'hasDrawn', 'drawnFromDiscardId',
         'lastAction', 'winner', 'winners', 'finishedByOkey', 'scores', 'createdAt'
       ])
       && d.status is string
       && d.players is list && d.players.size() <= 4
       && d.playerNames is map
+      && d.playerPhotos is map
       && d.hands is map
       && d.drawPile is list
       && d.discards is map
@@ -78,14 +81,15 @@ service cloud.firestore {
 
     function isValidPistiGame(d) {
       return d.keys().hasOnly([
-        'status', 'players', 'playerNames', 'hands', 'pile', 'drawPile',
-        'won', 'pistiCount', 'lastCapturer', 'lastAction', 'pendingCapture',
-        'currentTurn', 'winner', 'winners', 'scores', 'scoreDetail', 'createdAt',
-        'skipResultDelay'
+        'status', 'players', 'playerNames', 'playerPhotos', 'hands', 'pile',
+        'drawPile', 'won', 'pistiCount', 'jackPistiCount', 'lastCapturer',
+        'lastAction', 'pendingCapture', 'currentTurn', 'winner', 'winners',
+        'scores', 'scoreDetail', 'createdAt', 'skipResultDelay'
       ])
       && d.status is string
       && d.players is list && d.players.size() <= 4
       && d.playerNames is map
+      && d.playerPhotos is map
       && d.hands is map
       && d.pile is list
       && d.drawPile is list

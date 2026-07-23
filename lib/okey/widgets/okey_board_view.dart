@@ -145,36 +145,27 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                   fontWeight: FontWeight.w700,
                   fontSize: 13)),
           const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              OkeyPhotoFrame(base64Photo: c.opponentPhoto(id), size: 34),
-              const SizedBox(width: 8),
-              Column(
-                children: [
-                  const Text('attı',
-                      style: TextStyle(color: OkeyColors.muted, fontSize: 10)),
-                  const SizedBox(height: 2),
-                  discard != null
-                      ? OkeyTileWidget(
-                          tile: discard,
-                          width: _tileSize,
-                          isOkey: state.isOkey(discard),
-                        )
-                      : SizedBox(
-                          width: _tileSize,
-                          height: _tileSize * OkeyTileWidget.aspect,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0x33FFFFFF)),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                ],
-              ),
-            ],
-          ),
+          OkeyPhotoFrame(base64Photo: c.opponentPhoto(id), size: 70),
+          const SizedBox(height: 4),
+          const Text('attı',
+              style: TextStyle(color: OkeyColors.muted, fontSize: 10)),
+          const SizedBox(height: 2),
+          discard != null
+              ? OkeyTileWidget(
+                  tile: discard,
+                  width: _tileSize,
+                  isOkey: state.isOkey(discard),
+                )
+              : SizedBox(
+                  width: _tileSize,
+                  height: _tileSize * OkeyTileWidget.aspect,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0x33FFFFFF)),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
           const SizedBox(height: 2),
           Text('$count taş',
               style: const TextStyle(color: OkeyColors.muted, fontSize: 11)),
