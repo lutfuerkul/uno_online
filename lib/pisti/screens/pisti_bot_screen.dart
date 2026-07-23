@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/player_photo_store.dart';
+import '../../widgets/player_photo_picker.dart';
 import '../providers/pisti_local_provider.dart';
 import '../theme/pisti_theme.dart';
 import '../widgets/pisti_board_view.dart';
@@ -118,6 +120,7 @@ class _PistiBotSetupForm extends StatefulWidget {
 
 class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
   late final TextEditingController _nameController;
+  String? _photo;
 
   @override
   void initState() {
@@ -137,6 +140,7 @@ class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
     context.read<PistiLocalProvider>().startGame(
           playerName: _nameController.text.trim(),
           totalPlayers: total,
+          photo: _photo,
         );
   }
 
@@ -153,6 +157,15 @@ class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
             const Text(
               'Bilgisayara Karşı',
               style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            PlayerPhotoPicker(
+              onChanged: (photo) => _photo = photo,
+              loadSaved: PlayerPhotoStore.loadPistiPhoto,
+              saveNew: PlayerPhotoStore.savePistiPhoto,
+              borderColor: PistiColors.primary,
+              backgroundColor: PistiColors.hand,
+              badgeColor: PistiColors.primary,
             ),
             const SizedBox(height: 16),
             const Text(

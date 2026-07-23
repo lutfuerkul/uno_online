@@ -13,6 +13,10 @@ class PistiGameState {
 
   final List<String> players;
   final Map<String, String> playerNames;
+
+  /// Oyuncu kimliği -> yüklediği profil fotoğrafı (base64 jpeg). Fotoğrafı
+  /// olmayan oyuncular haritada yer almaz.
+  final Map<String, String> playerPhotos;
   final Map<String, List<PistiCard>> hands;
 
   /// Masadaki kartlar (en sonuncusu = en üstteki / son atılan).
@@ -47,6 +51,7 @@ class PistiGameState {
     required this.status,
     required this.players,
     required this.playerNames,
+    required this.playerPhotos,
     required this.hands,
     required this.pile,
     required this.drawPile,
@@ -69,6 +74,7 @@ class PistiGameState {
     String? status,
     List<String>? players,
     Map<String, String>? playerNames,
+    Map<String, String>? playerPhotos,
     Map<String, List<PistiCard>>? hands,
     List<PistiCard>? pile,
     List<PistiCard>? drawPile,
@@ -92,6 +98,7 @@ class PistiGameState {
       status: status ?? this.status,
       players: players ?? this.players,
       playerNames: playerNames ?? this.playerNames,
+      playerPhotos: playerPhotos ?? this.playerPhotos,
       hands: hands ?? this.hands,
       pile: pile ?? this.pile,
       drawPile: drawPile ?? this.drawPile,
@@ -126,6 +133,8 @@ class PistiGameState {
       status: map['status'] as String? ?? 'waiting',
       players: List<String>.from(map['players'] as List? ?? []),
       playerNames: Map<String, String>.from(map['playerNames'] as Map? ?? {}),
+      playerPhotos:
+          Map<String, String>.from(map['playerPhotos'] as Map? ?? {}),
       hands: parseHandLike(map['hands']),
       pile: parseCards(map['pile']),
       drawPile: parseCards(map['drawPile']),
@@ -149,6 +158,7 @@ class PistiGameState {
         'status': status,
         'players': players,
         'playerNames': playerNames,
+        'playerPhotos': playerPhotos,
         'hands': hands.map((k, v) => MapEntry(k, v.map((c) => c.toMap()).toList())),
         'pile': pile.map((c) => c.toMap()).toList(),
         'drawPile': drawPile.map((c) => c.toMap()).toList(),

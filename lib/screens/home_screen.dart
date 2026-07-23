@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 
 import '../providers/game_provider.dart';
 import '../services/player_name_store.dart';
+import '../services/player_photo_store.dart';
 import '../theme/uno_theme.dart';
+import '../widgets/player_photo_picker.dart';
 import 'uno_bot_screen.dart';
 
 /// Giriş ekranı: ad gir, oyun kur veya oda koduyla katıl. `docs/uno/game.js`
@@ -20,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
+  String? _photo;
 
   @override
   void initState() {
@@ -124,6 +127,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                PlayerPhotoPicker(
+                  onChanged: (photo) => _photo = photo,
+                  loadSaved: PlayerPhotoStore.loadUnoPhoto,
+                  saveNew: PlayerPhotoStore.saveUnoPhoto,
+                  borderColor: UnoColors.yellow,
+                  backgroundColor: UnoColors.wildCard,
+                  badgeColor: UnoColors.yellow,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Profil fotoğrafın (isteğe bağlı) — diğer oyuncular görür',
+                  style: TextStyle(color: UnoColors.muted, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 14),
                 TextField(
                   controller: _nameController,
                   textAlign: TextAlign.center,
@@ -169,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     onPressed: () {
                       final name = _validateName();
-                      if (name != null) provider.createGame(name);
+                      if (name != null) provider.createGame(name, photo: _photo);
                     },
                     child: const Text('Yeni Oyun Kur', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
@@ -199,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _toast('Oda kodunu gir.');
                         return;
                       }
-                      provider.joinGame(_codeController.text, name);
+                      provider.joinGame(_codeController.text, name, photo: _photo);
                     },
                     child: const Text('Oyuna Katıl', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),

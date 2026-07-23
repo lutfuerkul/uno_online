@@ -42,13 +42,24 @@ class PistiLocalProvider extends ChangeNotifier implements PistiBoardController 
   String opponentName(String id) => state?.playerNames[id] ?? id;
   @override
   int opponentCardCount(String id) => state?.hands[id]?.length ?? 0;
+  @override
+  String? opponentPhoto(String id) {
+    final photo = state?.playerPhotos[id];
+    return (photo != null && photo.isNotEmpty) ? photo : null;
+  }
 
   String _lastPlayerName = '';
   int _lastTotalPlayers = 2;
+  String? _lastPhoto;
 
-  void startGame({required String playerName, required int totalPlayers}) {
+  void startGame({
+    required String playerName,
+    required int totalPlayers,
+    String? photo,
+  }) {
     _lastPlayerName = playerName;
     _lastTotalPlayers = totalPlayers;
+    _lastPhoto = photo;
     _session++;
     final session = _session;
 
@@ -57,15 +68,27 @@ class PistiLocalProvider extends ChangeNotifier implements PistiBoardController 
       'you': playerName.isEmpty ? 'Sen' : playerName,
       for (var i = 1; i < totalPlayers; i++) 'bot$i': '🤖 Oyuncu $i',
     };
+    final photos = <String, String>{
+      if (photo != null && photo.isNotEmpty) 'you': photo,
+    };
 
-    state = PistiEngine.dealNewGame(id: 'local', players: players, playerNames: names);
+    state = PistiEngine.dealNewGame(
+      id: 'local',
+      players: players,
+      playerNames: names,
+      playerPhotos: photos,
+    );
     notifyListeners();
     _scheduleBotLoop(session);
   }
 
   /// Aynı oyuncu sayısıyla yeni bir yerel oyun başlatır.
   void rematch() {
-    startGame(playerName: _lastPlayerName, totalPlayers: _lastTotalPlayers);
+    startGame(
+      playerName: _lastPlayerName,
+      totalPlayers: _lastTotalPlayers,
+      photo: _lastPhoto,
+    );
   }
 
   @override

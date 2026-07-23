@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../widgets/player_photo_frame.dart';
 import '../models/pisti_board_controller.dart';
 import '../models/pisti_card.dart';
 import '../models/pisti_game_state.dart';
@@ -367,6 +368,13 @@ class _OpponentTile extends StatelessWidget {
           Text(
             controller.opponentName(id),
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          PlayerPhotoFrame(
+            base64Photo: controller.opponentPhoto(id),
+            size: 28,
+            borderColor: PistiColors.primary,
+            backgroundColor: PistiColors.hand,
           ),
           const SizedBox(height: 4),
           Padding(
