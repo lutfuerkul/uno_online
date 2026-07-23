@@ -159,13 +159,17 @@ class _OkeyBotSetupFormState extends State<_OkeyBotSetupForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    // Bu kurulum ekranının zemin tonu UNO'nunkiyle aynı (#1B2430) —
+    // yalnızca bu ekran için; oyun içi renkler (OkeyColors) değişmedi.
+    return Container(
+      color: const Color(0xFF1B2430),
+      child: Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🁢', style: TextStyle(fontSize: 44)),
+            const Text('🤖', style: TextStyle(fontSize: 44)),
             const SizedBox(height: 8),
             const Text(
               'Bilgisayara Karşı Okey',
@@ -252,6 +256,7 @@ class _OkeyBotSetupFormState extends State<_OkeyBotSetupForm> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
