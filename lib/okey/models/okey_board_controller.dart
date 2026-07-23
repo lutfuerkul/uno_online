@@ -30,6 +30,9 @@ abstract class OkeyBoardController implements Listenable {
   String opponentName(String id);
   int opponentTileCount(String id);
 
+  /// Oyuncunun yüklediği profil fotoğrafı (base64 jpeg), yoksa null.
+  String? opponentPhoto(String id);
+
   /// Bir oyuncunun ıskarta yığınının en üstteki taşı (yoksa null).
   OkeyTile? topDiscardOf(String id);
 

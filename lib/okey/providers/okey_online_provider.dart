@@ -78,6 +78,11 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   String opponentName(String id) => state?.playerNames[id] ?? id;
   @override
   int opponentTileCount(String id) => state?.hands[id]?.length ?? 0;
+  @override
+  String? opponentPhoto(String id) {
+    final photo = state?.playerPhotos[id];
+    return (photo != null && photo.isNotEmpty) ? photo : null;
+  }
 
   @override
   OkeyTile? topDiscardOf(String id) {
@@ -110,11 +115,12 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     return OkeyMeldSolver.winningDiscard(hand, s.okeyColor, s.okeyNumber) != null;
   }
 
-  Future<void> createGame(String name) async {
+  Future<void> createGame(String name, {String? photo}) async {
     error = null;
     _playerName = _normalizeName(name);
     try {
-      final id = await _service.createGame(playerId, _playerName!);
+      final id =
+          await _service.createGame(playerId, _playerName!, photo: photo);
       _subscribe(id);
     } catch (e) {
       error = e.toString();
@@ -122,12 +128,12 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     }
   }
 
-  Future<void> joinGame(String code, String name) async {
+  Future<void> joinGame(String code, String name, {String? photo}) async {
     error = null;
     _playerName = _normalizeName(name);
     final id = code.toUpperCase().trim();
     try {
-      await _service.joinGame(id, playerId, _playerName!);
+      await _service.joinGame(id, playerId, _playerName!, photo: photo);
       _subscribe(id);
     } catch (e) {
       error = _friendlyError(e);

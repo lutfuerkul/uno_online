@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/okey_board_controller.dart';
 import '../models/okey_game_state.dart';
 import '../models/okey_tile.dart';
+import '../services/okey_meld_solver.dart';
 import '../theme/okey_theme.dart';
 import 'okey_tile_widget.dart';
 
@@ -28,6 +29,13 @@ class OkeyHandRevealView extends StatelessWidget {
     final hand = winnerId != null
         ? (state.hands[winnerId] ?? const <OkeyTile>[])
         : const <OkeyTile>[];
+
+    // Jokerin (varsa) hangi taşın yerine kullanıldığını göstermek için elin
+    // gerçek grup bölünmesini bul; bulunamazsa (olmaması gerekir) düz
+    // sıralamaya düş.
+    final melds = hand.length == 14
+        ? OkeyMeldSolver.solveMelds(hand, state.okeyColor, state.okeyNumber)
+        : null;
 
     final sorted = [...hand]..sort((a, b) {
         final aOkey = state.isOkey(a);
@@ -76,19 +84,48 @@ class OkeyHandRevealView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0x55000000), width: 2),
                   ),
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: [
-                      for (final tile in sorted)
-                        OkeyTileWidget(
-                          tile: tile,
-                          width: 36,
-                          isOkey: state.isOkey(tile),
+                  child: melds != null
+                      ? Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            for (final meld in melds)
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x22FFFFFF),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    for (final tile in meld) ...[
+                                      OkeyTileWidget(
+                                        tile: tile,
+                                        width: 36,
+                                        isOkey: state.isOkey(tile),
+                                      ),
+                                      const SizedBox(width: 2),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                          ],
+                        )
+                      : Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: [
+                            for (final tile in sorted)
+                              OkeyTileWidget(
+                                tile: tile,
+                                width: 36,
+                                isOkey: state.isOkey(tile),
+                              ),
+                          ],
                         ),
-                    ],
-                  ),
                 ),
               ],
             ),

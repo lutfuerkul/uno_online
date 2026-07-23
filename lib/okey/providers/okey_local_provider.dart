@@ -61,6 +61,11 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
   String opponentName(String id) => state?.playerNames[id] ?? id;
   @override
   int opponentTileCount(String id) => state?.hands[id]?.length ?? 0;
+  @override
+  String? opponentPhoto(String id) {
+    final photo = state?.playerPhotos[id];
+    return (photo != null && photo.isNotEmpty) ? photo : null;
+  }
 
   @override
   OkeyTile? topDiscardOf(String id) {
@@ -95,10 +100,16 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
 
   String _lastPlayerName = '';
   int _lastTotalPlayers = 4;
+  String? _lastPhoto;
 
-  void startGame({required String playerName, required int totalPlayers}) {
+  void startGame({
+    required String playerName,
+    required int totalPlayers,
+    String? photo,
+  }) {
     _lastPlayerName = playerName;
     _lastTotalPlayers = totalPlayers;
+    _lastPhoto = photo;
     _session++;
     _slots = const [];
 
@@ -107,15 +118,25 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
       'you': playerName.isEmpty ? 'Sen' : playerName,
       for (var i = 1; i < totalPlayers; i++) 'bot$i': '🤖 Oyuncu $i',
     };
+    final photos = <String, String>{
+      if (photo != null && photo.isNotEmpty) 'you': photo,
+    };
 
-    state =
-        OkeyEngine.dealNewGame(id: 'local', players: players, playerNames: names);
+    state = OkeyEngine.dealNewGame(
+      id: 'local',
+      players: players,
+      playerNames: names,
+      playerPhotos: photos,
+    );
     notifyListeners();
     _scheduleBotLoop(_session);
   }
 
-  void rematch() =>
-      startGame(playerName: _lastPlayerName, totalPlayers: _lastTotalPlayers);
+  void rematch() => startGame(
+        playerName: _lastPlayerName,
+        totalPlayers: _lastTotalPlayers,
+        photo: _lastPhoto,
+      );
 
   @override
   Future<void> leaveGame() async {

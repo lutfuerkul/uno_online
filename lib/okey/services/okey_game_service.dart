@@ -15,12 +15,13 @@ class OkeyGameService {
   CollectionReference<Map<String, dynamic>> get _games =>
       _db.collection('okey_games');
 
-  Future<String> createGame(String playerId, String name) async {
+  Future<String> createGame(String playerId, String name, {String? photo}) async {
     final code = _generateCode();
     await _games.doc(code).set({
       'status': 'waiting',
       'players': [playerId],
       'playerNames': {playerId: name},
+      'playerPhotos': {if (photo != null && photo.isNotEmpty) playerId: photo},
       'hands': <String, dynamic>{},
       'drawPile': <dynamic>[],
       'discards': <String, dynamic>{},
@@ -38,7 +39,8 @@ class OkeyGameService {
     return code;
   }
 
-  Future<void> joinGame(String gameId, String playerId, String name) async {
+  Future<void> joinGame(String gameId, String playerId, String name,
+      {String? photo}) async {
     final ref = _games.doc(gameId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
@@ -47,6 +49,8 @@ class OkeyGameService {
       if (data['status'] != 'waiting') throw Exception('Oyun çoktan başladı.');
       final players = List<String>.from(data['players'] as List? ?? []);
       final names = Map<String, dynamic>.from(data['playerNames'] as Map? ?? {});
+      final photos =
+          Map<String, dynamic>.from(data['playerPhotos'] as Map? ?? {});
 
       if (players.contains(playerId)) return; // yeniden bağlanma
       if (players.length >= OkeyEngine.maxPlayers) {
@@ -58,7 +62,9 @@ class OkeyGameService {
       }
       players.add(playerId);
       names[playerId] = normalized;
-      tx.update(ref, {'players': players, 'playerNames': names});
+      if (photo != null && photo.isNotEmpty) photos[playerId] = photo;
+      tx.update(ref,
+          {'players': players, 'playerNames': names, 'playerPhotos': photos});
     });
   }
 
@@ -77,8 +83,16 @@ class OkeyGameService {
         (data['playerNames'] as Map? ?? {})
             .map((k, v) => MapEntry(k.toString(), v.toString())),
       );
-      final fresh =
-          OkeyEngine.dealNewGame(id: gameId, players: players, playerNames: names);
+      final photos = Map<String, String>.from(
+        (data['playerPhotos'] as Map? ?? {})
+            .map((k, v) => MapEntry(k.toString(), v.toString())),
+      );
+      final fresh = OkeyEngine.dealNewGame(
+        id: gameId,
+        players: players,
+        playerNames: names,
+        playerPhotos: photos,
+      );
       tx.update(ref, fresh.toMap());
     });
   }

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../services/player_name_store.dart';
 import '../providers/okey_online_provider.dart';
 import '../theme/okey_theme.dart';
+import '../widgets/okey_photo_picker.dart';
 import 'okey_bot_screen.dart';
 
 /// Okey giriş ekranı: ad gir, oyun kur, oda koduyla katıl ya da bilgisayara
@@ -20,6 +21,7 @@ class OkeyHomeScreen extends StatefulWidget {
 class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
+  String? _photo;
 
   @override
   void initState() {
@@ -125,6 +127,14 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                       fontSize: 18, letterSpacing: 10, color: Color(0xCCFFFFFF)),
                 ),
                 const SizedBox(height: 24),
+                OkeyPhotoPicker(onChanged: (photo) => _photo = photo),
+                const SizedBox(height: 8),
+                const Text(
+                  'Profil fotoğrafın (isteğe bağlı) — diğer oyuncular görür',
+                  style: TextStyle(color: OkeyColors.muted, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 14),
                 TextField(
                   controller: _nameController,
                   textAlign: TextAlign.center,
@@ -170,7 +180,7 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                     ),
                     onPressed: () {
                       final name = _validateName();
-                      if (name != null) provider.createGame(name);
+                      if (name != null) provider.createGame(name, photo: _photo);
                     },
                     child: const Text('Yeni Oyun Kur',
                         style: TextStyle(fontWeight: FontWeight.w700)),
@@ -200,7 +210,8 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                         _toast('Oda kodunu gir.');
                         return;
                       }
-                      provider.joinGame(_codeController.text, name);
+                      provider.joinGame(_codeController.text, name,
+                          photo: _photo);
                     },
                     child: const Text('Oyuna Katıl',
                         style: TextStyle(fontWeight: FontWeight.w700)),

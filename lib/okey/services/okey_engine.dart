@@ -22,6 +22,7 @@ class OkeyEngine {
     required String id,
     required List<String> players,
     required Map<String, String> playerNames,
+    Map<String, String> playerPhotos = const {},
   }) {
     final starterIndex = Random().nextInt(players.length);
     final dealt =
@@ -32,6 +33,7 @@ class OkeyEngine {
       status: 'playing',
       players: players,
       playerNames: playerNames,
+      playerPhotos: playerPhotos,
       hands: dealt.hands,
       drawPile: dealt.drawPile,
       discards: {for (final p in players) p: <OkeyTile>[]},
@@ -245,6 +247,8 @@ class OkeyEngine {
   }) {
     final players = state.players.where((p) => p != playerId).toList();
     final names = Map<String, String>.from(state.playerNames)..remove(playerId);
+    final photos = Map<String, String>.from(state.playerPhotos)
+      ..remove(playerId);
     final hands = {
       for (final e in state.hands.entries)
         if (e.key != playerId) e.key: e.value,
@@ -258,6 +262,7 @@ class OkeyEngine {
       return state.copyWith(
         players: players,
         playerNames: names,
+        playerPhotos: photos,
         hands: hands,
         discards: discards,
       );
@@ -267,6 +272,7 @@ class OkeyEngine {
       return state.copyWith(
         players: players,
         playerNames: names,
+        playerPhotos: photos,
         hands: hands,
         discards: discards,
         status: 'finished',
@@ -287,6 +293,7 @@ class OkeyEngine {
     return state.copyWith(
       players: players,
       playerNames: names,
+      playerPhotos: photos,
       hands: hands,
       discards: discards,
       currentTurn: currentTurn,

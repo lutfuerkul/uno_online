@@ -24,6 +24,9 @@ dependencies:
   # --- Oyuncu adı kalıcılığı (web localStorage ile aynı) ---
   shared_preferences: ^2.3.3
 
+  # --- Okey profil fotoğrafı seçimi (galeriden) ---
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
