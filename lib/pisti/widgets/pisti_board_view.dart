@@ -102,73 +102,95 @@ class _Board extends StatelessWidget {
         Expanded(
           child: Container(
             color: PistiColors.middle,
-            // FittedBox: kısa/dar ekranlarda (küçük telefon, büyük görüntü
-            // ölçeği) orta alan dikeyde sığmazsa taşmak yerine orantılı küçülür.
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Deste ($deckCount)',
-                          style: const TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      deckCount > 0
-                          ? const PistiCardWidget(faceDown: true, width: 84)
-                          : _EmptySlot(width: 84),
-                    ],
-                  ),
-                  const SizedBox(width: 22),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Yerdeki kartlar',
-                          style: TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      top != null ? _TableStack(pile: pile) : _EmptySlot(width: 84),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: PistiColors.pileCountBg,
-                          borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              children: [
+                // FittedBox: kısa/dar ekranlarda (küçük telefon, büyük
+                // görüntü ölçeği) orta alan dikeyde sığmazsa taşmak yerine
+                // orantılı küçülür. Sağdaki fotoğrafa (70px + 16px boşluk =
+                // 86px) yer açmak için hafif sola kaydırılmış.
+                Padding(
+                  padding: const EdgeInsets.only(right: 90),
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Deste ($deckCount)',
+                                style: const TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
+                            const SizedBox(height: 6),
+                            deckCount > 0
+                                ? const PistiCardWidget(faceDown: true, width: 84)
+                                : _EmptySlot(width: 84),
+                          ],
                         ),
-                        child: Text(
-                          '${pile.length} kart',
-                          style: const TextStyle(
-                              color: PistiColors.pileCountText, fontWeight: FontWeight.w800, fontSize: 14),
+                        const SizedBox(width: 22),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('Yerdeki kartlar',
+                                style: TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
+                            const SizedBox(height: 6),
+                            top != null ? _TableStack(pile: pile) : _EmptySlot(width: 84),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: PistiColors.pileCountBg,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${pile.length} kart',
+                                style: const TextStyle(
+                                    color: PistiColors.pileCountText, fontWeight: FontWeight.w800, fontSize: 14),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 22),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('Sende', style: TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
+                            const SizedBox(height: 6),
+                            Text('${controller.wonCount(controller.selfId)} 🂠',
+                                style: const TextStyle(color: Colors.white, fontSize: 30)),
+                            if (controller.pistiCountFor(controller.selfId) > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 3),
+                                child: Text(
+                                  '🔥 ${controller.pistiCountFor(controller.selfId)} pişti',
+                                  style: const TextStyle(
+                                      color: PistiColors.pistiTag, fontSize: 12, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                          ],
+                        ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(width: 22),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Sende', style: TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      Text('${controller.wonCount(controller.selfId)} 🂠',
-                          style: const TextStyle(color: Colors.white, fontSize: 30)),
-                      if (controller.pistiCountFor(controller.selfId) > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 3),
-                          child: Text(
-                            '🔥 ${controller.pistiCountFor(controller.selfId)} pişti',
-                            style: const TextStyle(
-                                color: PistiColors.pistiTag, fontSize: 12, fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                    ],
-                  ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                // Kendi fotoğrafım — sağ altta, ekranın kenarına ve alttaki
+                // bilgi/sıra banner'ına tam yaslanmadan hafif ayrık (ikisinden
+                // de eşit boşlukla).
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: PlayerPhotoFrame(
+                    base64Photo: controller.opponentPhoto(controller.selfId),
+                    size: 70,
+                    borderColor: PistiColors.primary,
+                    backgroundColor: PistiColors.hand,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

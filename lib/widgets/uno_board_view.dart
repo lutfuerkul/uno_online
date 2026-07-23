@@ -141,66 +141,88 @@ class _Board extends StatelessWidget {
         Expanded(
           child: Container(
             color: UnoColors.forCard(state.currentColor).withOpacity(0.13),
-            // FittedBox: kısa/dar ekranlarda (küçük telefon, büyük görüntü
-            // ölçeği) orta alan dikeyde sığmazsa taşmak yerine orantılı küçülür.
-            child: Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Deste', style: TextStyle(color: Colors.white, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      CardWidget(
-                        faceDown: true,
-                        width: 84,
-                        onTap: _isMyTurn && !state.hasDrawn ? controller.drawCard : null,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _isMyTurn ? (state.hasDrawn ? 'çektin' : 'çekmek için dokun') : '',
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 20),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Açık kart', style: TextStyle(color: Colors.white, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      CardWidget(card: top, width: 84, chosenColorOverride: topColorOverride),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: UnoColors.forCard(state.currentColor),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0x55FFFFFF)),
+            child: Stack(
+              children: [
+                // FittedBox: kısa/dar ekranlarda (küçük telefon, büyük
+                // görüntü ölçeği) orta alan dikeyde sığmazsa taşmak yerine
+                // orantılı küçülür. Sağdaki fotoğrafa (70px + 16px boşluk =
+                // 86px) yer açmak için hafif sola kaydırılmış.
+                Padding(
+                  padding: const EdgeInsets.only(right: 90),
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('Deste', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            const SizedBox(height: 6),
+                            CardWidget(
+                              faceDown: true,
+                              width: 84,
+                              onTap: _isMyTurn && !state.hasDrawn ? controller.drawCard : null,
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${_colorTr[state.currentColor] ?? ''} ${state.direction == 1 ? '↻' : '↺'}',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
-                          ),
-                        ],
+                            const SizedBox(height: 6),
+                            Text(
+                              _isMyTurn ? (state.hasDrawn ? 'çektin' : 'çekmek için dokun') : '',
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 20),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('Açık kart', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            const SizedBox(height: 6),
+                            CardWidget(card: top, width: 84, chosenColorOverride: topColorOverride),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 14,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: UnoColors.forCard(state.currentColor),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: const Color(0x55FFFFFF)),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${_colorTr[state.currentColor] ?? ''} ${state.direction == 1 ? '↻' : '↺'}',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                // Kendi fotoğrafım — sağ altta, ekranın kenarına ve alttaki
+                // bilgi/sıra banner'ına tam yaslanmadan hafif ayrık (ikisinden
+                // de eşit boşlukla).
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: PlayerPhotoFrame(
+                    base64Photo: controller.opponentPhoto(controller.selfId),
+                    size: 70,
+                    borderColor: UnoColors.yellow,
+                    backgroundColor: UnoColors.wildCard,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

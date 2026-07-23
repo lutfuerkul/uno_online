@@ -125,6 +125,11 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     final isTurn = state.currentTurn == id && state.status == 'playing';
     final count = c.opponentTileCount(id);
     final discard = c.topDiscardOf(id);
+    // Soldaki oyuncunun taşı buradan alınabilir (ayrı bir "Yerde" sütunu
+    // yerine doğrudan fotoğrafının altındaki taştan).
+    final canDraw =
+        c.isMyTurn && !c.hasDrawn && state.status == 'playing';
+    final canTakeHere = id == c.leftPlayerId && canDraw && discard != null;
 
     return Container(
       constraints: const BoxConstraints(minWidth: 92),
@@ -150,22 +155,36 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           const Text('attı',
               style: TextStyle(color: OkeyColors.muted, fontSize: 10)),
           const SizedBox(height: 2),
-          discard != null
-              ? OkeyTileWidget(
-                  tile: discard,
-                  width: _tileSize,
-                  isOkey: state.isOkey(discard),
-                )
-              : SizedBox(
-                  width: _tileSize,
-                  height: _tileSize * OkeyTileWidget.aspect,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0x33FFFFFF)),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
+          GestureDetector(
+            onTap: canTakeHere ? () => c.drawFromDiscard() : null,
+            child: Builder(builder: (_) {
+              final tile = discard != null
+                  ? OkeyTileWidget(
+                      tile: discard,
+                      width: _tileSize,
+                      isOkey: state.isOkey(discard),
+                    )
+                  : SizedBox(
+                      width: _tileSize,
+                      height: _tileSize * OkeyTileWidget.aspect,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0x33FFFFFF)),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    );
+              return canTakeHere ? _dropHighlight(tile, _tileSize) : tile;
+            }),
+          ),
+          SizedBox(
+            height: 12,
+            child: canTakeHere
+                ? const Text('almak için dokun',
+                    style:
+                        TextStyle(color: OkeyColors.okeyGlow, fontSize: 9))
+                : null,
+          ),
           const SizedBox(height: 2),
           Text('$count taş',
               style: const TextStyle(color: OkeyColors.muted, fontSize: 11)),
@@ -180,89 +199,85 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     final canDraw = isMyTurn && !c.hasDrawn && state.status == 'playing';
     final canDiscard = isMyTurn && c.hasDrawn && state.status == 'playing';
     final deckCount = state.drawPile.length;
-    final leftDiscard = c.takeableDiscard;
     final myDiscard = c.myLastDiscard;
 
     return Container(
       color: OkeyColors.middle,
       width: double.infinity,
-      child: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _indicatorCard(context, state, canDiscard),
-                const SizedBox(height: 16),
-                // FittedBox: dar telefonlarda orta satır taşmasın diye orantılı
-                // küçülür.
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Kendi en son attığım taş — atılacak taş buraya
-                      // sürüklenip bırakılır (normal atış, sıra geçer).
-                      _pileColumn(
-                        label: 'Attığım',
-                        highlight: canDiscard,
-                        hint: canDiscard ? 'atmak için sürükle' : null,
-                        child: DragTarget<String>(
-                          onWillAcceptWithDetails: (d) => canDiscard,
-                          onAcceptWithDetails: (d) =>
-                              _handleDiscardDrop(context, d.data),
-                          builder: (ctx, cand, rej) {
-                            final tile = myDiscard != null
-                                ? OkeyTileWidget(
-                                    tile: myDiscard,
-                                    width: _tileSize,
-                                    isOkey: state.isOkey(myDiscard),
-                                  )
-                                : _emptySlot(_tileSize);
-                            return cand.isNotEmpty
-                                ? _dropHighlight(tile, _tileSize)
-                                : tile;
-                          },
-                        ),
+      child: Stack(
+        children: [
+          Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _indicatorCard(context, state, canDiscard),
+                    const SizedBox(height: 16),
+                    // FittedBox: dar telefonlarda orta satır taşmasın diye
+                    // orantılı küçülür.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Kendi en son attığım taş — atılacak taş buraya
+                          // sürüklenip bırakılır (normal atış, sıra geçer).
+                          _pileColumn(
+                            label: 'Atılan',
+                            highlight: canDiscard,
+                            hint: canDiscard ? 'atmak için sürükle' : null,
+                            child: DragTarget<String>(
+                              onWillAcceptWithDetails: (d) => canDiscard,
+                              onAcceptWithDetails: (d) =>
+                                  _handleDiscardDrop(context, d.data),
+                              builder: (ctx, cand, rej) {
+                                final tile = myDiscard != null
+                                    ? OkeyTileWidget(
+                                        tile: myDiscard,
+                                        width: _tileSize,
+                                        isOkey: state.isOkey(myDiscard),
+                                      )
+                                    : _emptySlot(_tileSize);
+                                return cand.isNotEmpty
+                                    ? _dropHighlight(tile, _tileSize)
+                                    : tile;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          _pileColumn(
+                            label: 'Deste ($deckCount)',
+                            child: deckCount > 0
+                                ? const OkeyTileWidget(
+                                    faceDown: true, width: _tileSize)
+                                : _emptySlot(_tileSize),
+                            hint: canDraw && deckCount > 0
+                                ? 'çekmek için dokun'
+                                : null,
+                            onTap: canDraw && deckCount > 0
+                                ? () => c.drawFromStack()
+                                : null,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 20),
-                      _pileColumn(
-                        label: 'Deste ($deckCount)',
-                        child: deckCount > 0
-                            ? const OkeyTileWidget(faceDown: true, width: _tileSize)
-                            : _emptySlot(_tileSize),
-                        hint:
-                            canDraw && deckCount > 0 ? 'çekmek için dokun' : null,
-                        onTap: canDraw && deckCount > 0
-                            ? () => c.drawFromStack()
-                            : null,
-                      ),
-                      const SizedBox(width: 20),
-                      _pileColumn(
-                        label: 'Yerde',
-                        child: leftDiscard != null
-                            ? OkeyTileWidget(
-                                tile: leftDiscard,
-                                width: _tileSize,
-                                isOkey: state.isOkey(leftDiscard),
-                              )
-                            : _emptySlot(_tileSize),
-                        hint: canDraw && leftDiscard != null
-                            ? 'almak için dokun'
-                            : null,
-                        onTap: canDraw && leftDiscard != null
-                            ? () => c.drawFromDiscard()
-                            : null,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+          // Kendi fotoğrafım — sağ alt köşede, ekranın kenarına ve alttaki
+          // bilgi/sıra banner'ına tam yaslanmadan hafif ayrık.
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: OkeyPhotoFrame(
+                base64Photo: c.opponentPhoto(c.selfId), size: 70),
+          ),
+        ],
       ),
     );
   }
