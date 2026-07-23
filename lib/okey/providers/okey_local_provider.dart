@@ -102,16 +102,21 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
   int _lastTotalPlayers = 4;
   String? _lastPhoto;
 
+  /// Oyundan çıkılmadıkça (rövanşlarda da) korunan toplam puan tablosu.
+  Map<String, int> _cumulativeScores = const {};
+
   void startGame({
     required String playerName,
     required int totalPlayers,
     String? photo,
+    bool isRematch = false,
   }) {
     _lastPlayerName = playerName;
     _lastTotalPlayers = totalPlayers;
     _lastPhoto = photo;
     _session++;
     _slots = const [];
+    if (!isRematch) _cumulativeScores = const {};
 
     final players = ['you', for (var i = 1; i < totalPlayers; i++) 'bot$i'];
     final names = <String, String>{
@@ -127,16 +132,21 @@ class OkeyLocalProvider extends ChangeNotifier implements OkeyBoardController {
       players: players,
       playerNames: names,
       playerPhotos: photos,
+      cumulativeScores: _cumulativeScores,
     );
     notifyListeners();
     _scheduleBotLoop(_session);
   }
 
-  void rematch() => startGame(
-        playerName: _lastPlayerName,
-        totalPlayers: _lastTotalPlayers,
-        photo: _lastPhoto,
-      );
+  void rematch() {
+    _cumulativeScores = Map.of(state?.cumulativeScores ?? const {});
+    startGame(
+      playerName: _lastPlayerName,
+      totalPlayers: _lastTotalPlayers,
+      photo: _lastPhoto,
+      isRematch: true,
+    );
+  }
 
   @override
   Future<void> leaveGame() async {

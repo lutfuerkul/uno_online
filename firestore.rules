@@ -63,7 +63,8 @@ service cloud.firestore {
       return d.keys().hasOnly([
         'status', 'players', 'playerNames', 'playerPhotos', 'hands', 'drawPile',
         'discards', 'indicator', 'currentTurn', 'hasDrawn', 'drawnFromDiscardId',
-        'lastAction', 'winner', 'winners', 'finishedByOkey', 'scores', 'createdAt'
+        'lastAction', 'winner', 'winners', 'finishedByOkey', 'scores',
+        'cumulativeScores', 'createdAt'
       ])
       && d.status is string
       && d.players is list && d.players.size() <= 4
@@ -76,6 +77,7 @@ service cloud.firestore {
       && d.hasDrawn is bool
       && d.winners is list
       && d.scores is map
+      && d.cumulativeScores is map
       && d.createdAt is number;
     }
 

@@ -93,7 +93,7 @@ class _OkeyPhotoPickerState extends State<OkeyPhotoPicker> {
             child: Container(
               padding: const EdgeInsets.all(3),
               decoration: const BoxDecoration(
-                color: OkeyColors.accent,
+                color: OkeyColors.primary,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.camera_alt, size: 12, color: Colors.black),

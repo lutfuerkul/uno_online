@@ -34,6 +34,7 @@ class OkeyGameService {
       'winners': <dynamic>[],
       'finishedByOkey': false,
       'scores': <String, dynamic>{},
+      'cumulativeScores': <String, dynamic>{},
       'createdAt': DateTime.now().millisecondsSinceEpoch,
     });
     return code;
@@ -87,11 +88,17 @@ class OkeyGameService {
         (data['playerPhotos'] as Map? ?? {})
             .map((k, v) => MapEntry(k.toString(), v.toString())),
       );
+      // Oyundan çıkılmadıkça (rövanşlarda da) toplam puan tablosu korunur.
+      final cumulativeScores = Map<String, int>.from(
+        (data['cumulativeScores'] as Map? ?? {})
+            .map((k, v) => MapEntry(k.toString(), (v as num).toInt())),
+      );
       final fresh = OkeyEngine.dealNewGame(
         id: gameId,
         players: players,
         playerNames: names,
         playerPhotos: photos,
+        cumulativeScores: cumulativeScores,
       );
       tx.update(ref, fresh.toMap());
     });
