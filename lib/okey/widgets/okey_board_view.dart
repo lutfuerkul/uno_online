@@ -33,7 +33,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// Tüm taşların ortak ebadı — "oyuncuların yere attığı taş" boyutu. Masa
   /// ortasındaki taşlar (gösterge, deste, yerdeki, attığım) ve ıstakadaki
   /// taşlar bu boyutta çizilir; ıstakada ekrana sığmazsa otomatik küçülür.
-  static const double _tileSize = 26;
+  static const double _tileSize = 33;
 
   /// Renk sırala/Grupla düğmeleri serbest yerleşimle gereksiz kaldı;
   /// gerekirse tekrar açmak için burayı true yap.
