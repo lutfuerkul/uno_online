@@ -180,7 +180,13 @@ class _Board extends StatelessWidget {
                           children: [
                             const Text('Açık kart', style: TextStyle(color: Colors.white, fontSize: 12)),
                             const SizedBox(height: 6),
-                            CardWidget(card: top, width: 84, chosenColorOverride: topColorOverride),
+                            // Pişti'deki "Yerdeki kartlar" ile hizalı görünsün
+                            // diye biraz yukarı kaydırıldı.
+                            Transform.translate(
+                              offset: const Offset(0, -8),
+                              child: CardWidget(
+                                  card: top, width: 84, chosenColorOverride: topColorOverride),
+                            ),
                             const SizedBox(height: 8),
                             Row(
                               mainAxisSize: MainAxisSize.min,
