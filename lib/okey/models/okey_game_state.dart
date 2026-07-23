@@ -12,6 +12,10 @@ class OkeyGameState {
 
   final List<String> players;
   final Map<String, String> playerNames;
+
+  /// Oyuncuların yüklediği profil fotoğrafları (base64 jpeg). Fotoğrafı
+  /// olmayan oyuncular haritada yer almaz.
+  final Map<String, String> playerPhotos;
   final Map<String, List<OkeyTile>> hands;
 
   /// Ortadaki kapalı taş yığını (deste). Son eleman = en üstteki çekilecek taş.
@@ -50,6 +54,7 @@ class OkeyGameState {
     required this.status,
     required this.players,
     required this.playerNames,
+    required this.playerPhotos,
     required this.hands,
     required this.drawPile,
     required this.discards,
@@ -79,6 +84,7 @@ class OkeyGameState {
     String? status,
     List<String>? players,
     Map<String, String>? playerNames,
+    Map<String, String>? playerPhotos,
     Map<String, List<OkeyTile>>? hands,
     List<OkeyTile>? drawPile,
     Map<String, List<OkeyTile>>? discards,
@@ -100,6 +106,7 @@ class OkeyGameState {
       status: status ?? this.status,
       players: players ?? this.players,
       playerNames: playerNames ?? this.playerNames,
+      playerPhotos: playerPhotos ?? this.playerPhotos,
       hands: hands ?? this.hands,
       drawPile: drawPile ?? this.drawPile,
       discards: discards ?? this.discards,
@@ -133,6 +140,8 @@ class OkeyGameState {
       status: map['status'] as String? ?? 'waiting',
       players: List<String>.from(map['players'] as List? ?? []),
       playerNames: Map<String, String>.from(map['playerNames'] as Map? ?? {}),
+      playerPhotos:
+          Map<String, String>.from(map['playerPhotos'] as Map? ?? {}),
       hands: parseTileMap(map['hands']),
       drawPile: parseTiles(map['drawPile']),
       discards: parseTileMap(map['discards']),
@@ -155,6 +164,7 @@ class OkeyGameState {
         'status': status,
         'players': players,
         'playerNames': playerNames,
+        'playerPhotos': playerPhotos,
         'hands':
             hands.map((k, v) => MapEntry(k, v.map((t) => t.toMap()).toList())),
         'drawPile': drawPile.map((t) => t.toMap()).toList(),

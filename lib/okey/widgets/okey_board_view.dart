@@ -7,6 +7,7 @@ import '../models/okey_game_state.dart';
 import '../models/okey_tile.dart';
 import '../services/okey_meld_solver.dart';
 import '../theme/okey_theme.dart';
+import 'okey_photo_frame.dart';
 import 'okey_tile_widget.dart';
 
 /// Okey tahtası. Hem online (Firestore) hem de bilgisayara karşı (yerel) mod
@@ -37,7 +38,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
 
   /// Istakada sıra başına her zaman bu kadar taş gösterilir; taş piksel
   /// boyutu ekran genişliğine göre otomatik hesaplanır (bkz. [_rackWithTiles]).
-  static const int _rackTilesPerRow = 9;
+  static const int _rackTilesPerRow = 10;
 
   /// Renk sırala/Grupla düğmeleri serbest yerleşimle gereksiz kaldı;
   /// gerekirse tekrar açmak için burayı true yap.
@@ -147,7 +148,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _miniStack(count),
+              OkeyPhotoFrame(base64Photo: c.opponentPhoto(id), size: 34),
               const SizedBox(width: 8),
               Column(
                 children: [
@@ -177,27 +178,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           const SizedBox(height: 2),
           Text('$count taş',
               style: const TextStyle(color: OkeyColors.muted, fontSize: 11)),
-        ],
-      ),
-    );
-  }
-
-  Widget _miniStack(int count) {
-    final n = math.min(count, 5);
-    const w = 14.0;
-    const overlap = 9.0;
-    final step = w - overlap;
-    return SizedBox(
-      width: w + (n - 1) * step,
-      height: w * 1.5,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (var i = 0; i < n; i++)
-            Positioned(
-              left: i * step,
-              child: const OkeyTileWidget(faceDown: true, width: w),
-            ),
         ],
       ),
     );

@@ -8,6 +8,7 @@ import '../theme/okey_theme.dart';
 import '../widgets/okey_board_view.dart';
 import '../widgets/okey_exit_dialog.dart';
 import '../widgets/okey_hand_reveal_view.dart';
+import '../widgets/okey_photo_picker.dart';
 import '../widgets/okey_result_view.dart';
 
 /// "Bilgisayara Karşı Oyna" akışı: önce oyuncu sayısı seçilir, sonra tahta
@@ -71,7 +72,7 @@ class _LocalGameBody extends StatefulWidget {
 class _LocalGameBodyState extends State<_LocalGameBody> {
   /// Kazanan varsa eli birkaç saniye gösterilir; berabere ise kısa gecikmeyle
   /// doğrudan skor ekranına geçilir.
-  static const _handRevealDuration = Duration(milliseconds: 5500);
+  static const _handRevealDuration = Duration(seconds: 10);
   static const _drawDelay = Duration(milliseconds: 1600);
 
   Timer? _resultTimer;
@@ -131,6 +132,7 @@ class _OkeyBotSetupForm extends StatefulWidget {
 
 class _OkeyBotSetupFormState extends State<_OkeyBotSetupForm> {
   late final TextEditingController _nameController;
+  String? _photo;
 
   @override
   void initState() {
@@ -151,6 +153,7 @@ class _OkeyBotSetupFormState extends State<_OkeyBotSetupForm> {
     context.read<OkeyLocalProvider>().startGame(
           playerName: _nameController.text.trim(),
           totalPlayers: total,
+          photo: _photo,
         );
   }
 
@@ -171,6 +174,8 @@ class _OkeyBotSetupFormState extends State<_OkeyBotSetupForm> {
                   fontSize: 20,
                   fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 16),
+            OkeyPhotoPicker(onChanged: (photo) => _photo = photo),
             const SizedBox(height: 16),
             const Text(
               'Kaç kişi olsun? (sen + bilgisayarlar)',

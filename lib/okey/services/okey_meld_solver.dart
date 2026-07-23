@@ -114,6 +114,151 @@ class OkeyMeldSolver {
     return _bestCover(counts, wilds, <String, int>{});
   }
 
+  /// Kazanan bir elin gerçek grup bölünmesini bulur — jokerin (varsa) hangi
+  /// taşın yerine kullanıldığını göstermek için (el bitiş ekranı). Her
+  /// grup, taşların gerçek sırasıyla (seri: küçükten büyüğe, joker doğru
+  /// konumda) bir liste olarak döner. El geçerli değilse null.
+  static List<List<OkeyTile>>? solveMelds(
+    List<OkeyTile> tiles,
+    OkeyColor okeyColor,
+    int okeyNumber,
+  ) {
+    if (tiles.length != 14) return null;
+    final buckets = List<List<OkeyTile>>.generate(
+        _colors * _numbers, (_) => <OkeyTile>[]);
+    final wildTiles = <OkeyTile>[];
+    for (final t in tiles) {
+      if (t.isFakeJoker) {
+        buckets[okeyColor.index * _numbers + (okeyNumber - 1)].add(t);
+      } else if (t.color == okeyColor && t.number == okeyNumber) {
+        wildTiles.add(t);
+      } else {
+        buckets[t.color.index * _numbers + (t.number - 1)].add(t);
+      }
+    }
+    final out = <List<OkeyTile>>[];
+    if (_solveTiles(buckets, wildTiles, out)) {
+      return out.reversed.toList();
+    }
+    return null;
+  }
+
+  static bool _solveTiles(
+    List<List<OkeyTile>> buckets,
+    List<OkeyTile> wildTiles,
+    List<List<OkeyTile>> out,
+  ) {
+    final idx = _firstPresentBuckets(buckets);
+    if (idx == -1) {
+      if (wildTiles.isEmpty) return true;
+      if (wildTiles.length >= 3) {
+        out.add(List<OkeyTile>.of(wildTiles));
+        return true;
+      }
+      return false;
+    }
+    return _forEachGroupTiles(buckets, wildTiles, idx, (nb, nw, meld) {
+      if (_solveTiles(nb, nw, out)) {
+        out.add(meld);
+        return true;
+      }
+      return false;
+    });
+  }
+
+  static List<List<OkeyTile>> _cloneBuckets(List<List<OkeyTile>> b) =>
+      [for (final l in b) List<OkeyTile>.of(l)];
+
+  static int _firstPresentBuckets(List<List<OkeyTile>> b) {
+    for (var i = 0; i < b.length; i++) {
+      if (b[i].isNotEmpty) return i;
+    }
+    return -1;
+  }
+
+  static bool _valuePresentTiles(
+      List<List<OkeyTile>> buckets, int color, int value) {
+    final number = _valueToNumber(value);
+    return buckets[color * _numbers + (number - 1)].isNotEmpty;
+  }
+
+  /// [_forEachGroup]'un taş nesnelerini (kimliklerini koruyarak) izleyen
+  /// karşılığı — yalnızca el bitiş ekranındaki [solveMelds] için kullanılır.
+  static bool _forEachGroupTiles(
+    List<List<OkeyTile>> buckets,
+    List<OkeyTile> wildTiles,
+    int idx,
+    bool Function(List<List<OkeyTile>> newBuckets, List<OkeyTile> newWilds,
+            List<OkeyTile> meld)
+        visit,
+  ) {
+    final color = idx ~/ _numbers;
+    final number = idx % _numbers + 1;
+    final wilds = wildTiles.length;
+
+    // --- SETLER ---
+    final present = <int>[];
+    for (var c = 0; c < _colors; c++) {
+      if (c == color) continue;
+      if (buckets[c * _numbers + (number - 1)].isNotEmpty) present.add(c);
+    }
+    for (var size = 3; size <= 4; size++) {
+      final need = size - 1;
+      final maxFromPresent = need < present.length ? need : present.length;
+      final minFromPresent = need - wilds < 0 ? 0 : need - wilds;
+      for (var take = minFromPresent; take <= maxFromPresent; take++) {
+        final wildsUsed = need - take;
+        if (wildsUsed < 0 || wildsUsed > wilds) continue;
+        final stop = _forEachSubset(present, take, (subset) {
+          final nb = _cloneBuckets(buckets);
+          final meld = <OkeyTile>[nb[idx].removeLast()];
+          for (final c in subset) {
+            meld.add(nb[c * _numbers + (number - 1)].removeLast());
+          }
+          final nw = List<OkeyTile>.of(wildTiles);
+          for (var i = 0; i < wildsUsed; i++) {
+            meld.add(nw.removeLast());
+          }
+          return visit(nb, nw, meld);
+        });
+        if (stop) return true;
+      }
+    }
+
+    // --- SERİLER ---
+    final values = <int>[number];
+    if (number == 1) values.add(14);
+    for (final tValue in values) {
+      for (var lo = 1; lo <= tValue; lo++) {
+        for (var hi = tValue; hi <= 14; hi++) {
+          final len = hi - lo + 1;
+          if (len < 3 || len > 13) continue;
+          var wildsUsed = 0;
+          for (var v = lo; v <= hi; v++) {
+            if (v == tValue) continue;
+            if (!_valuePresentTiles(buckets, color, v)) wildsUsed++;
+          }
+          if (wildsUsed > wilds) continue;
+          final nb = _cloneBuckets(buckets);
+          final nw = List<OkeyTile>.of(wildTiles);
+          final meld = List<OkeyTile?>.filled(hi - lo + 1, null);
+          meld[tValue - lo] = nb[idx].removeLast();
+          for (var v = lo; v <= hi; v++) {
+            if (v == tValue) continue;
+            final n = _valueToNumber(v);
+            if (_valuePresentTiles(buckets, color, v)) {
+              meld[v - lo] = nb[color * _numbers + (n - 1)].removeLast();
+            } else {
+              meld[v - lo] = nw.removeLast();
+            }
+          }
+          if (visit(nb, nw, meld.cast<OkeyTile>())) return true;
+        }
+      }
+    }
+    return false;
+  }
+
   static String _key(List<int> counts, int wilds) {
     final sb = StringBuffer();
     for (final c in counts) {
