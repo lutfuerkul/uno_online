@@ -35,6 +35,10 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// taşlar bu boyutta çizilir; ıstakada ekrana sığmazsa otomatik küçülür.
   static const double _tileSize = 33;
 
+  /// Istakada sıra başına her zaman bu kadar taş gösterilir; taş piksel
+  /// boyutu ekran genişliğine göre otomatik hesaplanır (bkz. [_rackWithTiles]).
+  static const int _rackTilesPerRow = 9;
+
   /// Renk sırala/Grupla düğmeleri serbest yerleşimle gereksiz kaldı;
   /// gerekirse tekrar açmak için burayı true yap.
   static const bool _showArrangeButtons = false;
@@ -528,11 +532,12 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         const gap = 3.0;
         const hPad = 8.0;
         const borderW = 2.0; // rafın kenarlığı (taşmayı önlemek için düşülür)
-        // Taşlar "yere atılan taş" ebatında (_tileSize); ekrana sığmazsa
-        // otomatik küçülür (Honor vb. dar telefonlarda taşma olmaz).
+        // Sıra başına taş sayısı sabit (_rackTilesPerRow); taş piksel boyutu
+        // bu sayıyı ekrana tam sığdıracak şekilde hesaplanır — geniş
+        // ekranlarda en fazla _tileSize'a kadar büyür, dar telefonlarda
+        // (Honor vb.) otomatik küçülür, sıra başına taş sayısı hep aynı kalır.
         final inner = width - hPad * 2 - borderW * 2;
-        var perRow = ((inner + gap) / (_tileSize + gap)).floor();
-        perRow = perRow.clamp(1, 30);
+        const perRow = _rackTilesPerRow;
         var tileW = (inner - (perRow - 1) * gap) / perRow;
         tileW = tileW.clamp(18.0, _tileSize);
         final tileH = tileW * OkeyTileWidget.aspect;
