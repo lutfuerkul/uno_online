@@ -47,7 +47,13 @@ class OkeyGameState {
   /// El okey (joker) atılarak bitirildiyse çifte puan.
   final bool finishedByOkey;
 
+  /// Bu elin puanları (yalnızca bu el için — bitiş ekranındaki "+N puan"
+  /// mesajı bunu kullanır).
   final Map<String, int> scores;
+
+  /// Oyundan çıkılmadıkça (yeniden başlatılsa/rövanş yapılsa da) birikerek
+  /// güncel tutulan toplam puan tablosu.
+  final Map<String, int> cumulativeScores;
 
   const OkeyGameState({
     required this.id,
@@ -67,6 +73,7 @@ class OkeyGameState {
     required this.winners,
     required this.finishedByOkey,
     required this.scores,
+    required this.cumulativeScores,
   });
 
   /// Okey (joker) sayısı: göstergenin bir büyüğü (13'ten sonra 1'e döner).
@@ -100,6 +107,7 @@ class OkeyGameState {
     List<String>? winners,
     bool? finishedByOkey,
     Map<String, int>? scores,
+    Map<String, int>? cumulativeScores,
   }) {
     return OkeyGameState(
       id: id,
@@ -121,6 +129,7 @@ class OkeyGameState {
       winners: winners ?? this.winners,
       finishedByOkey: finishedByOkey ?? this.finishedByOkey,
       scores: scores ?? this.scores,
+      cumulativeScores: cumulativeScores ?? this.cumulativeScores,
     );
   }
 
@@ -157,6 +166,8 @@ class OkeyGameState {
       winners: List<String>.from(map['winners'] as List? ?? []),
       finishedByOkey: map['finishedByOkey'] as bool? ?? false,
       scores: Map<String, int>.from(map['scores'] as Map? ?? {}),
+      cumulativeScores:
+          Map<String, int>.from(map['cumulativeScores'] as Map? ?? {}),
     );
   }
 
@@ -179,6 +190,7 @@ class OkeyGameState {
         'winners': winners,
         'finishedByOkey': finishedByOkey,
         'scores': scores,
+        'cumulativeScores': cumulativeScores,
       };
 }
 

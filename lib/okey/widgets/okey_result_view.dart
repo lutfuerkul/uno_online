@@ -55,17 +55,21 @@ class OkeyResultView extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: OkeyColors.accent, fontSize: 15),
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 4),
+            const Text('Toplam puan (oyundan çıkılmadıkça birikir):',
+                style: TextStyle(color: OkeyColors.muted, fontSize: 12)),
+            const SizedBox(height: 8),
             SizedBox(
               width: 360,
               child: Column(
                 children: [
-                  for (final p in _sortedPlayers(state.players, state.scores))
+                  for (final p in _sortedPlayers(
+                      state.players, state.cumulativeScores))
                     _scoreRow(
                       name: controller.opponentName(p),
                       isMe: p == controller.selfId,
                       won: winners.contains(p),
-                      points: state.scores[p] ?? 0,
+                      points: state.cumulativeScores[p] ?? 0,
                     ),
                 ],
               ),

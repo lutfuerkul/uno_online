@@ -28,9 +28,9 @@ class OkeyPhotoFrame extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: OkeyColors.tileBackBg,
+        color: OkeyColors.topbar,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: OkeyColors.accent, width: 2),
+        border: Border.all(color: OkeyColors.primary, width: 2),
       ),
       clipBehavior: Clip.antiAlias,
       child: bytes != null

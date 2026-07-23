@@ -23,6 +23,7 @@ class OkeyEngine {
     required List<String> players,
     required Map<String, String> playerNames,
     Map<String, String> playerPhotos = const {},
+    Map<String, int> cumulativeScores = const {},
   }) {
     final starterIndex = Random().nextInt(players.length);
     final dealt =
@@ -46,6 +47,7 @@ class OkeyEngine {
       winners: const [],
       finishedByOkey: false,
       scores: const {},
+      cumulativeScores: cumulativeScores,
     );
   }
 
@@ -225,6 +227,8 @@ class OkeyEngine {
 
     final byOkey = state.isOkey(discarded);
     final points = byOkey ? okeyWinPoints : winPoints;
+    final cumulative = Map<String, int>.of(state.cumulativeScores);
+    cumulative[playerId] = (cumulative[playerId] ?? 0) + points;
     return state.copyWith(
       status: 'finished',
       hands: hands,
@@ -236,6 +240,7 @@ class OkeyEngine {
       winners: [playerId],
       finishedByOkey: byOkey,
       scores: {for (final p in state.players) p: p == playerId ? points : 0},
+      cumulativeScores: cumulative,
     );
   }
 

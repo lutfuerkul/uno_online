@@ -123,7 +123,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   Widget _opponentTile(OkeyGameState state, String id) {
     final c = widget.controller;
     final isTurn = state.currentTurn == id && state.status == 'playing';
-    final count = c.opponentTileCount(id);
     final discard = c.topDiscardOf(id);
     // Soldaki oyuncunun taşı buradan alınabilir (ayrı bir "Yerde" sütunu
     // yerine doğrudan fotoğrafının altındaki taştan).
@@ -185,9 +184,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                         TextStyle(color: OkeyColors.okeyGlow, fontSize: 9))
                 : null,
           ),
-          const SizedBox(height: 2),
-          Text('$count taş',
-              style: const TextStyle(color: OkeyColors.muted, fontSize: 11)),
         ],
       ),
     );
