@@ -442,29 +442,48 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       text = '○ Sıra: ${c.opponentName(state.currentTurn)}';
     }
 
+    final infoText =
+        (action != null && action.type == 'discard' && state.status == 'playing')
+            ? '${c.opponentName(action.player)}, ${action.tile?.nameTr ?? ''} attı'
+            : '';
+
     return Column(
       children: [
-        if (action != null && action.type == 'discard' && state.status == 'playing')
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+        // Her zaman aynı slotta kalır (yazı yokken de boş satır olarak) —
+        // aksi halde metin görünüp kaybolunca orta alan (FittedBox) sürekli
+        // yeniden ölçeklenip ekranı zıplatıyordu.
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+          // FittedBox: satıra sığmayan uzun metinler (2 satıra geçip
+          // yükseklik değiştirmeden) küçültülerek tek satırda kalır.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
             child: Text(
-              '${c.opponentName(action.player)}, ${action.tile?.nameTr ?? ''} attı',
+              infoText,
               textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
               style: const TextStyle(
                   color: OkeyColors.lastAction, fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
+        ),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(10),
           color: isMyTurn ? OkeyColors.turnMine : OkeyColors.turnTheirs,
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isMyTurn ? Colors.white : OkeyColors.turnTheirsText,
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                color: isMyTurn ? Colors.white : OkeyColors.turnTheirsText,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
             ),
           ),
         ),
