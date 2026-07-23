@@ -234,7 +234,12 @@ class _Board extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
+            // SizedBox: elde hiç kart kalmadığında (yeni dağıtım beklenirken)
+            // Row boş kalıp yüksekliği sıfırlanmasın diye kart yüksekliği
+            // kadar sabit yer ayrılıyor.
+            child: SizedBox(
+              height: 70 * 1.4,
+              child: Row(
               children: [
                 for (var i = 0; i < controller.myHand.length; i++) ...[
                   if (i > 0) const SizedBox(width: 6),
@@ -246,6 +251,7 @@ class _Board extends StatelessWidget {
                   ),
                 ],
               ],
+              ),
             ),
           ),
         ),
