@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Açılış (splash) ekranı zemin rengi — oyun seçme ekranının zeminiyle
+         aynı, geçiş göze batmasın diye. -->
+    <color name="splash_background">#FF12203A</color>
+</resources>

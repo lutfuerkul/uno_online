@@ -30,7 +30,7 @@ class GameSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Uno · Pişti · Okey',
+                  'Uno•Okey•Pişti',
                   style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w900,
@@ -55,22 +55,22 @@ class GameSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _GameCard(
-                  iconAsset: 'assets/icons/pisti_icon.png',
-                  title: 'Pişti',
-                  subtitle: '2-4 kişilik, oda koduyla online',
-                  borderColor: const Color(0x661565C0),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PistiRootScreen()),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _GameCard(
                   iconAsset: 'assets/icons/okey_icon.png',
                   title: 'Okey',
                   subtitle: '2-4 kişilik, oda koduyla online',
                   borderColor: const Color(0x6600796B),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const OkeyRootScreen()),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _GameCard(
+                  iconAsset: 'assets/icons/pisti_icon.png',
+                  title: 'Pişti',
+                  subtitle: '2-4 kişilik, oda koduyla online',
+                  borderColor: const Color(0x661565C0),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PistiRootScreen()),
                   ),
                 ),
                 const SizedBox(height: 28),
