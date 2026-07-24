@@ -12,9 +12,13 @@ class OkeyEngine {
   static const int maxPlayers = 4;
   static const allowedPlayerCounts = [2, 3, 4];
 
-  /// El açan (normal) kazanç puanı ve okey atarak bitirme (çifte) puanı.
+  /// El açan (normal) kazanç puanı; okey atarak bitirme ve/veya "çifte" (7
+  /// çift) bitiriş, ikisi de bağımsız birer katlama — ikisi birden olursa
+  /// (çifte biterken okey atmak) 8 puan.
   static const int winPoints = 2;
   static const int okeyWinPoints = 4;
+  static const int pairWinPoints = 4;
+  static const int pairOkeyWinPoints = 8;
 
   /// Yeni bir el dağıtır. İlk hamleyi rastgele bir oyuncu (15 taşla) açar;
   /// o oyuncu turuna çekmeden (hasDrawn = true) başlar, sadece atar.
@@ -46,6 +50,7 @@ class OkeyEngine {
       winner: null,
       winners: const [],
       finishedByOkey: false,
+      finishedByPair: false,
       scores: const {},
       cumulativeScores: cumulativeScores,
     );
@@ -171,6 +176,7 @@ class OkeyEngine {
         clearWinner: true,
         winners: const [],
         finishedByOkey: false,
+        finishedByPair: false,
         scores: {for (final p in state.players) p: 0},
       );
     }
@@ -186,9 +192,11 @@ class OkeyEngine {
   }
 
   /// Eli bitirme atışı (taş göstergenin üzerine bırakılınca). [tile]
-  /// atıldığında kalan 14 taş geçerli gruplara bölünüyorsa el açılır
-  /// (kazanılır) — okey atarak bitirmek çifte puandır. Bölünmüyorsa (geçersiz
-  /// bitiş girişimi) null döner; hiçbir şey değişmez, taş elde kalır.
+  /// atıldığında kalan 14 taş geçerli gruplara (seri/set) ya da "çifte" (7
+  /// aynı renk+sayı çift) biçiminde bölünüyorsa el açılır (kazanılır) —
+  /// okey atarak bitirmek ve/veya çifte bitirmek puanı katlar (ikisi
+  /// birden olursa 8 puan). Hiçbiri sağlanmıyorsa (geçersiz bitiş girişimi)
+  /// null döner; hiçbir şey değişmez, taş elde kalır.
   static OkeyGameState? finishDiscard({
     required OkeyGameState state,
     required String playerId,
@@ -206,10 +214,12 @@ class OkeyEngine {
     if (handIdx == -1) return null;
 
     final rest = List<OkeyTile>.of(hand)..removeAt(handIdx);
-    if (rest.length != 14 ||
-        !OkeyMeldSolver.isWinningHand(rest, state.okeyColor, state.okeyNumber)) {
-      return null;
-    }
+    if (rest.length != 14) return null;
+    final normalWin =
+        OkeyMeldSolver.isWinningHand(rest, state.okeyColor, state.okeyNumber);
+    final pairWin = !normalWin &&
+        OkeyMeldSolver.isPairWinningHand(rest, state.okeyColor, state.okeyNumber);
+    if (!normalWin && !pairWin) return null;
 
     final discarded = hand[handIdx];
     final hands = _cloneHands(state.hands);
@@ -226,7 +236,9 @@ class OkeyEngine {
     );
 
     final byOkey = state.isOkey(discarded);
-    final points = byOkey ? okeyWinPoints : winPoints;
+    final points = pairWin
+        ? (byOkey ? pairOkeyWinPoints : pairWinPoints)
+        : (byOkey ? okeyWinPoints : winPoints);
     final cumulative = Map<String, int>.of(state.cumulativeScores);
     cumulative[playerId] = (cumulative[playerId] ?? 0) + points;
     return state.copyWith(
@@ -239,6 +251,7 @@ class OkeyEngine {
       winner: playerId,
       winners: [playerId],
       finishedByOkey: byOkey,
+      finishedByPair: pairWin,
       scores: {for (final p in state.players) p: p == playerId ? points : 0},
       cumulativeScores: cumulative,
     );

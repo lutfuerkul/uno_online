@@ -33,6 +33,7 @@ class OkeyGameService {
       'winner': null,
       'winners': <dynamic>[],
       'finishedByOkey': false,
+      'finishedByPair': false,
       'scores': <String, dynamic>{},
       'cumulativeScores': <String, dynamic>{},
       'createdAt': DateTime.now().millisecondsSinceEpoch,
@@ -206,6 +207,7 @@ class OkeyGameService {
         'winner': null,
         'winners': <dynamic>[],
         'finishedByOkey': false,
+      'finishedByPair': false,
         'scores': <String, dynamic>{},
       });
     });

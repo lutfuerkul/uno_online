@@ -58,9 +58,51 @@ class OkeyMeldSolver {
     return _canPartition(counts, wilds, <String, bool>{});
   }
 
-  /// 15 taştan birini atarak el açılabiliyorsa, atılacak taşı döndürür.
-  /// [preferOkey] true ise (çifte puan için) mümkünse okey atan bir bitiş
-  /// seçilir. Açılamıyorsa null.
+  /// 14 taş "çifte" (7 aynı renk+sayı çift) biçiminde mi — normal seri/set
+  /// bölünmesinden ayrı, alternatif bir bitiş şekli.
+  ///
+  /// Kurallar:
+  ///  - Her çift, aynı renk+sayıda iki (gerçek) taştır.
+  ///  - Gerçek okey (evrensel joker) tek başına kalan herhangi bir taşla
+  ///    eşleşip onu çift yapabilir (ya da iki gerçek okey birbiriyle çift
+  ///    olur — zaten aynı renk+sayıdadırlar).
+  ///  - Sahte okey yalnızca diğer sahte okeyle çift sayılır; gerçek okeyle
+  ///    ya da başka bir taşla eşleşemez.
+  static bool isPairWinningHand(
+    List<OkeyTile> tiles,
+    OkeyColor okeyColor,
+    int okeyNumber,
+  ) {
+    if (tiles.length != 14) return false;
+
+    final fakeCount = tiles.where((t) => t.isFakeJoker).length;
+    if (fakeCount.isOdd) return false;
+
+    final wildCount = tiles
+        .where((t) =>
+            !t.isFakeJoker && t.color == okeyColor && t.number == okeyNumber)
+        .length;
+
+    final counts = <int, int>{};
+    for (final t in tiles) {
+      if (t.isFakeJoker) continue;
+      if (t.color == okeyColor && t.number == okeyNumber) continue;
+      final key = t.color.index * _numbers + (t.number - 1);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    var leftovers = 0;
+    for (final n in counts.values) {
+      if (n.isOdd) leftovers++;
+    }
+
+    if (wildCount < leftovers) return false;
+    return (wildCount - leftovers).isEven;
+  }
+
+  /// 15 taştan birini atarak el açılabiliyorsa (normal ya da çifte),
+  /// atılacak taşı döndürür. [preferOkey] true ise (çifte puan için)
+  /// mümkünse okey atan bir bitiş seçilir. Açılamıyorsa null.
   static OkeyTile? winningDiscard(
     List<OkeyTile> tiles,
     OkeyColor okeyColor,
@@ -90,7 +132,8 @@ class OkeyMeldSolver {
         }
         rest.add(t);
       }
-      if (isWinningHand(rest, okeyColor, okeyNumber)) {
+      if (isWinningHand(rest, okeyColor, okeyNumber) ||
+          isPairWinningHand(rest, okeyColor, okeyNumber)) {
         if (isRealOkey(candidate)) {
           if (preferOkey) return candidate;
           fallback ??= candidate;
