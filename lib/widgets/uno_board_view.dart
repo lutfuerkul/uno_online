@@ -535,7 +535,7 @@ class _OpponentTile extends StatelessWidget {
                 ),
                 if (blocked > 0)
                   TextSpan(
-                    text: ' 🚫${blocked > 1 ? '×$blocked' : ''}',
+                    text: ' 🚫${blocked > 1 ? '$blocked' : ''}',
                     style: const TextStyle(
                       color: UnoColors.blockedTag,
                       fontWeight: FontWeight.w800,
