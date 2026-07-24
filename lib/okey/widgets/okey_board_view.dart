@@ -339,7 +339,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             right: 0,
             bottom: 2,
             child: Align(
-              alignment: const Alignment(0.46, 0),
+              alignment: const Alignment(0.40, 0),
               child: _landscapeDeckPile(context, state, canDraw),
             ),
           ),
@@ -554,7 +554,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           // yükseklikte bir boşluk (yön düğmesi artık burada değil, sağ üst
           // köşede — bkz. _landscapeTable). Çok az sağa kaydırılmış.
           Transform.translate(
-            offset: const Offset(6, 0),
+            offset: const Offset(10, 0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -597,7 +597,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                 // Oyuncu 3'ün attığı taş — çok az sola kaydırılmış (fotoğraf
                 // yerinde kalıyor, yalnızca taş kayıyor).
                 Transform.translate(
-                  offset: const Offset(-6, 0),
+                  offset: const Offset(-10, 0),
                   child: _landscapeOpponentDiscardSlot(state, opps.last,
                       takeable: true, canDraw: canDraw),
                 ),
