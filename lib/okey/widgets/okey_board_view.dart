@@ -291,6 +291,14 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               child: Center(child: _landscapeSeat(state, opps.last)),
             ),
 
+          // Yön değiştirme düğmesi — sağdaki oyuncunun üstünde, ekranın en
+          // sağ üst köşesine yakın.
+          Positioned(
+            top: 4,
+            right: 4,
+            child: _orientationToggleButton(),
+          ),
+
           if (leftId != null)
             _cornerPositioned(
               alignX: 0.19,
@@ -517,14 +525,13 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Sağımdaki gibi alt alta: üstte attığım taş, arada "atmak için
-          // sürükle" ipucuna yer bırakan boşluk, altta yön düğmesi.
+          // Attığım taş — altında "atmak için sürükle" ipucu için sabit
+          // yükseklikte bir boşluk (yön düğmesi artık burada değil, sağ üst
+          // köşede — bkz. _landscapeTable).
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _landscapeMyDiscardSlot(context, state, canDiscard),
-              // Sabit yükseklik: ipucu görünüp kaybolunca düğme yerinden
-              // oynamasın.
               SizedBox(
                 height: 24,
                 child: canDiscard
@@ -541,7 +548,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                       )
                     : null,
               ),
-              _orientationToggleButton(),
             ],
           ),
           const SizedBox(width: 8),
