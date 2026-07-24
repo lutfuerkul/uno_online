@@ -917,7 +917,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                         final i = r * perRow + col;
                         final id = i < slots.length ? slots[i] : null;
                         return _slotCell(
-                            i, id, byId[id], tileW, tileH, canDiscard, state);
+                            i, id, byId[id], tileW, tileH, canDiscard, state,
+                            flipOkey: true);
                       }),
                     ],
                   ],
@@ -933,8 +934,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// Bir ıstaka hücresi: taş varsa sürüklenebilir taşı, yoksa soluk boş yuvayı
   /// gösterir. Her hücre bir DragTarget'tır; taş bırakılınca o yuvaya konur.
   /// [flipOkey] true ise okey (joker) taşı ters (baş aşağı) çizilir —
-  /// yatay modda "OKEY: {renk} {sayı}" metni kaldırıldığı için hangi
-  /// taşın okey olduğunu bu şekilde hatırlatıyoruz.
+  /// hem yatay hem dikey ıstakada, hangi taşın okey olduğunu bu şekilde
+  /// hatırlatıyoruz (yatayda ayrıca "OKEY: {renk} {sayı}" metni de yok).
   Widget _slotCell(int index, String? tileId, OkeyTile? tile, double w,
       double h, bool canDiscard, OkeyGameState state,
       {bool flipOkey = false}) {
