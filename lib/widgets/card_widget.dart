@@ -197,7 +197,7 @@ class CardWidget extends StatelessWidget {
         ),
         if (title != null)
           Positioned(
-            top: h * 0.17,
+            top: h * 0.13,
             left: 0,
             right: 0,
             child: Center(
