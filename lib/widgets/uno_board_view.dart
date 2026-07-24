@@ -523,7 +523,7 @@ class _OpponentTile extends StatelessWidget {
             ),
           Text('$count kart', style: const TextStyle(color: UnoColors.muted, fontSize: 12)),
           if (count == 1)
-            const Text('uWin', style: TextStyle(color: UnoColors.unoTag, fontSize: 16, fontWeight: FontWeight.w800)),
+            const Text('Son 1', style: TextStyle(color: UnoColors.unoTag, fontSize: 16, fontWeight: FontWeight.w800)),
         ],
       ),
     );
