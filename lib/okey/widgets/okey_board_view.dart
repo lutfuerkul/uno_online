@@ -381,7 +381,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 5,
+            bottom: 6,
             child: Align(
               alignment: const Alignment(-0.40, 0),
               child: FittedBox(
@@ -393,7 +393,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 5,
+            bottom: 6,
             child: Align(
               alignment: const Alignment(0.40, 0),
               child: _landscapeDeckPile(context, state, canDraw),
@@ -605,7 +605,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           // yükseklikte bir boşluk (yön düğmesi artık burada değil, sağ üst
           // köşede — bkz. _landscapeTable). Çok az sağa kaydırılmış.
           Transform.translate(
-            offset: const Offset(10, 0),
+            offset: const Offset(13, 0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -647,7 +647,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           // ayrıca bir sarmalayıcıya gerek yok.
           if (opps.isNotEmpty)
             Transform.translate(
-              offset: const Offset(-10, 0),
+              offset: const Offset(-13, 0),
               child: _landscapeOpponentDiscardSlot(state, opps.last,
                   takeable: true, canDraw: canDraw),
             ),
