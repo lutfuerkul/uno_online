@@ -324,7 +324,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               bottom: 0,
               child: Center(
                 child: Transform.translate(
-                  offset: const Offset(0, 17),
+                  offset: const Offset(0, 25),
                   child: _landscapeSeat(state, leftId),
                 ),
               ),
@@ -336,7 +336,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               bottom: 0,
               child: Center(
                 child: Transform.translate(
-                  offset: const Offset(0, 17),
+                  offset: const Offset(0, 25),
                   child: _landscapeSeat(state, opps.last),
                 ),
               ),
