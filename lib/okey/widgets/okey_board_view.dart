@@ -75,10 +75,39 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   }
 
   void _toggleOrientation() {
-    setState(() => _landscape = !_landscape);
+    final next = !_landscape;
+    // Istaka yuvaları (slots) tek bir ortak dizi; dikey (10 sütun) ve yatay
+    // (14 sütun) farklı sütun sayısı kullandığı için, bir taş diğer moddaki
+    // sütun sayısını aşan bir yuvaya (ör. yatayda 2. sıranın sonlarına)
+    // bırakılmışsa, öbür moda geçince o yuva 3. sıraya düşüyordu. Geçiş
+    // öncesi, hedef moda 2 sırada sığmıyorsa taşları baştan sıkıştırıyoruz.
+    _compactSlotsIfOverflowing(next ? _landscapeTilesPerRow : _rackTilesPerRow);
+    setState(() => _landscape = next);
     SystemChrome.setPreferredOrientations(_landscape
         ? const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
         : const [DeviceOrientation.portraitUp]);
+  }
+
+  /// [slots] içindeki dolu son yuvaya göre kaç sıra gerektiğini hesaplar
+  /// (ham liste uzunluğu değil — liste geçmişte açılan yuvalardan dolayı
+  /// gereğinden uzun kalabiliyor, o zaman da hep 3 sıra gösterirdi).
+  int _rowsNeeded(List<String?> slots, int perRow) {
+    final lastOccupied = slots.lastIndexWhere((id) => id != null);
+    if (lastOccupied < 0) return 0;
+    return lastOccupied ~/ perRow + 1;
+  }
+
+  /// Hedef moddaki sütun sayısıyla (ör. dikeyde 10) 2 sıraya sığmıyorsa,
+  /// taşları sırayla en baştaki boş yuvalara toplayıp (aradaki boşlukları
+  /// silerek) yeniden 2 sıraya indirir.
+  void _compactSlotsIfOverflowing(int perRow) {
+    final c = widget.controller;
+    final slots = c.handSlots;
+    if (_rowsNeeded(slots, perRow) <= 2) return;
+    final ids = slots.whereType<String>().toList();
+    for (var i = 0; i < ids.length; i++) {
+      c.placeTile(ids[i], i);
+    }
   }
 
   @override
@@ -625,8 +654,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     final tileH = tileW * OkeyTileWidget.aspect;
 
     final slots = widget.controller.handSlots;
-    final rowsNeeded = (slots.length + perRow - 1) ~/ perRow;
-    final rows = math.max(2, rowsNeeded);
+    final rows = math.max(2, _rowsNeeded(slots, perRow));
 
     final grid = Column(
       mainAxisSize: MainAxisSize.min,
@@ -999,8 +1027,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
 
         final slots = widget.controller.handSlots;
         // En az 2 satır; taşlar sığmıyorsa daha fazla. Kalan hücreler boş yuva.
-        final rowsNeeded = (slots.length + perRow - 1) ~/ perRow;
-        final rows = math.max(2, rowsNeeded);
+        final rows = math.max(2, _rowsNeeded(slots, perRow));
 
         return Container(
           width: double.infinity,
