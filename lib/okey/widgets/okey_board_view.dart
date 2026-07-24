@@ -475,13 +475,21 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               )
             : visual,
         // Sabit yükseklik: ipucu görünüp kaybolunca yerleşim zıplamasın.
+        // İki satıra bölünmüş — tek satırda taş genişliğinden çok daha
+        // geniş olup Column'u şişiriyor, bu da (ıstaka satırındaki bana
+        // atılan taş sütununda) Expanded ıstakadan yer çalıp onu sola
+        // kaydırıp yeniden ölçeklendiriyordu.
         SizedBox(
-          height: 13,
+          height: 24,
           child: canTakeHere
               ? const Padding(
                   padding: EdgeInsets.only(top: 2),
-                  child: Text('almak için sürükle',
-                      style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 9)),
+                  child: Text(
+                    'almak için\nsürükle',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: OkeyColors.okeyGlow, fontSize: 9, height: 1.15),
+                  ),
                 )
               : null,
         ),
@@ -631,19 +639,14 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           ),
           const SizedBox(width: 8),
           // Kendi fotoğrafım yataydan kaldırıldı; bana atılan taş artık
-          // benim attığım taşla aynı hizada (aynı sütun yapısı: taş +
-          // altında aynı yükseklikte boş bir alan, ipucu kutusuyla eşit).
+          // benim attığım taşla aynı hizada — _landscapeOpponentDiscardSlot
+          // kendi içinde aynı yükseklikte (24px) bir ipucu alanı ayırıyor,
+          // ayrıca bir sarmalayıcıya gerek yok.
           if (opps.isNotEmpty)
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Transform.translate(
-                  offset: const Offset(-10, 0),
-                  child: _landscapeOpponentDiscardSlot(state, opps.last,
-                      takeable: true, canDraw: canDraw),
-                ),
-                const SizedBox(height: 24),
-              ],
+            Transform.translate(
+              offset: const Offset(-10, 0),
+              child: _landscapeOpponentDiscardSlot(state, opps.last,
+                  takeable: true, canDraw: canDraw),
             ),
         ],
       ),
