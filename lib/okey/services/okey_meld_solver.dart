@@ -63,11 +63,11 @@ class OkeyMeldSolver {
   ///
   /// Kurallar:
   ///  - Her çift, aynı renk+sayıda iki (gerçek) taştır.
-  ///  - Gerçek okey (evrensel joker) tek başına kalan herhangi bir taşla
-  ///    eşleşip onu çift yapabilir (ya da iki gerçek okey birbiriyle çift
-  ///    olur — zaten aynı renk+sayıdadırlar).
-  ///  - Sahte okey yalnızca diğer sahte okeyle çift sayılır; gerçek okeyle
-  ///    ya da başka bir taşla eşleşemez.
+  ///  - Gerçek okey (evrensel joker) tek başına kalan herhangi bir sıradan
+  ///    taşla eşleşip onu çift yapabilir (ya da iki gerçek okey birbiriyle
+  ///    çift olur — zaten aynı renk+sayıdadırlar).
+  ///  - Sahte okey sıradan bir taşla eşleşemez; yalnızca diğer sahte okeyle
+  ///    ya da gerçek okeyle çift sayılır.
   static bool isPairWinningHand(
     List<OkeyTile> tiles,
     OkeyColor okeyColor,
@@ -76,8 +76,6 @@ class OkeyMeldSolver {
     if (tiles.length != 14) return false;
 
     final fakeCount = tiles.where((t) => t.isFakeJoker).length;
-    if (fakeCount.isOdd) return false;
-
     final wildCount = tiles
         .where((t) =>
             !t.isFakeJoker && t.color == okeyColor && t.number == okeyNumber)
@@ -96,8 +94,14 @@ class OkeyMeldSolver {
       if (n.isOdd) leftovers++;
     }
 
+    // Sıradan tek kalan taşlar yalnızca gerçek okeyle eşleşebilir.
     if (wildCount < leftovers) return false;
-    return (wildCount - leftovers).isEven;
+    final remainingWilds = wildCount - leftovers;
+
+    // Kalan gerçek okeyler ve sahte okeyler artık birbiriyle serbestçe
+    // eşleşebilir (sahte+sahte, sahte+gerçek okey, gerçek okey+gerçek okey);
+    // toplamlarının çift olması yeterli.
+    return (fakeCount + remainingWilds).isEven;
   }
 
   /// 15 taştan birini atarak el açılabiliyorsa (normal ya da çifte),
