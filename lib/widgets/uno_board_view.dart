@@ -239,21 +239,25 @@ class _Board extends StatelessWidget {
         _TurnBanner(controller: controller, state: state),
 
         // --- Aksiyonlar ---
-        if (_isMyTurn && state.hasDrawn)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-            child: Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: UnoColors.btnPass,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                ),
-                onPressed: controller.pass,
-                child: const Text('Pas Geç ▶'),
+        // Buton her zaman ekranda durur (yerleşim zıplamasın diye); yalnızca
+        // sıra bizde ve kart çekilmişken basılabilir — kural gereği pas
+        // geçmeden önce desteden kart çekmek zorunlu.
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+          child: Center(
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: UnoColors.btnPass,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFF2B3840),
+                disabledForegroundColor: const Color(0x66FFFFFF),
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
               ),
+              onPressed: _isMyTurn && state.hasDrawn ? controller.pass : null,
+              child: const Text('Pas Geç ▶'),
             ),
           ),
+        ),
 
         // --- El ---
         Container(
@@ -521,9 +525,15 @@ class _OpponentTile extends StatelessWidget {
               '🚫 bloklu${blocked > 1 ? ' ×$blocked' : ''}',
               style: const TextStyle(color: UnoColors.blockedTag, fontSize: 11, fontWeight: FontWeight.w800),
             ),
-          Text('$count kart', style: const TextStyle(color: UnoColors.muted, fontSize: 12)),
-          if (count == 1)
-            const Text('Son 1', style: TextStyle(color: UnoColors.unoTag, fontSize: 16, fontWeight: FontWeight.w800)),
+          // Tek kartı kalan oyuncunun kart sayısı yeşil ve kalın gösterilir.
+          Text(
+            '$count kart',
+            style: TextStyle(
+              color: count == 1 ? UnoColors.unoTag : UnoColors.muted,
+              fontSize: 12,
+              fontWeight: count == 1 ? FontWeight.w800 : FontWeight.normal,
+            ),
+          ),
         ],
       ),
     );
