@@ -58,9 +58,55 @@ class OkeyMeldSolver {
     return _canPartition(counts, wilds, <String, bool>{});
   }
 
-  /// 15 taştan birini atarak el açılabiliyorsa, atılacak taşı döndürür.
-  /// [preferOkey] true ise (çifte puan için) mümkünse okey atan bir bitiş
-  /// seçilir. Açılamıyorsa null.
+  /// 14 taş "çifte" (7 aynı renk+sayı çift) biçiminde mi — normal seri/set
+  /// bölünmesinden ayrı, alternatif bir bitiş şekli.
+  ///
+  /// Kurallar:
+  ///  - Her çift, aynı renk+sayıda iki (gerçek) taştır.
+  ///  - Gerçek okey (evrensel joker) tek başına kalan herhangi bir sıradan
+  ///    taşla eşleşip onu çift yapabilir (ya da iki gerçek okey birbiriyle
+  ///    çift olur — zaten aynı renk+sayıdadırlar).
+  ///  - Sahte okey sıradan bir taşla eşleşemez; yalnızca diğer sahte okeyle
+  ///    ya da gerçek okeyle çift sayılır.
+  static bool isPairWinningHand(
+    List<OkeyTile> tiles,
+    OkeyColor okeyColor,
+    int okeyNumber,
+  ) {
+    if (tiles.length != 14) return false;
+
+    final fakeCount = tiles.where((t) => t.isFakeJoker).length;
+    final wildCount = tiles
+        .where((t) =>
+            !t.isFakeJoker && t.color == okeyColor && t.number == okeyNumber)
+        .length;
+
+    final counts = <int, int>{};
+    for (final t in tiles) {
+      if (t.isFakeJoker) continue;
+      if (t.color == okeyColor && t.number == okeyNumber) continue;
+      final key = t.color.index * _numbers + (t.number - 1);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    var leftovers = 0;
+    for (final n in counts.values) {
+      if (n.isOdd) leftovers++;
+    }
+
+    // Sıradan tek kalan taşlar yalnızca gerçek okeyle eşleşebilir.
+    if (wildCount < leftovers) return false;
+    final remainingWilds = wildCount - leftovers;
+
+    // Kalan gerçek okeyler ve sahte okeyler artık birbiriyle serbestçe
+    // eşleşebilir (sahte+sahte, sahte+gerçek okey, gerçek okey+gerçek okey);
+    // toplamlarının çift olması yeterli.
+    return (fakeCount + remainingWilds).isEven;
+  }
+
+  /// 15 taştan birini atarak el açılabiliyorsa (normal ya da çifte),
+  /// atılacak taşı döndürür. [preferOkey] true ise (çifte puan için)
+  /// mümkünse okey atan bir bitiş seçilir. Açılamıyorsa null.
   static OkeyTile? winningDiscard(
     List<OkeyTile> tiles,
     OkeyColor okeyColor,
@@ -90,7 +136,8 @@ class OkeyMeldSolver {
         }
         rest.add(t);
       }
-      if (isWinningHand(rest, okeyColor, okeyNumber)) {
+      if (isWinningHand(rest, okeyColor, okeyNumber) ||
+          isPairWinningHand(rest, okeyColor, okeyNumber)) {
         if (isRealOkey(candidate)) {
           if (preferOkey) return candidate;
           fallback ??= candidate;

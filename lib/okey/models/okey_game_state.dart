@@ -47,6 +47,10 @@ class OkeyGameState {
   /// El okey (joker) atılarak bitirildiyse çifte puan.
   final bool finishedByOkey;
 
+  /// El "çifte" (7 aynı renk+sayı çift) biçiminde bitirildiyse çifte puan.
+  /// [finishedByOkey] ile birlikte de gerçekleşebilir (dörtlü puan).
+  final bool finishedByPair;
+
   /// Bu elin puanları (yalnızca bu el için — bitiş ekranındaki "+N puan"
   /// mesajı bunu kullanır).
   final Map<String, int> scores;
@@ -72,6 +76,7 @@ class OkeyGameState {
     required this.winner,
     required this.winners,
     required this.finishedByOkey,
+    required this.finishedByPair,
     required this.scores,
     required this.cumulativeScores,
   });
@@ -106,6 +111,7 @@ class OkeyGameState {
     String? winner,
     List<String>? winners,
     bool? finishedByOkey,
+    bool? finishedByPair,
     Map<String, int>? scores,
     Map<String, int>? cumulativeScores,
   }) {
@@ -128,6 +134,7 @@ class OkeyGameState {
       winner: clearWinner ? null : (winner ?? this.winner),
       winners: winners ?? this.winners,
       finishedByOkey: finishedByOkey ?? this.finishedByOkey,
+      finishedByPair: finishedByPair ?? this.finishedByPair,
       scores: scores ?? this.scores,
       cumulativeScores: cumulativeScores ?? this.cumulativeScores,
     );
@@ -165,6 +172,7 @@ class OkeyGameState {
       winner: map['winner'] as String?,
       winners: List<String>.from(map['winners'] as List? ?? []),
       finishedByOkey: map['finishedByOkey'] as bool? ?? false,
+      finishedByPair: map['finishedByPair'] as bool? ?? false,
       scores: Map<String, int>.from(map['scores'] as Map? ?? {}),
       cumulativeScores:
           Map<String, int>.from(map['cumulativeScores'] as Map? ?? {}),
@@ -189,6 +197,7 @@ class OkeyGameState {
         'winner': winner,
         'winners': winners,
         'finishedByOkey': finishedByOkey,
+        'finishedByPair': finishedByPair,
         'scores': scores,
         'cumulativeScores': cumulativeScores,
       };

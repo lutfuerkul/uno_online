@@ -49,9 +49,8 @@ class OkeyResultView extends StatelessWidget {
                   style: TextStyle(color: OkeyColors.muted, fontSize: 14))
             else
               Text(
-                state.finishedByOkey
-                    ? '$winnerName okey atarak bitirdi — çifte! (+${state.scores[winners.first] ?? 0})'
-                    : '$winnerName eli açtı (+${state.scores[winners.first] ?? 0})',
+                _finishText(winnerName, state.finishedByOkey,
+                    state.finishedByPair, state.scores[winners.first] ?? 0),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: OkeyColors.accent, fontSize: 15),
               ),
@@ -104,6 +103,22 @@ class OkeyResultView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Bitiş satırı: normal, okey atarak (çifte), 7 çift ile (çifte) ya da
+  /// ikisi birden (dörtlü puan) olma durumuna göre metni seçer.
+  String _finishText(
+      String winnerName, bool byOkey, bool byPair, int points) {
+    if (byPair && byOkey) {
+      return '$winnerName çifte (7 çift) + okey atarak bitirdi — dörtlü! (+$points)';
+    }
+    if (byPair) {
+      return '$winnerName çifte (7 çift) ile bitirdi! (+$points)';
+    }
+    if (byOkey) {
+      return '$winnerName okey atarak bitirdi — çifte! (+$points)';
+    }
+    return '$winnerName eli açtı (+$points)';
   }
 
   List<String> _sortedPlayers(List<String> players, Map<String, int> scores) {

@@ -61,9 +61,13 @@ class OkeyHandRevealView extends StatelessWidget {
                 const Text('🎉', style: TextStyle(fontSize: 56)),
                 const SizedBox(height: 8),
                 Text(
-                  state.finishedByOkey
-                      ? '$winnerName okey atarak bitirdi!'
-                      : '$winnerName elini açtı!',
+                  state.finishedByPair && state.finishedByOkey
+                      ? '$winnerName çifte + okey atarak bitirdi!'
+                      : state.finishedByPair
+                          ? '$winnerName çifte (7 çift) ile bitirdi!'
+                          : state.finishedByOkey
+                              ? '$winnerName okey atarak bitirdi!'
+                              : '$winnerName elini açtı!',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
