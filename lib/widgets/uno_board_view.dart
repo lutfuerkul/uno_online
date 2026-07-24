@@ -514,7 +514,7 @@ class _OpponentTile extends StatelessWidget {
             count: count,
             cardWidth: 34,
             overlap: 21,
-            cardBuilder: () => const CardWidget(faceDown: true, width: 34, showBackLogo: false),
+            cardBuilder: () => const CardWidget(faceDown: true, width: 34),
           ),
           if (blocked > 0)
             Text(
@@ -523,7 +523,7 @@ class _OpponentTile extends StatelessWidget {
             ),
           Text('$count kart', style: const TextStyle(color: UnoColors.muted, fontSize: 12)),
           if (count == 1)
-            const Text('UNO', style: TextStyle(color: UnoColors.unoTag, fontSize: 16, fontWeight: FontWeight.w800)),
+            const Text('Son 1', style: TextStyle(color: UnoColors.unoTag, fontSize: 16, fontWeight: FontWeight.w800)),
         ],
       ),
     );

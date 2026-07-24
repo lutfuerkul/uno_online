@@ -32,7 +32,7 @@ class UnoApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => GameProvider(),
       child: MaterialApp(
-        title: 'Uno, Pişti & Okey',
+        title: 'uWin, Pişti & Okey',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorSchemeSeed: const Color(0xFFD32F2F),
