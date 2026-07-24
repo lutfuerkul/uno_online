@@ -751,9 +751,10 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                       const SizedBox(height: 16),
                       // FittedBox: dar telefonlarda orta satır taşmasın diye
                       // orantılı küçülür. Atılan+Deste ikilisi çok az sağa
-                      // kaydırılmış, aralarındaki boşluk da biraz açılmış.
+                      // ve 1px yukarı kaydırılmış, aralarındaki boşluk da
+                      // biraz açılmış.
                       Transform.translate(
-                        offset: const Offset(10, 0),
+                        offset: const Offset(10, -1),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Row(
