@@ -15,7 +15,7 @@ import '../theme/uno_theme.dart';
 ///  - Bütün renkler aynı soyut çapraz çizgi dokusunu paylaşır,
 ///  - Skip kartında büyütülmüş ⊘ sembolü + üstte "BLOK" yazısı,
 ///  - Reverse'te UNO'nun kavisli çift ok ikonu yerine tek düz ok +
-///    üstte "TEKRAR OYNA" yazısı,
+///    üstte "TEKRAR" yazısı,
 ///  - Joker'de dairesel renk çarkı yerine 4 yapraklı "pervane" rozeti +
 ///    üstünde "RENK SEÇ" yazısı; +4'te aynı rozet, yalnızca köşelerde
 ///    büyük "+4",
@@ -119,9 +119,14 @@ class CardWidget extends StatelessWidget {
   Widget _buildBack(double w, double h) {
     return Stack(
       alignment: Alignment.center,
-      fit: StackFit.expand,
       children: [
-        CustomPaint(painter: _StripesPainter(Colors.white, 0.05)),
+        // Positioned.fill: yalnızca doku deseni tam kartı kaplasın; "uWin"
+        // yazısı ise (Stack'in varsayılan gevşek kısıtı + alignment:center
+        // sayesinde) hem yatayda hem dikeyde tam ortada kalsın. Önceden
+        // Stack'in fit: StackFit.expand olması Text'i de kartın tam
+        // boyutuna zorluyordu; Text kendi kutusunda dikeyde ortalanmadığı
+        // için yazı en tepede görünüyordu.
+        Positioned.fill(child: CustomPaint(painter: _StripesPainter(Colors.white, 0.05))),
         Text(
           'uWin',
           style: TextStyle(
@@ -167,7 +172,7 @@ class CardWidget extends StatelessWidget {
     final title = c.type == CardType.skip
         ? 'BLOK'
         : c.type == CardType.reverse
-            ? 'TEKRAR OYNA'
+            ? 'TEKRAR'
             : null;
 
     final cornerFontSize = w * (c.type == CardType.number ? 0.24 : 0.15);
@@ -177,7 +182,6 @@ class CardWidget extends StatelessWidget {
 
     return Stack(
       children: [
-        Positioned.fill(child: CustomPaint(painter: _StripesPainter(Colors.white, 0.16))),
         Positioned(
           top: h * 0.06,
           left: w * 0.12,
@@ -193,7 +197,7 @@ class CardWidget extends StatelessWidget {
         ),
         if (title != null)
           Positioned(
-            top: h * 0.17,
+            top: h * 0.13,
             left: 0,
             right: 0,
             child: Center(
