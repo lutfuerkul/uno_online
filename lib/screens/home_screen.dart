@@ -109,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'UNO',
+                  'uWin',
                   style: TextStyle(
                     fontSize: 72,
                     fontWeight: FontWeight.w900,
