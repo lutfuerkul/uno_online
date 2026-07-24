@@ -241,6 +241,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   Widget _landscapeTable(BuildContext context, OkeyGameState state) {
     final c = widget.controller;
     final opps = c.opponents;
+    final canDraw = c.isMyTurn && !c.hasDrawn && state.status == 'playing';
     final canDiscard = c.isMyTurn && c.hasDrawn && state.status == 'playing';
 
     final String? leftId = opps.length >= 3 ? opps[0] : null;
@@ -286,9 +287,9 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               child: _landscapeOpponentDiscardSlot(state, topId),
             ),
 
-          // Gösterge + deste artık ortada değil: sola ve aşağı kaydırılmış,
-          // bilgi bannerının hemen üstünde duruyor — böylece karşımdaki
-          // oyuncunun koltuğuyla çakışmıyor.
+          // Gösterge artık ortada değil: sola ve aşağı kaydırılmış, bilgi
+          // bannerının hemen üstünde duruyor — böylece karşımdaki oyuncunun
+          // koltuğuyla çakışmıyor.
           Positioned(
             left: 0,
             right: 0,
@@ -300,6 +301,13 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                 child: _landscapeCenterPiles(context, state, canDiscard),
               ),
             ),
+          ),
+          // Deste, karşımdaki oyuncuyla çakışmaması için Gösterge'den ayrıldı;
+          // sağ tarafta boş kalan alana taşındı.
+          _cornerPositioned(
+            alignX: 0.65,
+            alignY: 0.5,
+            child: _landscapeDeckPile(context, state, canDraw),
           ),
         ],
       ),
@@ -380,38 +388,41 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         mainAxisSize: MainAxisSize.min,
         children: [
           canTakeHere ? _dropHighlight(tile, _tileSize) : tile,
-          if (canTakeHere)
-            const Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: Text('almak için dokun',
-                  style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 9)),
-            ),
+          // Sabit yükseklik: ipucu görünüp kaybolunca yerleşim zıplamasın.
+          SizedBox(
+            height: 13,
+            child: canTakeHere
+                ? const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Text('almak için dokun',
+                        style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 9)),
+                  )
+                : null,
+          ),
         ],
       ),
     );
   }
 
-  /// Ortak masa: yalnızca gösterge ve deste (atılan köşeye taşındığı için).
+  /// Ortak masa: yalnızca gösterge (deste artık ayrı, sağdaki boş alanda).
   Widget _landscapeCenterPiles(
       BuildContext context, OkeyGameState state, bool canDiscard) {
+    return _indicatorCard(context, state, canDiscard, showOkeyLabel: false);
+  }
+
+  /// Deste — Gösterge'nin yanından ayrılıp masanın sağındaki boş alana
+  /// taşındı (karşımdaki oyuncunun koltuğuyla çakışmasın diye).
+  Widget _landscapeDeckPile(
+      BuildContext context, OkeyGameState state, bool canDraw) {
     final c = widget.controller;
-    final canDraw = c.isMyTurn && !c.hasDrawn && state.status == 'playing';
     final deckCount = state.drawPile.length;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _indicatorCard(context, state, canDiscard, showOkeyLabel: false),
-        const SizedBox(width: 24),
-        _pileColumn(
-          label: 'Deste ($deckCount)',
-          child: deckCount > 0
-              ? const OkeyTileWidget(faceDown: true, width: _tileSize)
-              : _emptySlot(_tileSize),
-          hint: canDraw && deckCount > 0 ? 'çekmek için dokun' : null,
-          onTap: canDraw && deckCount > 0 ? () => c.drawFromStack() : null,
-        ),
-      ],
+    return _pileColumn(
+      label: 'Deste ($deckCount)',
+      child: deckCount > 0
+          ? const OkeyTileWidget(faceDown: true, width: _tileSize)
+          : _emptySlot(_tileSize),
+      hint: canDraw && deckCount > 0 ? 'çekmek için dokun' : null,
+      onTap: canDraw && deckCount > 0 ? () => c.drawFromStack() : null,
     );
   }
 
@@ -484,18 +495,24 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _landscapeMyDiscardSlot(context, state, canDiscard),
-              if (canDiscard)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 2),
-                  child: Text(
-                    'atmak için\nsürükle',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: OkeyColors.okeyGlow, fontSize: 8, height: 1.15),
-                  ),
-                )
-              else
-                const SizedBox(height: 6),
+              // Sabit yükseklik: ipucu görünüp kaybolunca düğme yerinden
+              // oynamasın.
+              SizedBox(
+                height: 24,
+                child: canDiscard
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          'atmak için\nsürükle',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: OkeyColors.okeyGlow,
+                              fontSize: 8,
+                              height: 1.15),
+                        ),
+                      )
+                    : null,
+              ),
               _orientationToggleButton(),
             ],
           ),
@@ -731,12 +748,20 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                       : tile;
                 },
               ),
-              if (canDiscard)
-                const Padding(
-                  padding: EdgeInsets.only(top: 3),
-                  child: Text('bitirmek için sürükle',
-                      style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 10)),
-                ),
+              // Sabit yükseklik: ipucu görünüp kaybolunca kart boyutu
+              // değişmesin diye (aksi halde bunu saran FittedBox sürekli
+              // yeniden ölçeklenip ekranı zıplatıyordu).
+              SizedBox(
+                height: 16,
+                child: canDiscard
+                    ? const Padding(
+                        padding: EdgeInsets.only(top: 3),
+                        child: Text('bitirmek için sürükle',
+                            style: TextStyle(
+                                color: OkeyColors.okeyGlow, fontSize: 10)),
+                      )
+                    : null,
+              ),
             ],
           ),
           if (showOkeyLabel) ...[
