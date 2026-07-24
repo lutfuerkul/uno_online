@@ -375,10 +375,13 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           // bannerının hemen üstünde duruyor — böylece karşımdaki oyuncunun
           // koltuğuyla çakışmıyor. Deste de aynı satırda (aynı bottom
           // hizasında), sağ tarafta duruyor — ikisi de aynı yükseklikte.
+          // İpucu metinleri iki satıra bölününce yükseklikleri arttığı
+          // için (bottom-sabitli olduklarından yukarı doğru büyürler) 3px
+          // daha yukarı alındı, banner'a yapışmasınlar diye.
           Positioned(
             left: 0,
             right: 0,
-            bottom: 2,
+            bottom: 5,
             child: Align(
               alignment: const Alignment(-0.40, 0),
               child: FittedBox(
@@ -390,7 +393,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 2,
+            bottom: 5,
             child: Align(
               alignment: const Alignment(0.40, 0),
               child: _landscapeDeckPile(context, state, canDraw),
@@ -475,13 +478,21 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               )
             : visual,
         // Sabit yükseklik: ipucu görünüp kaybolunca yerleşim zıplamasın.
+        // İki satıra bölünmüş — tek satırda taş genişliğinden çok daha
+        // geniş olup Column'u şişiriyor, bu da (ıstaka satırındaki bana
+        // atılan taş sütununda) Expanded ıstakadan yer çalıp onu sola
+        // kaydırıp yeniden ölçeklendiriyordu.
         SizedBox(
-          height: 13,
+          height: 24,
           child: canTakeHere
               ? const Padding(
                   padding: EdgeInsets.only(top: 2),
-                  child: Text('almak için sürükle',
-                      style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 9)),
+                  child: Text(
+                    'almak için\nsürükle',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: OkeyColors.okeyGlow, fontSize: 9, height: 1.15),
+                  ),
                 )
               : null,
         ),
@@ -504,7 +515,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       label: 'Deste ($deckCount)',
       highlight: canDraw && deckCount > 0,
       child: _deckTile(canDraw, deckCount),
-      hint: canDraw && deckCount > 0 ? 'çekmek için sürükle' : null,
+      hint: canDraw && deckCount > 0 ? 'çekmek için\nsürükle' : null,
     );
   }
 
@@ -631,19 +642,14 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           ),
           const SizedBox(width: 8),
           // Kendi fotoğrafım yataydan kaldırıldı; bana atılan taş artık
-          // benim attığım taşla aynı hizada (aynı sütun yapısı: taş +
-          // altında aynı yükseklikte boş bir alan, ipucu kutusuyla eşit).
+          // benim attığım taşla aynı hizada — _landscapeOpponentDiscardSlot
+          // kendi içinde aynı yükseklikte (24px) bir ipucu alanı ayırıyor,
+          // ayrıca bir sarmalayıcıya gerek yok.
           if (opps.isNotEmpty)
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Transform.translate(
-                  offset: const Offset(-10, 0),
-                  child: _landscapeOpponentDiscardSlot(state, opps.last,
-                      takeable: true, canDraw: canDraw),
-                ),
-                const SizedBox(height: 24),
-              ],
+            Transform.translate(
+              offset: const Offset(-10, 0),
+              child: _landscapeOpponentDiscardSlot(state, opps.last,
+                  takeable: true, canDraw: canDraw),
             ),
         ],
       ),
@@ -759,7 +765,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                               _pileColumn(
                                 label: 'Atılan',
                                 highlight: canDiscard,
-                                hint: canDiscard ? 'atmak için sürükle' : null,
+                                hint: canDiscard ? 'atmak için\nsürükle' : null,
                                 child: DragTarget<String>(
                                   onWillAcceptWithDetails: (d) => canDiscard,
                                   onAcceptWithDetails: (d) =>
@@ -784,7 +790,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                                 highlight: canDraw && deckCount > 0,
                                 child: _deckTile(canDraw, deckCount),
                                 hint: canDraw && deckCount > 0
-                                    ? 'çekmek için sürükle'
+                                    ? 'çekmek için\nsürükle'
                                     : null,
                               ),
                             ],
@@ -868,15 +874,22 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               ),
               // Sabit yükseklik: ipucu görünüp kaybolunca kart boyutu
               // değişmesin diye (aksi halde bunu saran FittedBox sürekli
-              // yeniden ölçeklenip ekranı zıplatıyordu).
+              // yeniden ölçeklenip ekranı zıplatıyordu). İki satır — tek
+              // satırda taş genişliğinden çok daha geniş olup aynı sorunu
+              // genişlik üzerinden yaratıyordu.
               SizedBox(
-                height: 16,
+                height: 24,
                 child: canDiscard
                     ? const Padding(
                         padding: EdgeInsets.only(top: 3),
-                        child: Text('bitirmek için sürükle',
-                            style: TextStyle(
-                                color: OkeyColors.okeyGlow, fontSize: 10)),
+                        child: Text(
+                          'bitirmek için\nsürükle',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: OkeyColors.okeyGlow,
+                              fontSize: 10,
+                              height: 1.15),
+                        ),
                       )
                     : null,
               ),
@@ -936,12 +949,16 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           ),
         ),
         const SizedBox(height: 4),
+        // İki satır (sabit yükseklik) — tek satırda taş genişliğinden çok
+        // daha geniş olup Column'u şişiriyor, bu da FittedBox'ı yeniden
+        // ölçeklendirip komşu içeriği kaydırıyordu.
         SizedBox(
-          height: 14,
+          height: 22,
           child: hint != null
               ? Text(hint,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                      color: OkeyColors.okeyGlow, fontSize: 11))
+                      color: OkeyColors.okeyGlow, fontSize: 11, height: 1.15))
               : null,
         ),
       ],
