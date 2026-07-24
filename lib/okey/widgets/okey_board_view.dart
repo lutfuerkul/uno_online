@@ -634,10 +634,11 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Oyuncu 3'ün attığı taş (bana atılan) — çok az sola
-                // kaydırılmış (fotoğraf yerinde kalıyor, yalnızca taş kayıyor).
+                // Oyuncu 3'ün attığı taş (bana atılan) — çok az sola ve
+                // biraz yukarı kaydırılmış (fotoğraf yerinde kalıyor,
+                // yalnızca taş kayıyor).
                 Transform.translate(
-                  offset: const Offset(-10, 0),
+                  offset: const Offset(-10, -5),
                   child: _landscapeOpponentDiscardSlot(state, opps.last,
                       takeable: true, canDraw: canDraw),
                 ),
