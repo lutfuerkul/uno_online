@@ -552,28 +552,31 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         children: [
           // Attığım taş — altında "atmak için sürükle" ipucu için sabit
           // yükseklikte bir boşluk (yön düğmesi artık burada değil, sağ üst
-          // köşede — bkz. _landscapeTable).
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _landscapeMyDiscardSlot(context, state, canDiscard),
-              SizedBox(
-                height: 24,
-                child: canDiscard
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          'atmak için\nsürükle',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: OkeyColors.okeyGlow,
-                              fontSize: 8,
-                              height: 1.15),
-                        ),
-                      )
-                    : null,
-              ),
-            ],
+          // köşede — bkz. _landscapeTable). Çok az sağa kaydırılmış.
+          Transform.translate(
+            offset: const Offset(6, 0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _landscapeMyDiscardSlot(context, state, canDiscard),
+                SizedBox(
+                  height: 24,
+                  child: canDiscard
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            'atmak için\nsürükle',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: OkeyColors.okeyGlow,
+                                fontSize: 8,
+                                height: 1.15),
+                          ),
+                        )
+                      : null,
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: 8),
           // leftPlayerId'nin yerdeki taşını ya da desteden çektiğimi tam
@@ -591,8 +594,13 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _landscapeOpponentDiscardSlot(state, opps.last,
-                    takeable: true, canDraw: canDraw),
+                // Oyuncu 3'ün attığı taş — çok az sola kaydırılmış (fotoğraf
+                // yerinde kalıyor, yalnızca taş kayıyor).
+                Transform.translate(
+                  offset: const Offset(-6, 0),
+                  child: _landscapeOpponentDiscardSlot(state, opps.last,
+                      takeable: true, canDraw: canDraw),
+                ),
                 const SizedBox(height: 4),
                 OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 56),
               ],
@@ -699,47 +707,51 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                       _indicatorCard(context, state, canDiscard),
                       const SizedBox(height: 16),
                       // FittedBox: dar telefonlarda orta satır taşmasın diye
-                      // orantılı küçülür.
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Kendi en son attığım taş — atılacak taş buraya
-                            // sürüklenip bırakılır (normal atış, sıra geçer).
-                            _pileColumn(
-                              label: 'Atılan',
-                              highlight: canDiscard,
-                              hint: canDiscard ? 'atmak için sürükle' : null,
-                              child: DragTarget<String>(
-                                onWillAcceptWithDetails: (d) => canDiscard,
-                                onAcceptWithDetails: (d) =>
-                                    _handleDiscardDrop(context, d.data),
-                                builder: (ctx, cand, rej) {
-                                  final tile = myDiscard != null
-                                      ? OkeyTileWidget(
-                                          tile: myDiscard,
-                                          width: _tileSize,
-                                          isOkey: state.isOkey(myDiscard),
-                                        )
-                                      : _emptySlot(_tileSize);
-                                  return cand.isNotEmpty
-                                      ? _dropHighlight(tile, _tileSize)
-                                      : tile;
-                                },
+                      // orantılı küçülür. Atılan+Deste ikilisi çok az sağa
+                      // kaydırılmış, aralarındaki boşluk da biraz açılmış.
+                      Transform.translate(
+                        offset: const Offset(10, 0),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Kendi en son attığım taş — atılacak taş buraya
+                              // sürüklenip bırakılır (normal atış, sıra geçer).
+                              _pileColumn(
+                                label: 'Atılan',
+                                highlight: canDiscard,
+                                hint: canDiscard ? 'atmak için sürükle' : null,
+                                child: DragTarget<String>(
+                                  onWillAcceptWithDetails: (d) => canDiscard,
+                                  onAcceptWithDetails: (d) =>
+                                      _handleDiscardDrop(context, d.data),
+                                  builder: (ctx, cand, rej) {
+                                    final tile = myDiscard != null
+                                        ? OkeyTileWidget(
+                                            tile: myDiscard,
+                                            width: _tileSize,
+                                            isOkey: state.isOkey(myDiscard),
+                                          )
+                                        : _emptySlot(_tileSize);
+                                    return cand.isNotEmpty
+                                        ? _dropHighlight(tile, _tileSize)
+                                        : tile;
+                                  },
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 20),
-                            _pileColumn(
-                              label: 'Deste ($deckCount)',
-                              highlight: canDraw && deckCount > 0,
-                              child: _deckTile(canDraw, deckCount),
-                              hint: canDraw && deckCount > 0
-                                  ? 'çekmek için sürükle'
-                                  : null,
-                            ),
-                          ],
+                              const SizedBox(width: 28),
+                              _pileColumn(
+                                label: 'Deste ($deckCount)',
+                                highlight: canDraw && deckCount > 0,
+                                child: _deckTile(canDraw, deckCount),
+                                hint: canDraw && deckCount > 0
+                                    ? 'çekmek için sürükle'
+                                    : null,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
