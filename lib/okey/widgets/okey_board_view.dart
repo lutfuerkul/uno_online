@@ -630,24 +630,21 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             ),
           ),
           const SizedBox(width: 8),
+          // Kendi fotoğrafım yataydan kaldırıldı; bana atılan taş artık
+          // benim attığım taşla aynı hizada (aynı sütun yapısı: taş +
+          // altında aynı yükseklikte boş bir alan, ipucu kutusuyla eşit).
           if (opps.isNotEmpty)
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Oyuncu 3'ün attığı taş (bana atılan) — çok az sola ve
-                // biraz yukarı kaydırılmış (fotoğraf yerinde kalıyor,
-                // yalnızca taş kayıyor).
                 Transform.translate(
-                  offset: const Offset(-10, -5),
+                  offset: const Offset(-10, 0),
                   child: _landscapeOpponentDiscardSlot(state, opps.last,
                       takeable: true, canDraw: canDraw),
                 ),
-                const SizedBox(height: 4),
-                OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 70),
+                const SizedBox(height: 24),
               ],
-            )
-          else
-            OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 70),
+            ),
         ],
       ),
     );
