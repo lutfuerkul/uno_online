@@ -286,10 +286,19 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               child: _landscapeOpponentDiscardSlot(state, topId),
             ),
 
-          Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: _landscapeCenterPiles(context, state, canDiscard),
+          // Gösterge + deste artık ortada değil: sola ve aşağı kaydırılmış,
+          // bilgi bannerının hemen üstünde duruyor — böylece karşımdaki
+          // oyuncunun koltuğuyla çakışmıyor.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 2,
+            child: Align(
+              alignment: const Alignment(-0.3, 0),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: _landscapeCenterPiles(context, state, canDiscard),
+              ),
             ),
           ),
         ],
@@ -392,7 +401,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _indicatorCard(context, state, canDiscard),
+        _indicatorCard(context, state, canDiscard, showOkeyLabel: false),
         const SizedBox(width: 24),
         _pileColumn(
           label: 'Deste ($deckCount)',
@@ -469,9 +478,27 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _orientationToggleButton(),
-          const SizedBox(width: 6),
-          _landscapeMyDiscardSlot(context, state, canDiscard),
+          // Sağımdaki gibi alt alta: üstte attığım taş, arada "atmak için
+          // sürükle" ipucuna yer bırakan boşluk, altta yön düğmesi.
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _landscapeMyDiscardSlot(context, state, canDiscard),
+              if (canDiscard)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    'atmak için\nsürükle',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: OkeyColors.okeyGlow, fontSize: 8, height: 1.15),
+                  ),
+                )
+              else
+                const SizedBox(height: 6),
+              _orientationToggleButton(),
+            ],
+          ),
           const SizedBox(width: 8),
           Expanded(child: _landscapeRack(context, state, myHand, canDiscard)),
           const SizedBox(width: 8),
@@ -522,7 +549,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                   final i = r * perRow + col;
                   final id = i < slots.length ? slots[i] : null;
                   return _slotCell(
-                      i, id, byId[id], tileW, tileH, canDiscard, state);
+                      i, id, byId[id], tileW, tileH, canDiscard, state,
+                      flipOkey: true);
                 }),
               ],
             ],
@@ -590,13 +618,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Yön değiştirme düğmesi — üst çubuk kaldırıldığı
-                            // için buraya, "Attığım"ın soluna taşındı.
-                            Padding(
-                              padding: const EdgeInsets.only(top: 18),
-                              child: _orientationToggleButton(),
-                            ),
-                            const SizedBox(width: 14),
                             // Kendi en son attığım taş — atılacak taş buraya
                             // sürüklenip bırakılır (normal atış, sıra geçer).
                             _pileColumn(
@@ -644,22 +665,32 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               ),
             ),
           ),
-          // Kendi fotoğrafım — sağ alt köşede, hafifçe yukarı kaydırılmış
-          // (masa içeriğiyle birlikte); ekranın kenarına tam yaslanmadan
-          // ayrık.
+          // Kendi fotoğrafım — artık sol alt köşede, hafifçe yukarı
+          // kaydırılmış (masa içeriğiyle birlikte).
           Positioned(
-            right: 16,
+            left: 16,
             bottom: 30,
             child: OkeyPhotoFrame(
                 base64Photo: c.opponentPhoto(c.selfId), size: 70),
+          ),
+          // Yön değiştirme düğmesi — fotoğrafımın eski yerine, sağ alt
+          // köşeye taşındı.
+          Positioned(
+            right: 16,
+            bottom: 30,
+            child: _orientationToggleButton(),
           ),
         ],
       ),
     );
   }
 
+  /// [showOkeyLabel] false ise sağdaki "OKEY / {renk} {sayı}" metni
+  /// gizlenir — yatay modda bu bilgi artık ıstakadaki okey taşının ters
+  /// (baş aşağı) durmasıyla veriliyor, ayrı bir metne gerek yok.
   Widget _indicatorCard(
-      BuildContext context, OkeyGameState state, bool canDiscard) {
+      BuildContext context, OkeyGameState state, bool canDiscard,
+      {bool showOkeyLabel = true}) {
     final ind = state.indicator;
     final okeyColorName = OkeyTile(
       color: state.okeyColor,
@@ -708,22 +739,24 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                 ),
             ],
           ),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('OKEY',
-                  style: TextStyle(
-                      color: OkeyColors.okeyGlow,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13,
-                      letterSpacing: 2)),
-              const SizedBox(height: 2),
-              Text('$okeyColorName ${state.okeyNumber}',
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w700)),
-            ],
-          ),
+          if (showOkeyLabel) ...[
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('OKEY',
+                    style: TextStyle(
+                        color: OkeyColors.okeyGlow,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                        letterSpacing: 2)),
+                const SizedBox(height: 2),
+                Text('$okeyColorName ${state.okeyNumber}',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -797,7 +830,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           style: TextStyle(color: Color(0x66FFFFFF), fontSize: 11)),
     );
   }
-
 
   Widget _handArea(BuildContext context, OkeyGameState state) {
     final c = widget.controller;
@@ -885,7 +917,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                         final i = r * perRow + col;
                         final id = i < slots.length ? slots[i] : null;
                         return _slotCell(
-                            i, id, byId[id], tileW, tileH, canDiscard, state);
+                            i, id, byId[id], tileW, tileH, canDiscard, state,
+                            flipOkey: true);
                       }),
                     ],
                   ],
@@ -900,8 +933,12 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
 
   /// Bir ıstaka hücresi: taş varsa sürüklenebilir taşı, yoksa soluk boş yuvayı
   /// gösterir. Her hücre bir DragTarget'tır; taş bırakılınca o yuvaya konur.
+  /// [flipOkey] true ise okey (joker) taşı ters (baş aşağı) çizilir —
+  /// hem yatay hem dikey ıstakada, hangi taşın okey olduğunu bu şekilde
+  /// hatırlatıyoruz (yatayda ayrıca "OKEY: {renk} {sayı}" metni de yok).
   Widget _slotCell(int index, String? tileId, OkeyTile? tile, double w,
-      double h, bool canDiscard, OkeyGameState state) {
+      double h, bool canDiscard, OkeyGameState state,
+      {bool flipOkey = false}) {
     return DragTarget<String>(
       onWillAcceptWithDetails: (d) => d.data != tileId,
       onAcceptWithDetails: (d) => widget.controller.placeTile(d.data, index),
@@ -910,19 +947,23 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         if (tile == null) {
           return _emptyRackSlot(w, h, hl);
         }
-        final tileWidget = OkeyTileWidget(
+        final isOkeyTile = state.isOkey(tile);
+        final shouldFlip = flipOkey && isOkeyTile;
+        Widget applyFlip(Widget child) =>
+            shouldFlip ? Transform.rotate(angle: math.pi, child: child) : child;
+        final tileWidget = applyFlip(OkeyTileWidget(
           tile: tile,
           width: w,
-          isOkey: state.isOkey(tile),
+          isOkey: isOkeyTile,
           selected: tile.id == _selectedId,
           onTap: () => _onTileTap(tile, canDiscard),
-        );
+        ));
         return Draggable<String>(
           data: tile.id,
           feedback: Material(
             color: Colors.transparent,
-            child: OkeyTileWidget(
-                tile: tile, width: w * 1.12, isOkey: state.isOkey(tile)),
+            child: applyFlip(OkeyTileWidget(
+                tile: tile, width: w * 1.12, isOkey: isOkeyTile)),
           ),
           childWhenDragging: _emptyRackSlot(w, h, false),
           child: SizedBox(
