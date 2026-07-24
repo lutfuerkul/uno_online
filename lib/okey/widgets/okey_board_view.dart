@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/okey_board_controller.dart';
 import '../models/okey_game_state.dart';
@@ -44,6 +45,29 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// gerekirse tekrar açmak için burayı true yap.
   static const bool _showArrangeButtons = false;
 
+  /// Yatay moddaki ıstaka: sıra başına taş sayısı (2 sıra x 14 = 28 göz).
+  /// Dikeyin aksine taş boyutu burada sabit kalır, sıkıştırma yapılmaz.
+  static const int _landscapeTilesPerRow = 14;
+
+  /// Yatay/dikey modu — yalnızca bu düğmeyle değişir, cihazın fiziksel
+  /// döndürmesi hiçbir şeyi etkilemez (SystemChrome her iki modda da tek
+  /// bir yöne kilitli tutuyor).
+  bool _landscape = false;
+
+  @override
+  void dispose() {
+    // Ekrandan çıkarken uygulamanın geri kalanını dikeye kilitli bırak.
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    super.dispose();
+  }
+
+  void _toggleOrientation() {
+    setState(() => _landscape = !_landscape);
+    SystemChrome.setPreferredOrientations(_landscape
+        ? const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]
+        : const [DeviceOrientation.portraitUp]);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -67,6 +91,17 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       _selectedId = null;
     }
 
+    if (_landscape) {
+      return Column(
+        children: [
+          _topBar(),
+          Expanded(child: _landscapeTable(context, state)),
+          _landscapeTurnBanner(state),
+          _landscapeRackWithPhoto(context, state),
+        ],
+      );
+    }
+
     return Column(
       children: [
         _topBar(),
@@ -87,6 +122,16 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         children: [
           Text(widget.roomLabel,
               style: const TextStyle(color: OkeyColors.muted, fontSize: 14)),
+          TextButton(
+            onPressed: _toggleOrientation,
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0x22FFD54F),
+              foregroundColor: OkeyColors.okeyGlow,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            child: Text(_landscape ? '⤢ Dikey' : '⤢ Yatay',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+          ),
           TextButton(
             onPressed: widget.onLeave,
             style: TextButton.styleFrom(
@@ -185,6 +230,330 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                 : null,
           ),
         ],
+      ),
+    );
+  }
+
+  // ===================== Yatay mod =====================
+  //
+  // Rakipler gerçek bir masaya oturmuş gibi konumlanır: sıradaki oyuncu
+  // solda, ondan sonraki karşıda, solumdaki oyuncu (ıskartasını
+  // alabildiğim — leftPlayerId) sağda. `controller.opponents` zaten sıra
+  // yönünde döndüğü için (bkz. okey_board_controller.dart), tek rakipte
+  // hep karşıya, iki rakipte karşı+sağa, üç rakipte sol+karşı+sağa oturur.
+  //
+  // Atış taşları dönel: ben → sol → karşı → sağ → ben yönünde, herkes
+  // taşını sıradaki oyuncuya bakan köşeye bırakır. Sağ-alt köşe bu yüzden
+  // her zaman leftPlayerId'nin taşıdır — yani her zaman alınabilir köşe.
+
+  Widget _landscapeTable(BuildContext context, OkeyGameState state) {
+    final c = widget.controller;
+    final opps = c.opponents;
+    final canDraw = c.isMyTurn && !c.hasDrawn && state.status == 'playing';
+    final canDiscard = c.isMyTurn && c.hasDrawn && state.status == 'playing';
+
+    final String? leftId = opps.length >= 3 ? opps[0] : null;
+    final String? topId = opps.isEmpty ? null : opps[opps.length >= 3 ? 1 : 0];
+
+    return Container(
+      color: OkeyColors.middle,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          if (topId != null)
+            Positioned(
+              top: 4,
+              left: 0,
+              right: 0,
+              child: Center(child: _landscapeSeat(state, topId)),
+            ),
+          if (leftId != null)
+            Positioned(
+              left: 4,
+              top: 0,
+              bottom: 0,
+              child: Center(child: _landscapeSeat(state, leftId)),
+            ),
+          if (opps.length >= 2)
+            Positioned(
+              right: 4,
+              top: 0,
+              bottom: 0,
+              child: Center(child: _landscapeSeat(state, opps.last)),
+            ),
+
+          _cornerPositioned(
+            alignX: 0.19,
+            alignY: 0.82,
+            child: _landscapeMyDiscardSlot(context, state, canDiscard),
+          ),
+          if (leftId != null)
+            _cornerPositioned(
+              alignX: 0.19,
+              alignY: 0.18,
+              child: _landscapeOpponentDiscardSlot(state, leftId),
+            ),
+          if (topId != null && opps.length >= 2)
+            _cornerPositioned(
+              alignX: 0.81,
+              alignY: 0.18,
+              child: _landscapeOpponentDiscardSlot(state, topId),
+            ),
+          if (opps.isNotEmpty)
+            _cornerPositioned(
+              alignX: 0.81,
+              alignY: 0.82,
+              child: _landscapeOpponentDiscardSlot(state, opps.last,
+                  takeable: true, canDraw: canDraw),
+            ),
+
+          Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: _landscapeCenterPiles(context, state, canDiscard),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cornerPositioned({
+    required double alignX,
+    required double alignY,
+    required Widget child,
+  }) {
+    return Positioned.fill(
+      child: Align(
+        alignment: Alignment(alignX * 2 - 1, alignY * 2 - 1),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _landscapeSeat(OkeyGameState state, String id) {
+    final c = widget.controller;
+    final isTurn = state.currentTurn == id && state.status == 'playing';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(
+            color: isTurn ? OkeyColors.oppTurnBorder : Colors.transparent,
+            width: 2),
+        color: isTurn ? OkeyColors.oppTurnBg : null,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          OkeyPhotoFrame(base64Photo: c.opponentPhoto(id), size: 44),
+          const SizedBox(height: 3),
+          Text(c.opponentName(id),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _landscapeDiscardTile(OkeyTile? tile, OkeyGameState state) {
+    return tile != null
+        ? OkeyTileWidget(tile: tile, width: _tileSize, isOkey: state.isOkey(tile))
+        : _emptySlot(_tileSize);
+  }
+
+  /// Kendi son attığım taş — sürükleyip bırakınca normal atış olur (aynı
+  /// [_handleDiscardDrop] mantığı, yalnızca konum köşeye taşındı).
+  Widget _landscapeMyDiscardSlot(
+      BuildContext context, OkeyGameState state, bool canDiscard) {
+    final myDiscard = widget.controller.myLastDiscard;
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (d) => canDiscard,
+      onAcceptWithDetails: (d) => _handleDiscardDrop(context, d.data),
+      builder: (ctx, cand, rej) {
+        final tile = _landscapeDiscardTile(myDiscard, state);
+        return cand.isNotEmpty ? _dropHighlight(tile, _tileSize) : tile;
+      },
+    );
+  }
+
+  /// Bir rakibin son attığı taş. [takeable] true ve sıra bendeyse (henüz
+  /// çekmediysem) dokunarak alabilirim — tıpkı dikey moddaki "Yerde" alma
+  /// davranışı gibi.
+  Widget _landscapeOpponentDiscardSlot(OkeyGameState state, String id,
+      {bool takeable = false, bool canDraw = false}) {
+    final c = widget.controller;
+    final discard = c.topDiscardOf(id);
+    final canTakeHere = takeable && canDraw && discard != null;
+    final tile = _landscapeDiscardTile(discard, state);
+    return GestureDetector(
+      onTap: canTakeHere ? () => c.drawFromDiscard() : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          canTakeHere ? _dropHighlight(tile, _tileSize) : tile,
+          if (canTakeHere)
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Text('almak için dokun',
+                  style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 9)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Ortak masa: yalnızca gösterge ve deste (atılan köşeye taşındığı için).
+  Widget _landscapeCenterPiles(
+      BuildContext context, OkeyGameState state, bool canDiscard) {
+    final c = widget.controller;
+    final canDraw = c.isMyTurn && !c.hasDrawn && state.status == 'playing';
+    final deckCount = state.drawPile.length;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _indicatorCard(context, state, canDiscard),
+        const SizedBox(width: 24),
+        _pileColumn(
+          label: 'Deste ($deckCount)',
+          child: deckCount > 0
+              ? const OkeyTileWidget(faceDown: true, width: _tileSize)
+              : _emptySlot(_tileSize),
+          hint: canDraw && deckCount > 0 ? 'çekmek için dokun' : null,
+          onTap: canDraw && deckCount > 0 ? () => c.drawFromStack() : null,
+        ),
+      ],
+    );
+  }
+
+  /// Son hamle bilgisi ve sıra durumu tek satırda birleşti — sıra bana
+  /// gelince bu satır doğrudan "Sıra sende" yazar; ayrı bir "sıra" satırı
+  /// yok (dikeydeki iki banner'ın aksine).
+  Widget _landscapeTurnBanner(OkeyGameState state) {
+    final c = widget.controller;
+    final isMyTurn = c.isMyTurn;
+    final action = state.lastAction;
+
+    String text;
+    if (state.status != 'playing') {
+      text = 'El bitti';
+    } else if (isMyTurn) {
+      if (c.canFinish) {
+        text = '🎉 Elini bitirebilirsin — kazandıran taşı at!';
+      } else if (!c.hasDrawn) {
+        text = '● Sıra sende';
+      } else {
+        text = '● Bir taş at';
+      }
+    } else if (action != null && action.type == 'discard') {
+      text = '${c.opponentName(action.player)}, ${action.tile?.nameTr ?? ''} attı';
+    } else {
+      text = '○ Sıra: ${c.opponentName(state.currentTurn)}';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(6),
+      color: isMyTurn ? OkeyColors.turnMine : OkeyColors.turnTheirs,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            color: isMyTurn ? Colors.white : OkeyColors.turnTheirsText,
+            fontWeight: FontWeight.w800,
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Istaka + kendi fotoğrafım aynı alt çubukta: fotoğraf ıstakanın sağında,
+  /// ekran kenarına yakın.
+  Widget _landscapeRackWithPhoto(BuildContext context, OkeyGameState state) {
+    final c = widget.controller;
+    final isMyTurn = c.isMyTurn;
+    final canDiscard = isMyTurn && c.hasDrawn && state.status == 'playing';
+    final myHand = c.myHand;
+
+    return Container(
+      color: OkeyColors.topbar,
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: _landscapeRack(context, state, myHand, canDiscard)),
+          const SizedBox(width: 8),
+          OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 56),
+        ],
+      ),
+    );
+  }
+
+  /// Yatay ıstaka: 14'lük iki sıra (28 göz), taş boyutu sabit (_tileSize) —
+  /// dikeydeki gibi ekrana sığdırmak için küçültülmez. Ekran yeterince
+  /// genişse taşlar ortalanır; sığmazsa (dar/eski yatay ekranlar) yatay
+  /// kaydırmaya düşer.
+  Widget _landscapeRack(BuildContext context, OkeyGameState state,
+      List<OkeyTile> myHand, bool canDiscard) {
+    final byId = {for (final t in myHand) t.id: t};
+    const perRow = _landscapeTilesPerRow;
+    const tileW = _tileSize;
+    const gap = 3.0;
+    final tileH = tileW * OkeyTileWidget.aspect;
+
+    final slots = widget.controller.handSlots;
+    final rowsNeeded = (slots.length + perRow - 1) ~/ perRow;
+    final rows = math.max(2, rowsNeeded);
+
+    final grid = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var r = 0; r < rows; r++) ...[
+          if (r > 0) const SizedBox(height: gap + 2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var col = 0; col < perRow; col++) ...[
+                if (col > 0) const SizedBox(width: gap),
+                Builder(builder: (_) {
+                  final i = r * perRow + col;
+                  final id = i < slots.length ? slots[i] : null;
+                  return _slotCell(
+                      i, id, byId[id], tileW, tileH, canDiscard, state);
+                }),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: OkeyColors.rackDark,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0x55000000), width: 2),
+        boxShadow: const [
+          BoxShadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 2)),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final needed = perRow * tileW + (perRow - 1) * gap;
+          if (constraints.maxWidth >= needed) {
+            return Center(child: grid);
+          }
+          return SingleChildScrollView(
+              scrollDirection: Axis.horizontal, child: grid);
+        },
       ),
     );
   }
