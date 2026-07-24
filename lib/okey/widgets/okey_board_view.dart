@@ -92,9 +92,13 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     }
 
     if (_landscape) {
+      // Yatay modda üst çubuk (oda adı/Çık) tamamen kaldırıldı — dikeyde
+      // kısıtlı olan yükseklik ıstaka + masaya kalsın diye. Çıkış zaten
+      // sistem geri tuşuyla (PopScope/confirmLeaveOkeyGame) çalışıyor;
+      // yön değiştirme düğmesi ıstakanın soluna taşındı (bkz.
+      // _landscapeRackWithPhoto).
       return Column(
         children: [
-          _topBar(),
           Expanded(child: _landscapeTable(context, state)),
           _landscapeTurnBanner(state),
           _landscapeRackWithPhoto(context, state),
@@ -113,6 +117,21 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
+  Widget _orientationToggleButton() {
+    return TextButton(
+      onPressed: _toggleOrientation,
+      style: TextButton.styleFrom(
+        backgroundColor: const Color(0x22FFD54F),
+        foregroundColor: OkeyColors.okeyGlow,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(_landscape ? '⤢ Dikey' : '⤢ Yatay',
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+
   Widget _topBar() {
     return Container(
       color: OkeyColors.topbar,
@@ -122,16 +141,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         children: [
           Text(widget.roomLabel,
               style: const TextStyle(color: OkeyColors.muted, fontSize: 14)),
-          TextButton(
-            onPressed: _toggleOrientation,
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0x22FFD54F),
-              foregroundColor: OkeyColors.okeyGlow,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            child: Text(_landscape ? '⤢ Dikey' : '⤢ Yatay',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-          ),
+          _orientationToggleButton(),
           TextButton(
             onPressed: widget.onLeave,
             style: TextButton.styleFrom(
@@ -473,8 +483,9 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  /// Istaka + kendi fotoğrafım aynı alt çubukta: fotoğraf ıstakanın sağında,
-  /// ekran kenarına yakın.
+  /// Istaka + kendi fotoğrafım aynı alt çubukta: yön düğmesi ıstakanın
+  /// solunda (üst çubuk kaldırıldığı için buraya taşındı), fotoğraf ise
+  /// sağında, ekran kenarına yakın.
   Widget _landscapeRackWithPhoto(BuildContext context, OkeyGameState state) {
     final c = widget.controller;
     final isMyTurn = c.isMyTurn;
@@ -487,6 +498,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          _orientationToggleButton(),
+          const SizedBox(width: 8),
           Expanded(child: _landscapeRack(context, state, myHand, canDiscard)),
           const SizedBox(width: 8),
           OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 56),
