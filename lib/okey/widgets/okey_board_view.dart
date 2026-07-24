@@ -100,7 +100,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       return Column(
         children: [
           Expanded(child: _landscapeTable(context, state)),
-          _landscapeTurnBanner(state),
+          _turnBanner(state),
           _landscapeRackWithPhoto(context, state),
         ],
       );
@@ -408,8 +408,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
 
   /// Son hamle bilgisi ve sıra durumu tek satırda birleşti — sıra bana
   /// gelince bu satır doğrudan "Sıra sende" yazar; ayrı bir "sıra" satırı
-  /// yok (dikeydeki iki banner'ın aksine).
-  Widget _landscapeTurnBanner(OkeyGameState state) {
+  /// yok. Hem yatay hem dikeyde kullanılır.
+  Widget _turnBanner(OkeyGameState state) {
     final c = widget.controller;
     final isMyTurn = c.isMyTurn;
     final action = state.lastAction;
@@ -798,74 +798,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  Widget _turnBanner(OkeyGameState state) {
-    final c = widget.controller;
-    final isMyTurn = c.isMyTurn;
-    final action = state.lastAction;
-
-    String text;
-    if (state.status != 'playing') {
-      text = 'El bitti';
-    } else if (isMyTurn) {
-      if (c.canFinish) {
-        text = '🎉 Elini bitirebilirsin — kazandıran taşı at!';
-      } else if (!c.hasDrawn) {
-        text = '● Sıra sende — desteden çek ya da yerden al';
-      } else {
-        text = '● Bir taş at';
-      }
-    } else {
-      text = '○ Sıra: ${c.opponentName(state.currentTurn)}';
-    }
-
-    final infoText =
-        (action != null && action.type == 'discard' && state.status == 'playing')
-            ? '${c.opponentName(action.player)}, ${action.tile?.nameTr ?? ''} attı'
-            : '';
-
-    return Column(
-      children: [
-        // Her zaman aynı slotta kalır (yazı yokken de boş satır olarak) —
-        // aksi halde metin görünüp kaybolunca orta alan (FittedBox) sürekli
-        // yeniden ölçeklenip ekranı zıplatıyordu.
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
-          // FittedBox: satıra sığmayan uzun metinler (2 satıra geçip
-          // yükseklik değiştirmeden) küçültülerek tek satırda kalır.
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              infoText,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              softWrap: false,
-              style: const TextStyle(
-                  color: OkeyColors.lastAction, fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(10),
-          color: isMyTurn ? OkeyColors.turnMine : OkeyColors.turnTheirs,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              softWrap: false,
-              style: TextStyle(
-                color: isMyTurn ? Colors.white : OkeyColors.turnTheirsText,
-                fontWeight: FontWeight.w800,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _handArea(BuildContext context, OkeyGameState state) {
     final c = widget.controller;
