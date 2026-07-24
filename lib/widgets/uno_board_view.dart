@@ -514,7 +514,7 @@ class _OpponentTile extends StatelessWidget {
             count: count,
             cardWidth: 34,
             overlap: 21,
-            cardBuilder: () => const CardWidget(faceDown: true, width: 34, showBackLogo: false),
+            cardBuilder: () => const CardWidget(faceDown: true, width: 34),
           ),
           if (blocked > 0)
             Text(

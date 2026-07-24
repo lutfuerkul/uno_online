@@ -52,3 +52,6 @@ flutter:
     - docs/pisti/cards/
     # Okey: gerçek taş fotoğrafından kesilmiş taşlar.
     - assets/okey/tiles/
+    # UNO kart görselleri — kökteki tasarım SVG'lerinden
+    # tool/split_uno_cards.py ile üretilir.
+    - assets/uno_cards/
