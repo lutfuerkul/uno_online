@@ -405,7 +405,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          OkeyPhotoFrame(base64Photo: c.opponentPhoto(id), size: 44),
+          OkeyPhotoFrame(base64Photo: c.opponentPhoto(id), size: 70),
           const SizedBox(height: 3),
           Text(c.opponentName(id),
               style: const TextStyle(
@@ -631,11 +631,11 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                       takeable: true, canDraw: canDraw),
                 ),
                 const SizedBox(height: 4),
-                OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 56),
+                OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 70),
               ],
             )
           else
-            OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 56),
+            OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 70),
         ],
       ),
     );
