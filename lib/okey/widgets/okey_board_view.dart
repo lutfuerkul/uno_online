@@ -263,12 +263,17 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               child: visual,
             );
           }),
+          // İki satır, sabit yükseklik — tek satırda taş genişliğinden çok
+          // daha genişti ve komşu oyuncu kutularını itip kaydırıyordu.
           SizedBox(
-            height: 12,
+            height: 22,
             child: canTakeHere
-                ? const Text('almak için sürükle',
-                    style:
-                        TextStyle(color: OkeyColors.okeyGlow, fontSize: 9))
+                ? const Text(
+                    'almak için\nsürükle',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: OkeyColors.okeyGlow, fontSize: 9, height: 1.15),
+                  )
                 : null,
           ),
         ],
@@ -319,7 +324,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               bottom: 0,
               child: Center(
                 child: Transform.translate(
-                  offset: const Offset(0, 17),
+                  offset: const Offset(0, 25),
                   child: _landscapeSeat(state, leftId),
                 ),
               ),
@@ -331,7 +336,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               bottom: 0,
               child: Center(
                 child: Transform.translate(
-                  offset: const Offset(0, 17),
+                  offset: const Offset(0, 25),
                   child: _landscapeSeat(state, opps.last),
                 ),
               ),
@@ -877,20 +882,20 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               // değişmesin diye (aksi halde bunu saran FittedBox sürekli
               // yeniden ölçeklenip ekranı zıplatıyordu). İki satır — tek
               // satırda taş genişliğinden çok daha geniş olup aynı sorunu
-              // genişlik üzerinden yaratıyordu.
+              // genişlik üzerinden yaratıyordu. Gap(4)+kutu(27) tam
+              // _pileColumn'daki (Deste) ile aynı — böylece ikisi tam aynı
+              // hizada duruyor (bkz. _pileColumn).
+              const SizedBox(height: 4),
               SizedBox(
-                height: 24,
+                height: 27,
                 child: canDiscard
-                    ? const Padding(
-                        padding: EdgeInsets.only(top: 3),
-                        child: Text(
-                          'bitirmek için\nsürükle',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: OkeyColors.okeyGlow,
-                              fontSize: 10,
-                              height: 1.15),
-                        ),
+                    ? const Text(
+                        'bitirmek için\nsürükle',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: OkeyColors.okeyGlow,
+                            fontSize: 10,
+                            height: 1.15),
                       )
                     : null,
               ),
@@ -950,11 +955,14 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           ),
         ),
         const SizedBox(height: 4),
-        // İki satır (sabit yükseklik) — tek satırda taş genişliğinden çok
-        // daha geniş olup Column'u şişiriyor, bu da FittedBox'ı yeniden
-        // ölçeklendirip komşu içeriği kaydırıyordu.
+        // İki satır (sabit yükseklik, iki satırı kesmeyecek kadar geniş) —
+        // tek satırda taş genişliğinden çok daha geniş olup Column'u
+        // şişiriyor, bu da FittedBox'ı yeniden ölçeklendirip komşu içeriği
+        // kaydırıyordu. Yükseklik her zaman aynı (görünür/gizli fark
+        // etmeksizin) — Gösterge'nin ipucu alanıyla da aynı boyut, ikisi
+        // aynı hizada dursun diye (bkz. _indicatorCard).
         SizedBox(
-          height: 22,
+          height: 27,
           child: hint != null
               ? Text(hint,
                   textAlign: TextAlign.center,
