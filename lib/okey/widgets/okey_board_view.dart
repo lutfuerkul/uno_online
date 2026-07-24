@@ -320,25 +320,28 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
 
           // Gösterge artık ortada değil: sola ve aşağı kaydırılmış, bilgi
           // bannerının hemen üstünde duruyor — böylece karşımdaki oyuncunun
-          // koltuğuyla çakışmıyor.
+          // koltuğuyla çakışmıyor. Deste de aynı satırda (aynı bottom
+          // hizasında), sağ tarafta duruyor — ikisi de aynı yükseklikte.
           Positioned(
             left: 0,
             right: 0,
             bottom: 2,
             child: Align(
-              alignment: const Alignment(-0.3, 0),
+              alignment: const Alignment(-0.45, 0),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: _landscapeCenterPiles(context, state, canDiscard),
               ),
             ),
           ),
-          // Deste, karşımdaki oyuncuyla çakışmaması için Gösterge'den ayrıldı;
-          // sağ tarafta boş kalan alana taşındı.
-          _cornerPositioned(
-            alignX: 0.65,
-            alignY: 0.5,
-            child: _landscapeDeckPile(context, state, canDraw),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 2,
+            child: Align(
+              alignment: const Alignment(0.62, 0),
+              child: _landscapeDeckPile(context, state, canDraw),
+            ),
           ),
         ],
       ),
@@ -784,9 +787,12 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       decoration: BoxDecoration(
         color: const Color(0x22000000),
         borderRadius: BorderRadius.circular(14),
+        // Kenarlık genişliği sabit (2) — yalnızca renk değişir; aksi halde
+        // sarı olunca kart büyüyüp (bottom'a sabitli olduğu için) yukarı
+        // doğru genişleyip üstteki oyuncu koltuğuyla çakışıyordu.
         border: Border.all(
           color: canDiscard ? OkeyColors.okeyGlow : const Color(0x33FFFFFF),
-          width: canDiscard ? 2 : 1,
+          width: 2,
         ),
       ),
       child: Row(
