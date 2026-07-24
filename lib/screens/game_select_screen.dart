@@ -30,7 +30,7 @@ class GameSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Uno•Okey•Pişti',
+                  'uWin•Okey•Pişti',
                   style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w900,
@@ -45,8 +45,8 @@ class GameSelectScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 _GameCard(
-                  iconAsset: 'assets/icons/uno_icon.png',
-                  title: 'UNO',
+                  iconAsset: 'assets/icons/uwin_icon.png',
+                  title: 'uWin',
                   subtitle: '2-4 kişilik, oda koduyla online',
                   borderColor: const Color(0x66C62828),
                   onTap: () => Navigator.of(context).push(
