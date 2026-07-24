@@ -97,6 +97,7 @@ class _Board extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = state.topCard;
     final topColorOverride = top != null && top.isWild ? state.currentColor : null;
+    final myBlocked = controller.blockedCount(controller.selfId);
 
     return Column(
       children: [
@@ -245,16 +246,35 @@ class _Board extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
           child: Center(
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: UnoColors.btnPass,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFF2B3840),
-                disabledForegroundColor: const Color(0x66FFFFFF),
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-              ),
-              onPressed: _isMyTurn && state.hasDrawn ? controller.pass : null,
-              child: const Text('Pas Geç ▶'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: UnoColors.btnPass,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFF2B3840),
+                    disabledForegroundColor: const Color(0x66FFFFFF),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                  ),
+                  onPressed: _isMyTurn && state.hasDrawn ? controller.pass : null,
+                  child: const Text('Pas Geç ▶'),
+                ),
+                // Kaç kez bloklandığımı, rakiplerinkiyle (_OpponentTile)
+                // aynı biçimde gösteriyorum: tek turluksa sade 🚫, birden
+                // fazlaysa yanına sayı.
+                if (myBlocked > 0) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    '🚫${myBlocked > 1 ? '$myBlocked' : ''}',
+                    style: const TextStyle(
+                      color: UnoColors.blockedTag,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ),
