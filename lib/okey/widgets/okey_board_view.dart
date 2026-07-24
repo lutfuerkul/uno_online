@@ -311,19 +311,30 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               right: 0,
               child: Center(child: _landscapeSeat(state, topId)),
             ),
+          // Oyuncu 1 ve Oyuncu 3 (sol/sağ koltuklar) biraz aşağı kaydırıldı.
           if (leftId != null)
             Positioned(
               left: 4,
               top: 0,
               bottom: 0,
-              child: Center(child: _landscapeSeat(state, leftId)),
+              child: Center(
+                child: Transform.translate(
+                  offset: const Offset(0, 14),
+                  child: _landscapeSeat(state, leftId),
+                ),
+              ),
             ),
           if (opps.length >= 2)
             Positioned(
               right: 4,
               top: 0,
               bottom: 0,
-              child: Center(child: _landscapeSeat(state, opps.last)),
+              child: Center(
+                child: Transform.translate(
+                  offset: const Offset(0, 14),
+                  child: _landscapeSeat(state, opps.last),
+                ),
+              ),
             ),
 
           // Yön değiştirme düğmesi — sağdaki oyuncunun üstünde, ekranın en
@@ -334,17 +345,30 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             child: _orientationToggleButton(),
           ),
 
+          // Oyuncu 1'in ve Oyuncu 2'nin attığı taşlar artık Oyuncu 2'nin
+          // fotoğrafının en üst kısmıyla aynı hizada — sabit bir tepe
+          // referansı (Oyuncu 2 koltuğunun top:4 + kenarlık(2) +
+          // padding(4) toplamı) kullanıyoruz, ekran yüksekliğine göre
+          // değişen bir oran değil.
           if (leftId != null)
-            _cornerPositioned(
-              alignX: 0.19,
-              alignY: 0.18,
-              child: _landscapeOpponentDiscardSlot(state, leftId),
+            Positioned(
+              top: 10,
+              left: 0,
+              right: 0,
+              child: Align(
+                alignment: const Alignment(-0.62, 0),
+                child: _landscapeOpponentDiscardSlot(state, leftId),
+              ),
             ),
           if (topId != null && opps.length >= 2)
-            _cornerPositioned(
-              alignX: 0.81,
-              alignY: 0.18,
-              child: _landscapeOpponentDiscardSlot(state, topId),
+            Positioned(
+              top: 10,
+              left: 0,
+              right: 0,
+              child: Align(
+                alignment: const Alignment(0.62, 0),
+                child: _landscapeOpponentDiscardSlot(state, topId),
+              ),
             ),
 
           // Gösterge artık ortada değil: sola ve aşağı kaydırılmış, bilgi
@@ -373,19 +397,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _cornerPositioned({
-    required double alignX,
-    required double alignY,
-    required Widget child,
-  }) {
-    return Positioned.fill(
-      child: Align(
-        alignment: Alignment(alignX * 2 - 1, alignY * 2 - 1),
-        child: child,
       ),
     );
   }
@@ -623,11 +634,11 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Oyuncu 3'ün attığı taş — sola kaydırılmış ve yukarı
-                // çekilmiş (banner'a ~3px kalacak kadar; fotoğraf yerinde
-                // kalıyor, yalnızca taş kayıyor).
+                // Oyuncu 3'ün attığı taş (bana atılan) — çok az sola ve
+                // biraz yukarı kaydırılmış (fotoğraf yerinde kalıyor,
+                // yalnızca taş kayıyor).
                 Transform.translate(
-                  offset: const Offset(-16, -9),
+                  offset: const Offset(-10, -5),
                   child: _landscapeOpponentDiscardSlot(state, opps.last,
                       takeable: true, canDraw: canDraw),
                 ),
