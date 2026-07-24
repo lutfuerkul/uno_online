@@ -520,19 +520,30 @@ class _OpponentTile extends StatelessWidget {
             overlap: 17,
             cardBuilder: () => const CardWidget(faceDown: true, width: 27),
           ),
-          if (blocked > 0)
-            Text(
-              '🚫 bloklu${blocked > 1 ? ' ×$blocked' : ''}',
-              style: const TextStyle(color: UnoColors.blockedTag, fontSize: 11, fontWeight: FontWeight.w800),
+          // Tek satır: kart sayısı (tek kart kalınca yeşil/kalın) ve blok
+          // işareti yan yana — ayrı satır açılırsa rakip kutusu uzayıp
+          // tahtanın ölçeklenmesine yol açıyordu.
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '$count kart',
+                  style: TextStyle(
+                    color: count == 1 ? UnoColors.unoTag : UnoColors.muted,
+                    fontWeight: count == 1 ? FontWeight.w800 : FontWeight.normal,
+                  ),
+                ),
+                if (blocked > 0)
+                  TextSpan(
+                    text: ' 🚫${blocked > 1 ? '×$blocked' : ''}',
+                    style: const TextStyle(
+                      color: UnoColors.blockedTag,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+              ],
             ),
-          // Tek kartı kalan oyuncunun kart sayısı yeşil ve kalın gösterilir.
-          Text(
-            '$count kart',
-            style: TextStyle(
-              color: count == 1 ? UnoColors.unoTag : UnoColors.muted,
-              fontSize: 12,
-              fontWeight: count == 1 ? FontWeight.w800 : FontWeight.normal,
-            ),
+            style: const TextStyle(fontSize: 12),
           ),
         ],
       ),
