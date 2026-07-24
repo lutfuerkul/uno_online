@@ -15,7 +15,7 @@ import '../theme/uno_theme.dart';
 ///  - Bütün renkler aynı soyut çapraz çizgi dokusunu paylaşır,
 ///  - Skip kartında büyütülmüş ⊘ sembolü + üstte "BLOK" yazısı,
 ///  - Reverse'te UNO'nun kavisli çift ok ikonu yerine tek düz ok +
-///    üstte "TEKRAR OYNA" yazısı,
+///    üstte "TEKRAR" yazısı,
 ///  - Joker'de dairesel renk çarkı yerine 4 yapraklı "pervane" rozeti +
 ///    üstünde "RENK SEÇ" yazısı; +4'te aynı rozet, yalnızca köşelerde
 ///    büyük "+4",
@@ -172,7 +172,7 @@ class CardWidget extends StatelessWidget {
     final title = c.type == CardType.skip
         ? 'BLOK'
         : c.type == CardType.reverse
-            ? 'TEKRAR OYNA'
+            ? 'TEKRAR'
             : null;
 
     final cornerFontSize = w * (c.type == CardType.number ? 0.24 : 0.15);
