@@ -11,6 +11,13 @@ import '../theme/okey_theme.dart';
 import 'okey_photo_frame.dart';
 import 'okey_tile_widget.dart';
 
+/// Solumdaki oyuncunun (leftPlayerId) attığı taşı "yerden almak" için
+/// sürüklenen sinyal — ıstakadaki taşları yeniden dizmek için kullanılan
+/// `Draggable<String>` ile karışmasın diye ayrı bir tür.
+class _DrawFromDiscardSignal {
+  const _DrawFromDiscardSignal();
+}
+
 /// Okey tahtası. Hem online (Firestore) hem de bilgisayara karşı (yerel) mod
 /// bu widget'ı [OkeyBoardController] üzerinden paylaşır.
 class OkeyBoardView extends StatefulWidget {
@@ -189,32 +196,42 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           const Text('attı',
               style: TextStyle(color: OkeyColors.muted, fontSize: 10)),
           const SizedBox(height: 2),
-          GestureDetector(
-            onTap: canTakeHere ? () => c.drawFromDiscard() : null,
-            child: Builder(builder: (_) {
-              final tile = discard != null
-                  ? OkeyTileWidget(
-                      tile: discard,
-                      width: _tileSize,
-                      isOkey: state.isOkey(discard),
-                    )
-                  : SizedBox(
-                      width: _tileSize,
-                      height: _tileSize * OkeyTileWidget.aspect,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0x33FFFFFF)),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+          Builder(builder: (_) {
+            final tile = discard != null
+                ? OkeyTileWidget(
+                    tile: discard,
+                    width: _tileSize,
+                    isOkey: state.isOkey(discard),
+                  )
+                : SizedBox(
+                    width: _tileSize,
+                    height: _tileSize * OkeyTileWidget.aspect,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0x33FFFFFF)),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                    );
-              return canTakeHere ? _dropHighlight(tile, _tileSize) : tile;
-            }),
-          ),
+                    ),
+                  );
+            final visual = canTakeHere ? _dropHighlight(tile, _tileSize) : tile;
+            if (!canTakeHere) return visual;
+            // Dokunmak yerine sürükle: elimin/ıstakamın üzerine bırakınca
+            // yerden alınır (bkz. _handArea'daki DragTarget).
+            return Draggable<_DrawFromDiscardSignal>(
+              data: const _DrawFromDiscardSignal(),
+              feedback: Material(
+                color: Colors.transparent,
+                child: OkeyTileWidget(
+                    tile: discard!, width: _tileSize * 1.12, isOkey: state.isOkey(discard)),
+              ),
+              childWhenDragging: Opacity(opacity: 0.35, child: visual),
+              child: visual,
+            );
+          }),
           SizedBox(
             height: 12,
             child: canTakeHere
-                ? const Text('almak için dokun',
+                ? const Text('almak için sürükle',
                     style:
                         TextStyle(color: OkeyColors.okeyGlow, fontSize: 9))
                 : null,
@@ -374,33 +391,44 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   }
 
   /// Bir rakibin son attığı taş. [takeable] true ve sıra bendeyse (henüz
-  /// çekmediysem) dokunarak alabilirim — tıpkı dikey moddaki "Yerde" alma
-  /// davranışı gibi.
+  /// çekmediysem) ıstakama sürükleyerek alabilirim (bkz. _landscapeRack'ı
+  /// saran DragTarget).
   Widget _landscapeOpponentDiscardSlot(OkeyGameState state, String id,
       {bool takeable = false, bool canDraw = false}) {
     final c = widget.controller;
     final discard = c.topDiscardOf(id);
     final canTakeHere = takeable && canDraw && discard != null;
     final tile = _landscapeDiscardTile(discard, state);
-    return GestureDetector(
-      onTap: canTakeHere ? () => c.drawFromDiscard() : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          canTakeHere ? _dropHighlight(tile, _tileSize) : tile,
-          // Sabit yükseklik: ipucu görünüp kaybolunca yerleşim zıplamasın.
-          SizedBox(
-            height: 13,
-            child: canTakeHere
-                ? const Padding(
-                    padding: EdgeInsets.only(top: 2),
-                    child: Text('almak için dokun',
-                        style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 9)),
-                  )
-                : null,
-          ),
-        ],
-      ),
+    final visual = canTakeHere ? _dropHighlight(tile, _tileSize) : tile;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        canTakeHere
+            ? Draggable<_DrawFromDiscardSignal>(
+                data: const _DrawFromDiscardSignal(),
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: OkeyTileWidget(
+                      tile: discard!,
+                      width: _tileSize * 1.12,
+                      isOkey: state.isOkey(discard)),
+                ),
+                childWhenDragging: Opacity(opacity: 0.35, child: visual),
+                child: visual,
+              )
+            : visual,
+        // Sabit yükseklik: ipucu görünüp kaybolunca yerleşim zıplamasın.
+        SizedBox(
+          height: 13,
+          child: canTakeHere
+              ? const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Text('almak için sürükle',
+                      style: TextStyle(color: OkeyColors.okeyGlow, fontSize: 9)),
+                )
+              : null,
+        ),
+      ],
     );
   }
 
@@ -517,7 +545,25 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             ],
           ),
           const SizedBox(width: 8),
-          Expanded(child: _landscapeRack(context, state, myHand, canDiscard)),
+          Expanded(
+            // leftPlayerId'nin yerdeki taşı buraya sürüklenip bırakılınca
+            // "yerden" alınır.
+            child: DragTarget<_DrawFromDiscardSignal>(
+              onWillAcceptWithDetails: (d) => canDraw,
+              onAcceptWithDetails: (d) => c.drawFromDiscard(),
+              builder: (ctx, cand, rej) {
+                final rack = _landscapeRack(context, state, myHand, canDiscard);
+                if (cand.isEmpty) return rack;
+                return Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: OkeyColors.okeyGlow, width: 3),
+                  ),
+                  child: rack,
+                );
+              },
+            ),
+          ),
           const SizedBox(width: 8),
           if (opps.isNotEmpty)
             Column(
@@ -859,6 +905,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   Widget _handArea(BuildContext context, OkeyGameState state) {
     final c = widget.controller;
     final isMyTurn = c.isMyTurn;
+    final canDraw = isMyTurn && !c.hasDrawn && state.status == 'playing';
     final canDiscard = isMyTurn && c.hasDrawn && state.status == 'playing';
     final myHand = c.myHand;
 
@@ -884,7 +931,23 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             ),
             const SizedBox(height: 8),
           ],
-          _rackWithTiles(context, state, myHand, canDiscard),
+          // Solumdaki oyuncunun (leftPlayerId) yerdeki taşı buraya
+          // sürükleyip bırakınca "yerden" alınır.
+          DragTarget<_DrawFromDiscardSignal>(
+            onWillAcceptWithDetails: (d) => canDraw,
+            onAcceptWithDetails: (d) => c.drawFromDiscard(),
+            builder: (ctx, cand, rej) {
+              final rack = _rackWithTiles(context, state, myHand, canDiscard);
+              if (cand.isEmpty) return rack;
+              return Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: OkeyColors.okeyGlow, width: 3),
+                ),
+                child: rack,
+              );
+            },
+          ),
         ],
       ),
     );
@@ -961,6 +1024,9 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// [flipOkey] true ise okey (joker) taşı ters (baş aşağı) çizilir —
   /// hem yatay hem dikey ıstakada, hangi taşın okey olduğunu bu şekilde
   /// hatırlatıyoruz (yatayda ayrıca "OKEY: {renk} {sayı}" metni de yok).
+  /// Sahte okeyler (fiziksel joker taşları, [OkeyTile.isFakeJoker]) hariç —
+  /// onlar zaten ayrı görünüyor, ters çevrilmez; yalnızca göstergeye göre
+  /// bu elde okey sayılan gerçek (renk+sayı) taş ters durur.
   Widget _slotCell(int index, String? tileId, OkeyTile? tile, double w,
       double h, bool canDiscard, OkeyGameState state,
       {bool flipOkey = false}) {
@@ -973,7 +1039,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
           return _emptyRackSlot(w, h, hl);
         }
         final isOkeyTile = state.isOkey(tile);
-        final shouldFlip = flipOkey && isOkeyTile;
+        final shouldFlip = flipOkey && isOkeyTile && !tile.isFakeJoker;
         Widget applyFlip(Widget child) =>
             shouldFlip ? Transform.rotate(angle: math.pi, child: child) : child;
         final tileWidget = applyFlip(OkeyTileWidget(
