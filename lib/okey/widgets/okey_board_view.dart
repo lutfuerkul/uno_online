@@ -327,7 +327,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             right: 0,
             bottom: 2,
             child: Align(
-              alignment: const Alignment(-0.45, 0),
+              alignment: const Alignment(-0.40, 0),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: _landscapeCenterPiles(context, state, canDiscard),
@@ -339,7 +339,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             right: 0,
             bottom: 2,
             child: Align(
-              alignment: const Alignment(0.62, 0),
+              alignment: const Alignment(0.46, 0),
               child: _landscapeDeckPile(context, state, canDraw),
             ),
           ),
