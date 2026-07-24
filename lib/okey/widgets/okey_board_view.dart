@@ -253,13 +253,14 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   // hep karşıya, iki rakipte karşı+sağa, üç rakipte sol+karşı+sağa oturur.
   //
   // Atış taşları dönel: ben → sol → karşı → sağ → ben yönünde, herkes
-  // taşını sıradaki oyuncuya bakan köşeye bırakır. Sağ-alt köşe bu yüzden
-  // her zaman leftPlayerId'nin taşıdır — yani her zaman alınabilir köşe.
+  // taşını sıradaki oyuncuya bakan köşeye bırakır. Benim taşım ve
+  // leftPlayerId'nin (alınabilir) taşı artık masada değil, alt çubukta
+  // ıstakanın hemen solunda/sağında duruyor (bkz. _landscapeRackWithPhoto);
+  // masada yalnızca "ara" oyuncuların (leftId, topId) taşları kalıyor.
 
   Widget _landscapeTable(BuildContext context, OkeyGameState state) {
     final c = widget.controller;
     final opps = c.opponents;
-    final canDraw = c.isMyTurn && !c.hasDrawn && state.status == 'playing';
     final canDiscard = c.isMyTurn && c.hasDrawn && state.status == 'playing';
 
     final String? leftId = opps.length >= 3 ? opps[0] : null;
@@ -292,11 +293,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               child: Center(child: _landscapeSeat(state, opps.last)),
             ),
 
-          _cornerPositioned(
-            alignX: 0.19,
-            alignY: 0.82,
-            child: _landscapeMyDiscardSlot(context, state, canDiscard),
-          ),
           if (leftId != null)
             _cornerPositioned(
               alignX: 0.19,
@@ -308,13 +304,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
               alignX: 0.81,
               alignY: 0.18,
               child: _landscapeOpponentDiscardSlot(state, topId),
-            ),
-          if (opps.isNotEmpty)
-            _cornerPositioned(
-              alignX: 0.81,
-              alignY: 0.82,
-              child: _landscapeOpponentDiscardSlot(state, opps.last,
-                  takeable: true, canDraw: canDraw),
             ),
 
           Center(
@@ -483,12 +472,14 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  /// Istaka + kendi fotoğrafım aynı alt çubukta: yön düğmesi ıstakanın
-  /// solunda (üst çubuk kaldırıldığı için buraya taşındı), fotoğraf ise
-  /// sağında, ekran kenarına yakın.
+  /// Istaka + kendi fotoğrafım aynı alt çubukta: yön düğmesi + benim son
+  /// attığım taş ıstakanın solunda; leftPlayerId'nin (alınabilir) taşı
+  /// fotoğrafımın üstünde, ıstakanın sağında.
   Widget _landscapeRackWithPhoto(BuildContext context, OkeyGameState state) {
     final c = widget.controller;
+    final opps = c.opponents;
     final isMyTurn = c.isMyTurn;
+    final canDraw = isMyTurn && !c.hasDrawn && state.status == 'playing';
     final canDiscard = isMyTurn && c.hasDrawn && state.status == 'playing';
     final myHand = c.myHand;
 
@@ -499,10 +490,23 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _orientationToggleButton(),
+          const SizedBox(width: 6),
+          _landscapeMyDiscardSlot(context, state, canDiscard),
           const SizedBox(width: 8),
           Expanded(child: _landscapeRack(context, state, myHand, canDiscard)),
           const SizedBox(width: 8),
-          OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 56),
+          if (opps.isNotEmpty)
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _landscapeOpponentDiscardSlot(state, opps.last,
+                    takeable: true, canDraw: canDraw),
+                const SizedBox(height: 4),
+                OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 56),
+              ],
+            )
+          else
+            OkeyPhotoFrame(base64Photo: c.opponentPhoto(c.selfId), size: 56),
         ],
       ),
     );
