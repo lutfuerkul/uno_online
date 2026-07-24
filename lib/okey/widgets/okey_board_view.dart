@@ -18,6 +18,12 @@ class _DrawFromDiscardSignal {
   const _DrawFromDiscardSignal();
 }
 
+/// Desteden taş çekmek için sürüklenen sinyal — [_DrawFromDiscardSignal]
+/// gibi, yalnızca ıstaka hücrelerinin kabul ettiği ayrı bir tür.
+class _DrawFromStackSignal {
+  const _DrawFromStackSignal();
+}
+
 /// Okey tahtası. Hem online (Firestore) hem de bilgisayara karşı (yerel) mod
 /// bu widget'ı [OkeyBoardController] üzerinden paylaşır.
 class OkeyBoardView extends StatefulWidget {
@@ -314,25 +320,28 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
 
           // Gösterge artık ortada değil: sola ve aşağı kaydırılmış, bilgi
           // bannerının hemen üstünde duruyor — böylece karşımdaki oyuncunun
-          // koltuğuyla çakışmıyor.
+          // koltuğuyla çakışmıyor. Deste de aynı satırda (aynı bottom
+          // hizasında), sağ tarafta duruyor — ikisi de aynı yükseklikte.
           Positioned(
             left: 0,
             right: 0,
             bottom: 2,
             child: Align(
-              alignment: const Alignment(-0.3, 0),
+              alignment: const Alignment(-0.45, 0),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: _landscapeCenterPiles(context, state, canDiscard),
               ),
             ),
           ),
-          // Deste, karşımdaki oyuncuyla çakışmaması için Gösterge'den ayrıldı;
-          // sağ tarafta boş kalan alana taşındı.
-          _cornerPositioned(
-            alignX: 0.65,
-            alignY: 0.5,
-            child: _landscapeDeckPile(context, state, canDraw),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 2,
+            child: Align(
+              alignment: const Alignment(0.62, 0),
+              child: _landscapeDeckPile(context, state, canDraw),
+            ),
           ),
         ],
       ),
@@ -450,15 +459,31 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// taşındı (karşımdaki oyuncunun koltuğuyla çakışmasın diye).
   Widget _landscapeDeckPile(
       BuildContext context, OkeyGameState state, bool canDraw) {
-    final c = widget.controller;
     final deckCount = state.drawPile.length;
     return _pileColumn(
       label: 'Deste ($deckCount)',
-      child: deckCount > 0
-          ? const OkeyTileWidget(faceDown: true, width: _tileSize)
-          : _emptySlot(_tileSize),
-      hint: canDraw && deckCount > 0 ? 'çekmek için dokun' : null,
-      onTap: canDraw && deckCount > 0 ? () => c.drawFromStack() : null,
+      highlight: canDraw && deckCount > 0,
+      child: _deckTile(canDraw, deckCount),
+      hint: canDraw && deckCount > 0 ? 'çekmek için sürükle' : null,
+    );
+  }
+
+  /// Deste taşı — [canDraw] ve deste doluyken sürüklenebilir olur (hem
+  /// dikey hem yatay). Dokunmak yerine ıstakadaki istediğim boşluğa
+  /// sürükleyip bırakırım (bkz. _slotCell'in çekme sinyali kabulü).
+  Widget _deckTile(bool canDraw, int deckCount) {
+    final visual = deckCount > 0
+        ? const OkeyTileWidget(faceDown: true, width: _tileSize)
+        : _emptySlot(_tileSize);
+    if (!canDraw || deckCount == 0) return visual;
+    return Draggable<_DrawFromStackSignal>(
+      data: const _DrawFromStackSignal(),
+      feedback: Material(
+        color: Colors.transparent,
+        child: const OkeyTileWidget(faceDown: true, width: _tileSize * 1.12),
+      ),
+      childWhenDragging: Opacity(opacity: 0.35, child: visual),
+      child: visual,
     );
   }
 
@@ -551,23 +576,14 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             ],
           ),
           const SizedBox(width: 8),
+          // leftPlayerId'nin yerdeki taşını ya da desteden çektiğimi tam
+          // istediğim boşluğa bırakabilmem için artık her ıstaka hücresi
+          // kendi DragTarget'ı (bkz. _slotCell) — burada sarmalayan ayrı
+          // bir hedefe gerek yok.
           Expanded(
-            // leftPlayerId'nin yerdeki taşı buraya sürüklenip bırakılınca
-            // "yerden" alınır.
-            child: DragTarget<_DrawFromDiscardSignal>(
-              onWillAcceptWithDetails: (d) => canDraw,
-              onAcceptWithDetails: (d) => c.drawFromDiscard(),
-              builder: (ctx, cand, rej) {
-                final rack = _landscapeRack(context, state, myHand, canDiscard);
-                if (cand.isEmpty) return rack;
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: OkeyColors.okeyGlow, width: 3),
-                  ),
-                  child: rack,
-                );
-              },
+            child: Center(
+              child:
+                  _landscapeRack(context, state, myHand, canDiscard, canDraw),
             ),
           ),
           const SizedBox(width: 8),
@@ -593,7 +609,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// genişse taşlar ortalanır; sığmazsa (dar/eski yatay ekranlar) yatay
   /// kaydırmaya düşer.
   Widget _landscapeRack(BuildContext context, OkeyGameState state,
-      List<OkeyTile> myHand, bool canDiscard) {
+      List<OkeyTile> myHand, bool canDiscard, bool canDraw) {
     final byId = {for (final t in myHand) t.id: t};
     const perRow = _landscapeTilesPerRow;
     const tileW = _tileSize;
@@ -619,7 +635,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                   final id = i < slots.length ? slots[i] : null;
                   return _slotCell(
                       i, id, byId[id], tileW, tileH, canDiscard, state,
-                      flipOkey: true);
+                      flipOkey: true, canDraw: canDraw);
                 }),
               ],
             ],
@@ -629,7 +645,6 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
 
     return Container(
-      width: double.infinity,
       decoration: BoxDecoration(
         color: OkeyColors.rackDark,
         borderRadius: BorderRadius.circular(10),
@@ -643,7 +658,11 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         builder: (context, constraints) {
           final needed = perRow * tileW + (perRow - 1) * gap;
           if (constraints.maxWidth >= needed) {
-            return Center(child: grid);
+            // Çerçeve içeriğin (14 sütun) gerçek genişliğine sarılsın —
+            // Center burada kullanılmıyor çünkü Center, sonlu (loose de
+            // olsa) genişlik kısıtında mevcut alanı doldurur; biz ise
+            // dıştaki Expanded+Center ile ortalıyoruz (bkz. çağıran yer).
+            return grid;
           }
           return SingleChildScrollView(
               scrollDirection: Axis.horizontal, child: grid);
@@ -714,15 +733,10 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                             const SizedBox(width: 20),
                             _pileColumn(
                               label: 'Deste ($deckCount)',
-                              child: deckCount > 0
-                                  ? const OkeyTileWidget(
-                                      faceDown: true, width: _tileSize)
-                                  : _emptySlot(_tileSize),
+                              highlight: canDraw && deckCount > 0,
+                              child: _deckTile(canDraw, deckCount),
                               hint: canDraw && deckCount > 0
-                                  ? 'çekmek için dokun'
-                                  : null,
-                              onTap: canDraw && deckCount > 0
-                                  ? () => c.drawFromStack()
+                                  ? 'çekmek için sürükle'
                                   : null,
                             ),
                           ],
@@ -773,9 +787,12 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       decoration: BoxDecoration(
         color: const Color(0x22000000),
         borderRadius: BorderRadius.circular(14),
+        // Kenarlık genişliği sabit (2) — yalnızca renk değişir; aksi halde
+        // sarı olunca kart büyüyüp (bottom'a sabitli olduğu için) yukarı
+        // doğru genişleyip üstteki oyuncu koltuğuyla çakışıyordu.
         border: Border.all(
           color: canDiscard ? OkeyColors.okeyGlow : const Color(0x33FFFFFF),
-          width: canDiscard ? 2 : 1,
+          width: 2,
         ),
       ),
       child: Row(
@@ -937,23 +954,10 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
             ),
             const SizedBox(height: 8),
           ],
-          // Solumdaki oyuncunun (leftPlayerId) yerdeki taşı buraya
-          // sürükleyip bırakınca "yerden" alınır.
-          DragTarget<_DrawFromDiscardSignal>(
-            onWillAcceptWithDetails: (d) => canDraw,
-            onAcceptWithDetails: (d) => c.drawFromDiscard(),
-            builder: (ctx, cand, rej) {
-              final rack = _rackWithTiles(context, state, myHand, canDiscard);
-              if (cand.isEmpty) return rack;
-              return Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: OkeyColors.okeyGlow, width: 3),
-                ),
-                child: rack,
-              );
-            },
-          ),
+          // Solumdaki oyuncunun (leftPlayerId) yerdeki taşını ya da desteden
+          // çektiğimi tam istediğim boşluğa bırakabilmem için artık her
+          // ıstaka hücresi kendi DragTarget'ı (bkz. _slotCell).
+          _rackWithTiles(context, state, myHand, canDiscard, canDraw),
         ],
       ),
     );
@@ -963,7 +967,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// hedefidir; taşı boş yuvaya bırakırsan oraya gider, eski yeri boş kalır
   /// (serbest yerleşim + boşluk bırakma). Boş yuvalar soluk gösterilir.
   Widget _rackWithTiles(BuildContext context, OkeyGameState state,
-      List<OkeyTile> myHand, bool canDiscard) {
+      List<OkeyTile> myHand, bool canDiscard, bool canDraw) {
     final byId = {for (final t in myHand) t.id: t};
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1012,7 +1016,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
                         final id = i < slots.length ? slots[i] : null;
                         return _slotCell(
                             i, id, byId[id], tileW, tileH, canDiscard, state,
-                            flipOkey: true);
+                            flipOkey: true, canDraw: canDraw);
                       }),
                     ],
                   ],
@@ -1026,7 +1030,11 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   }
 
   /// Bir ıstaka hücresi: taş varsa sürüklenebilir taşı, yoksa soluk boş yuvayı
-  /// gösterir. Her hücre bir DragTarget'tır; taş bırakılınca o yuvaya konur.
+  /// gösterir. Her hücre bir DragTarget'tır ve üç tür sürüklemeyi kabul eder:
+  /// elimdeki bir taşı yeniden dizmek (`String`, taş kimliği), desteden
+  /// çekmek ([_DrawFromStackSignal]) ya da yerden almak
+  /// ([_DrawFromDiscardSignal]) — böylece çektiğim/aldığım taşı ıstakadaki
+  /// istediğim boşluğa doğrudan bırakabilirim.
   /// [flipOkey] true ise okey (joker) taşı ters (baş aşağı) çizilir —
   /// hem yatay hem dikey ıstakada, hangi taşın okey olduğunu bu şekilde
   /// hatırlatıyoruz (yatayda ayrıca "OKEY: {renk} {sayı}" metni de yok).
@@ -1035,10 +1043,17 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// bu elde okey sayılan gerçek (renk+sayı) taş ters durur.
   Widget _slotCell(int index, String? tileId, OkeyTile? tile, double w,
       double h, bool canDiscard, OkeyGameState state,
-      {bool flipOkey = false}) {
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (d) => d.data != tileId,
-      onAcceptWithDetails: (d) => widget.controller.placeTile(d.data, index),
+      {bool flipOkey = false, bool canDraw = false}) {
+    return DragTarget<Object>(
+      onWillAcceptWithDetails: (d) {
+        final data = d.data;
+        if (data is String) return data != tileId;
+        if (data is _DrawFromDiscardSignal || data is _DrawFromStackSignal) {
+          return canDraw;
+        }
+        return false;
+      },
+      onAcceptWithDetails: (d) => _handleSlotDrop(d.data, index),
       builder: (ctx, cand, rej) {
         final hl = cand.isNotEmpty;
         if (tile == null) {
@@ -1087,6 +1102,41 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         );
       },
     );
+  }
+
+  /// Bir ıstaka hücresine bırakılan sürüklemeyi türüne göre yönlendirir:
+  /// elden gelen bir taş kimliğiyse yeniden dizer; çekme/alma sinyaliyse
+  /// önce taşı çeker/alır, sonra tam bu hücreye ([targetIndex]) yerleştirir.
+  Future<void> _handleSlotDrop(Object data, int targetIndex) async {
+    if (data is String) {
+      widget.controller.placeTile(data, targetIndex);
+      return;
+    }
+    if (data is _DrawFromDiscardSignal) {
+      await _drawThenPlace(fromDiscard: true, targetIndex: targetIndex);
+    } else if (data is _DrawFromStackSignal) {
+      await _drawThenPlace(fromDiscard: false, targetIndex: targetIndex);
+    }
+  }
+
+  /// Desteden çeker ya da yerden alır, ardından yeni gelen taşı — hangi
+  /// taşın "yeni" olduğunu çekme öncesi/sonrası eldeki taş kimliklerini
+  /// karşılaştırarak bulup — bırakıldığı boşluğa taşır.
+  Future<void> _drawThenPlace(
+      {required bool fromDiscard, required int targetIndex}) async {
+    final beforeIds = widget.controller.myHand.map((t) => t.id).toSet();
+    if (fromDiscard) {
+      await widget.controller.drawFromDiscard();
+    } else {
+      await widget.controller.drawFromStack();
+    }
+    if (!mounted) return;
+    for (final t in widget.controller.myHand) {
+      if (!beforeIds.contains(t.id)) {
+        widget.controller.placeTile(t.id, targetIndex);
+        break;
+      }
+    }
   }
 
   /// Boş yuva (soluk çerçeve). Üzerine taş sürüklenince vurgulanır.
