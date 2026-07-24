@@ -80,9 +80,9 @@ class CardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final height = width * 1.5;
-    // Eski (görsel tabanlı) kartlarla aynı ebat: dış çerçeve 120 birim
-    // genişlikte 14 birim yuvarlatılmıştı, aynı oran korunuyor.
-    final radius = BorderRadius.circular(width * 14 / 120);
+    // En eski (elle çizilen) kartlarla birebir aynı ebat: height = width x
+    // 1,5 ve köşe yuvarlaklığı width x 0,14.
+    final radius = BorderRadius.circular(width * 0.14);
 
     final overrideColor = (!_isFaceDown && card!.isWild && chosenColorOverride != null)
         ? UnoColors.forCard(chosenColorOverride!)
