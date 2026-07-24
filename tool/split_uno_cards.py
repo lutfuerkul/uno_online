@@ -15,9 +15,11 @@ Kullanım:  python3 tool/split_uno_cards.py
 """
 import os
 import re
+import struct
 import subprocess
 import sys
 import tempfile
+import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "assets", "uno_cards")
@@ -57,6 +59,13 @@ def wrap_cell(inner):
     )
 
 
+# Chromium'un başsız ekran görüntüsünde ~500px'lik bir minimum pencere
+# genişliği var; tam kart boyutunda (480px) pencere istenirse içerik
+# ölçeklenip alttan kesiliyor. Bu yüzden kart, daha büyük bir pencerede
+# sol üst köşeye render edilir ve PNG sonradan tam boyuta kırpılır.
+WIN_W, WIN_H = 640, 800
+
+
 def render(svg_text, out_png, tmp_dir):
     svg_path = os.path.join(tmp_dir, os.path.basename(out_png) + ".svg")
     with open(svg_path, "w") as f:
@@ -69,13 +78,80 @@ def render(svg_text, out_png, tmp_dir):
             "--disable-gpu",
             "--force-device-scale-factor=1",
             "--default-background-color=00000000",
-            f"--window-size={CARD_W * SCALE},{CARD_H * SCALE}",
+            f"--window-size={WIN_W},{WIN_H}",
             f"--screenshot={out_png}",
             "file://" + svg_path,
         ],
         check=True,
         capture_output=True,
     )
+    _crop_png(out_png, CARD_W * SCALE, CARD_H * SCALE)
+
+
+def _read_png(path):
+    d = open(path, "rb").read()
+    pos, idat = 8, b""
+    while pos < len(d):
+        ln, typ = struct.unpack(">I4s", d[pos:pos + 8])
+        chunk = d[pos + 8:pos + 8 + ln]
+        if typ == b"IHDR":
+            w, h, depth, ctype = struct.unpack(">IIBB", chunk[:10])
+            assert depth == 8 and ctype in (2, 6), (depth, ctype)
+            bpp = 3 if ctype == 2 else 4
+        elif typ == b"IDAT":
+            idat += chunk
+        pos += 12 + ln
+    raw = zlib.decompress(idat)
+    stride = w * bpp
+    out, prev, p = bytearray(), bytearray(stride), 0
+    for _ in range(h):
+        f = raw[p]; p += 1
+        line = bytearray(raw[p:p + stride]); p += stride
+        if f == 1:
+            for i in range(bpp, stride):
+                line[i] = (line[i] + line[i - bpp]) & 255
+        elif f == 2:
+            for i in range(stride):
+                line[i] = (line[i] + prev[i]) & 255
+        elif f == 3:
+            for i in range(stride):
+                a = line[i - bpp] if i >= bpp else 0
+                line[i] = (line[i] + ((a + prev[i]) >> 1)) & 255
+        elif f == 4:
+            for i in range(stride):
+                a = line[i - bpp] if i >= bpp else 0
+                b = prev[i]
+                c = prev[i - bpp] if i >= bpp else 0
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                pr = a if pa <= pb and pa <= pc else (b if pb <= pc else c)
+                line[i] = (line[i] + pr) & 255
+        out += line
+        prev = line
+    return w, h, bpp, out
+
+
+def _write_png(path, w, h, bpp, pix):
+    ctype = 2 if bpp == 3 else 6
+    raw = b"".join(
+        b"\x00" + bytes(pix[y * w * bpp:(y + 1) * w * bpp]) for y in range(h))
+
+    def chunk(t, c):
+        return struct.pack(">I", len(c)) + t + c + struct.pack(">I", zlib.crc32(t + c))
+
+    open(path, "wb").write(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, ctype, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw, 9))
+        + chunk(b"IEND", b""))
+
+
+def _crop_png(path, cw, ch):
+    w, h, bpp, pix = _read_png(path)
+    assert w >= cw and h >= ch, (w, h)
+    crop = bytearray()
+    for y in range(ch):
+        crop += pix[(y * w) * bpp:(y * w + cw) * bpp]
+    _write_png(path, cw, ch, bpp, crop)
 
 
 def main():
