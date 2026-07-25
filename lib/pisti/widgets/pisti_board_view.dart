@@ -9,6 +9,22 @@ import '../models/pisti_game_state.dart';
 import '../theme/pisti_theme.dart';
 import 'pisti_card_widget.dart';
 
+/// Ekranın gerçek boyutunu sabit bir referansa (390x844 — yaygın bir telefon
+/// ölçüsü) oranlayan TEK katsayı; aşırı büyüme/küçülmeyi önlemek için
+/// 0.75-1.15 arasına sıkıştırılır. Okey tahtasındaki
+/// (`_OkeyBoardViewState._computeScale`) yaklaşımın aynısı: eskiden her bölüm
+/// (masa, rakip kutuları, el) kendi başına FittedBox ile küçülüyordu; dar
+/// ekranlarda (ör. Honor serisi) bu, parçaların birbirine göre tutarsız
+/// oranda görünmesine yol açıyordu. Artık kart/fotoğraf boyutları, yazı
+/// puntoları ve boşluklar hep bu tek katsayıyla ölçekleniyor.
+double _computeScale(BoxConstraints c) {
+  const refW = 390.0;
+  const refH = 844.0;
+  final w = c.maxWidth.isFinite ? c.maxWidth : refW;
+  final h = c.maxHeight.isFinite ? c.maxHeight : refH;
+  return math.min(w / refW, h / refH).clamp(0.75, 1.15);
+}
+
 /// Pişti tahtası — `docs/pisti/game.js`'teki `renderBoard()` ile birebir
 /// aynı görsel dili kullanır. Hem online (Firestore) hem de bilgisayara
 /// karşı (yerel) mod bu widget'ı [PistiBoardController] üzerinden paylaşır.
@@ -33,7 +49,15 @@ class PistiBoardView extends StatelessWidget {
         if (state == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        return _Board(controller: controller, state: state, roomLabel: roomLabel, onLeave: onLeave);
+        return LayoutBuilder(
+          builder: (context, constraints) => _Board(
+            controller: controller,
+            state: state,
+            roomLabel: roomLabel,
+            onLeave: onLeave,
+            scale: _computeScale(constraints),
+          ),
+        );
       },
     );
   }
@@ -45,12 +69,19 @@ class _Board extends StatelessWidget {
   final String roomLabel;
   final VoidCallback onLeave;
 
+  /// bkz. [_computeScale] — tahtadaki tüm ölçüler bununla çarpılır.
+  final double scale;
+
   const _Board({
     required this.controller,
     required this.state,
     required this.roomLabel,
     required this.onLeave,
+    required this.scale,
   });
+
+  /// Referans tasarımdaki bir ölçüyü ([scale] ile) bu ekrana uyarlar.
+  double _s(double v) => v * scale;
 
   bool get _collecting => state.pendingCapture != null;
   bool get _isMyTurn => controller.isMyTurn;
@@ -65,34 +96,38 @@ class _Board extends StatelessWidget {
       children: [
         Container(
           color: PistiColors.topbar,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: _s(12), vertical: _s(8)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(roomLabel, style: const TextStyle(color: PistiColors.muted, fontSize: 14)),
+              Text(roomLabel, style: TextStyle(color: PistiColors.muted, fontSize: _s(14))),
               TextButton(
                 onPressed: onLeave,
                 style: TextButton.styleFrom(
                   backgroundColor: const Color(0x1AFFFFFF),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: _s(16), vertical: _s(8)),
                 ),
-                child: const Text('Çık', style: TextStyle(fontSize: 14)),
+                child: Text('Çık', style: TextStyle(fontSize: _s(14))),
               ),
             ],
           ),
         ),
 
         Padding(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(_s(8)),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (var i = 0; i < controller.opponents.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  _OpponentTile(id: controller.opponents[i], controller: controller, state: state),
+                  if (i > 0) SizedBox(width: _s(8)),
+                  _OpponentTile(
+                      id: controller.opponents[i],
+                      controller: controller,
+                      state: state,
+                      scale: scale),
                 ],
               ],
             ),
@@ -104,17 +139,17 @@ class _Board extends StatelessWidget {
             color: PistiColors.middle,
             child: Stack(
               children: [
-                // FittedBox: kısa/dar ekranlarda (küçük telefon, büyük
-                // görüntü ölçeği) orta alan dikeyde sığmazsa taşmak yerine
-                // orantılı küçülür. Sağdaki fotoğrafa (70px + 16px boşluk =
-                // 86px) yer açmak için hafif sola kaydırılmış.
+                // İçerik zaten tek ölçek katsayısıyla küçülüyor; FittedBox
+                // yalnızca uç durumlar için emniyet payı olarak duruyor.
+                // Sağdaki fotoğrafa (70px + 16px boşluk = 86px) yer açmak için
+                // hafif sola kaydırılmış.
                 Padding(
-                  padding: const EdgeInsets.only(right: 90),
+                  padding: EdgeInsets.only(right: _s(90)),
                   child: Center(
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Padding(
-                        padding: const EdgeInsets.all(8),
+                        padding: EdgeInsets.all(_s(8)),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -122,51 +157,53 @@ class _Board extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text('Deste ($deckCount)',
-                                style: const TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
-                            const SizedBox(height: 6),
+                                style: TextStyle(color: PistiColors.pileLabel, fontSize: _s(12))),
+                            SizedBox(height: _s(6)),
                             deckCount > 0
-                                ? const PistiCardWidget(faceDown: true, width: 84)
-                                : _EmptySlot(width: 84),
+                                ? PistiCardWidget(faceDown: true, width: _s(84))
+                                : _EmptySlot(width: _s(84)),
                           ],
                         ),
-                        const SizedBox(width: 22),
+                        SizedBox(width: _s(22)),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('Yerdeki kartlar',
-                                style: TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
-                            const SizedBox(height: 6),
-                            top != null ? _TableStack(pile: pile) : _EmptySlot(width: 84),
-                            const SizedBox(height: 10),
+                            Text('Yerdeki kartlar',
+                                style: TextStyle(color: PistiColors.pileLabel, fontSize: _s(12))),
+                            SizedBox(height: _s(6)),
+                            top != null
+                                ? _TableStack(pile: pile, cardWidth: _s(84))
+                                : _EmptySlot(width: _s(84)),
+                            SizedBox(height: _s(10)),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              padding: EdgeInsets.symmetric(horizontal: _s(12), vertical: _s(2)),
                               decoration: BoxDecoration(
                                 color: PistiColors.pileCountBg,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(_s(12)),
                               ),
                               child: Text(
                                 '${pile.length} kart',
-                                style: const TextStyle(
-                                    color: PistiColors.pileCountText, fontWeight: FontWeight.w800, fontSize: 14),
+                                style: TextStyle(
+                                    color: PistiColors.pileCountText, fontWeight: FontWeight.w800, fontSize: _s(14)),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(width: 22),
+                        SizedBox(width: _s(22)),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('Sende', style: TextStyle(color: PistiColors.pileLabel, fontSize: 12)),
-                            const SizedBox(height: 6),
+                            Text('Sende', style: TextStyle(color: PistiColors.pileLabel, fontSize: _s(12))),
+                            SizedBox(height: _s(6)),
                             Text('${controller.wonCount(controller.selfId)} 🂠',
-                                style: const TextStyle(color: Colors.white, fontSize: 30)),
+                                style: TextStyle(color: Colors.white, fontSize: _s(30))),
                             if (controller.pistiCountFor(controller.selfId) > 0)
                               Padding(
-                                padding: const EdgeInsets.only(top: 3),
+                                padding: EdgeInsets.only(top: _s(3)),
                                 child: Text(
                                   '🔥 ${controller.pistiCountFor(controller.selfId)} pişti',
-                                  style: const TextStyle(
-                                      color: PistiColors.pistiTag, fontSize: 12, fontWeight: FontWeight.w800),
+                                  style: TextStyle(
+                                      color: PistiColors.pistiTag, fontSize: _s(12), fontWeight: FontWeight.w800),
                                 ),
                               ),
                           ],
@@ -181,11 +218,11 @@ class _Board extends StatelessWidget {
                 // bilgi/sıra banner'ına tam yaslanmadan hafif ayrık (ikisinden
                 // de eşit boşlukla).
                 Positioned(
-                  right: 16,
-                  bottom: 16,
+                  right: _s(16),
+                  bottom: _s(16),
                   child: PlayerPhotoFrame(
                     base64Photo: controller.opponentPhoto(controller.selfId),
-                    size: 70,
+                    size: _s(70),
                     borderColor: PistiColors.primary,
                     backgroundColor: PistiColors.hand,
                   ),
@@ -203,11 +240,12 @@ class _Board extends StatelessWidget {
           playerName: state.lastAction != null
               ? controller.opponentName(state.lastAction!.player)
               : '',
+          scale: scale,
         ),
 
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(_s(10)),
           color: _isMyTurn ? PistiColors.turnMine : PistiColors.turnTheirs,
           // FittedBox: satıra sığmayan uzun metinler (2 satıra geçip
           // yükseklik değiştirmeden) küçültülerek tek satırda kalır.
@@ -223,7 +261,7 @@ class _Board extends StatelessWidget {
               style: TextStyle(
                 color: _isMyTurn ? Colors.white : PistiColors.turnTheirsText,
                 fontWeight: FontWeight.w800,
-                fontSize: 16,
+                fontSize: _s(16),
               ),
             ),
           ),
@@ -231,21 +269,21 @@ class _Board extends StatelessWidget {
 
         Container(
           color: PistiColors.hand,
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(_s(12)),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             // SizedBox: elde hiç kart kalmadığında (yeni dağıtım beklenirken)
             // Row boş kalıp yüksekliği sıfırlanmasın diye kart yüksekliği
             // kadar sabit yer ayrılıyor.
             child: SizedBox(
-              height: 70 * 1.4,
+              height: _s(70) * 1.4,
               child: Row(
               children: [
                 for (var i = 0; i < controller.myHand.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 6),
+                  if (i > 0) SizedBox(width: _s(6)),
                   PistiCardWidget(
                     card: controller.myHand[i],
-                    width: 70,
+                    width: _s(70),
                     dimmed: !_isMyTurn,
                     onTap: _isMyTurn ? () => _tryPlay(context, controller.myHand[i]) : null,
                   ),
@@ -277,11 +315,13 @@ class _EmptySlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Ölçüler kart genişliğinden türetiliyor — [width] zaten ekran ölçeğiyle
+    // çarpılmış geldiği için köşe yarıçapı ve yazı da onunla birlikte küçülür.
     return CustomPaint(
       painter: _DashedBorderPainter(
         color: const Color(0x33FFFFFF),
         strokeWidth: 2,
-        radius: 10,
+        radius: width * 0.12,
         dashWidth: 6,
         dashGap: 4,
       ),
@@ -289,7 +329,8 @@ class _EmptySlot extends StatelessWidget {
         width: width,
         height: width * 1.4,
         alignment: Alignment.center,
-        child: const Text('boş', style: TextStyle(color: Color(0x66FFFFFF), fontSize: 13)),
+        child: Text('boş',
+            style: TextStyle(color: const Color(0x66FFFFFF), fontSize: width * 0.155)),
       ),
     );
   }
@@ -341,38 +382,45 @@ class _DashedBorderPainter extends CustomPainter {
 /// halinde hafifçe kaydırılmış olarak görünür.
 class _TableStack extends StatelessWidget {
   final List<PistiCard> pile;
-  const _TableStack({required this.pile});
+
+  /// Ekran ölçeğiyle çarpılmış kart genişliği; yığındaki kaydırma payları da
+  /// buna oranla hesaplanır.
+  final double cardWidth;
+  const _TableStack({required this.pile, required this.cardWidth});
 
   @override
   Widget build(BuildContext context) {
     final top = pile.last;
     final hidden = pile.length - 1;
-    if (hidden <= 0) return PistiCardWidget(card: top, width: 84);
+    if (hidden <= 0) return PistiCardWidget(card: top, width: cardWidth);
+
+    final dx = cardWidth * 0.119; // eski sabit: 84px kartta 10px
+    final dy = cardWidth * 0.095; // eski sabit: 84px kartta 8px
 
     return SizedBox(
-      width: 84 + 10,
-      height: 84 * 1.4 + 8,
+      width: cardWidth + dx,
+      height: cardWidth * 1.4 + dy,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           if (hidden >= 2)
             Positioned(
-              left: -10,
-              top: -8,
+              left: -dx,
+              top: -dy,
               child: Transform.rotate(
                 angle: -7 * math.pi / 180,
-                child: const PistiCardWidget(faceDown: true, width: 84),
+                child: PistiCardWidget(faceDown: true, width: cardWidth),
               ),
             ),
           Positioned(
-            left: -5,
-            top: -4,
+            left: -dx / 2,
+            top: -dy / 2,
             child: Transform.rotate(
               angle: -3.5 * math.pi / 180,
-              child: const PistiCardWidget(faceDown: true, width: 84),
+              child: PistiCardWidget(faceDown: true, width: cardWidth),
             ),
           ),
-          PistiCardWidget(card: top, width: 84),
+          PistiCardWidget(card: top, width: cardWidth),
         ],
       ),
     );
@@ -383,8 +431,15 @@ class _OpponentTile extends StatelessWidget {
   final String id;
   final PistiBoardController controller;
   final PistiGameState state;
+  final double scale;
 
-  const _OpponentTile({required this.id, required this.controller, required this.state});
+  const _OpponentTile(
+      {required this.id,
+      required this.controller,
+      required this.state,
+      required this.scale});
+
+  double _s(double v) => v * scale;
 
   @override
   Widget build(BuildContext context) {
@@ -392,12 +447,13 @@ class _OpponentTile extends StatelessWidget {
     final count = controller.opponentCardCount(id);
     final won = controller.wonCount(id);
     final pisti = controller.pistiCountFor(id);
+    final cardW = _s(34);
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 84),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      constraints: BoxConstraints(minWidth: _s(84)),
+      padding: EdgeInsets.symmetric(horizontal: _s(10), vertical: _s(6)),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(_s(10)),
         border: Border.all(color: isTurn ? PistiColors.oppTurnBorder : Colors.transparent, width: 2),
         color: isTurn ? PistiColors.oppTurnBg : null,
       ),
@@ -406,31 +462,31 @@ class _OpponentTile extends StatelessWidget {
         children: [
           Text(
             controller.opponentName(id),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: _s(13)),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: _s(4)),
           PlayerPhotoFrame(
             base64Photo: controller.opponentPhoto(id),
-            size: 70,
+            size: _s(70),
             borderColor: PistiColors.primary,
             backgroundColor: PistiColors.hand,
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: _s(4)),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
+            padding: EdgeInsets.symmetric(vertical: _s(2)),
             child: _OverlappingOpponentCards(
               count: count,
-              cardWidth: 34,
-              overlap: 21,
-              cardBuilder: () => const PistiCardWidget(faceDown: true, width: 34),
+              cardWidth: cardW,
+              overlap: _s(21),
+              cardBuilder: () => PistiCardWidget(faceDown: true, width: cardW),
             ),
           ),
-          Text('$won', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+          Text('$won', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: _s(15))),
           if (pisti > 0)
             Padding(
-              padding: const EdgeInsets.only(top: 3),
+              padding: EdgeInsets.only(top: _s(3)),
               child: Text('🔥 $pisti pişti',
-                  style: const TextStyle(color: PistiColors.pistiTag, fontSize: 12, fontWeight: FontWeight.w800)),
+                  style: TextStyle(color: PistiColors.pistiTag, fontSize: _s(12), fontWeight: FontWeight.w800)),
             ),
         ],
       ),
@@ -443,7 +499,13 @@ class _LastActionBanner extends StatefulWidget {
   /// korunur (bkz. çağıran yerdeki yorum).
   final PistiLastAction? action;
   final String playerName;
-  const _LastActionBanner({required this.action, required this.playerName});
+
+  /// bkz. [_computeScale] — yazı puntoları/boşluklar bununla çarpılır.
+  /// (Aşağıdaki `_pulse` ile karıştırılmamalı: o, pişti anındaki büyüyüp
+  /// küçülme animasyonu.)
+  final double scale;
+  const _LastActionBanner(
+      {required this.action, required this.playerName, required this.scale});
 
   @override
   State<_LastActionBanner> createState() => _LastActionBannerState();
@@ -452,7 +514,12 @@ class _LastActionBanner extends StatefulWidget {
 class _LastActionBannerState extends State<_LastActionBanner>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _scale;
+
+  /// Pişti olunca banner'ı hafifçe büyütüp küçülten animasyon — ekran
+  /// ölçeğiyle (widget.scale) ilgisi yok.
+  late final Animation<double> _pulse;
+
+  double _s(double v) => v * widget.scale;
 
   @override
   void initState() {
@@ -461,7 +528,7 @@ class _LastActionBannerState extends State<_LastActionBanner>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _scale = Tween<double>(begin: 1, end: 1.05).animate(
+    _pulse = Tween<double>(begin: 1, end: 1.05).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
     if (widget.action?.isPisti ?? false) {
@@ -501,25 +568,25 @@ class _LastActionBannerState extends State<_LastActionBanner>
   Widget build(BuildContext context) {
     final action = widget.action;
     if (action == null) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: _s(4), horizontal: _s(10)),
         child: Text(
           '',
           textAlign: TextAlign.center,
           style: TextStyle(
-              color: PistiColors.lastAction, fontSize: 16.5, fontWeight: FontWeight.w700),
+              color: PistiColors.lastAction, fontSize: _s(16.5), fontWeight: FontWeight.w700),
         ),
       );
     }
     if (action.isPisti) {
       return ScaleTransition(
-        scale: _scale,
+        scale: _pulse,
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+          margin: EdgeInsets.symmetric(vertical: _s(4), horizontal: _s(12)),
+          padding: EdgeInsets.symmetric(vertical: _s(8), horizontal: _s(10)),
           decoration: BoxDecoration(
             color: PistiColors.pistiBannerBg,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(_s(10)),
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,
@@ -530,9 +597,9 @@ class _LastActionBannerState extends State<_LastActionBanner>
               textAlign: TextAlign.center,
               maxLines: 1,
               softWrap: false,
-              style: const TextStyle(
+              style: TextStyle(
                 color: PistiColors.pistiBannerText,
-                fontSize: 17,
+                fontSize: _s(17),
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -541,7 +608,7 @@ class _LastActionBannerState extends State<_LastActionBanner>
       );
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+      padding: EdgeInsets.symmetric(vertical: _s(4), horizontal: _s(10)),
       // FittedBox: satıra sığmayan uzun metinler (2 satıra geçip yükseklik
       // değiştirmeden) küçültülerek tek satırda kalır.
       child: FittedBox(
@@ -551,9 +618,9 @@ class _LastActionBannerState extends State<_LastActionBanner>
           maxLines: 1,
           overflow: TextOverflow.clip,
           text: TextSpan(
-            style: const TextStyle(
+            style: TextStyle(
               color: PistiColors.lastAction,
-              fontSize: 16.5,
+              fontSize: _s(16.5),
               fontWeight: FontWeight.w700,
             ),
             children: [

@@ -47,6 +47,22 @@ List<UnoCard> sortedHand(List<UnoCard> hand) {
     });
 }
 
+/// Ekranın gerçek boyutunu sabit bir referansa (390x844 — yaygın bir telefon
+/// ölçüsü) oranlayan TEK katsayı; aşırı büyüme/küçülmeyi önlemek için
+/// 0.75-1.15 arasına sıkıştırılır. Okey tahtasındaki
+/// (`_OkeyBoardViewState._computeScale`) yaklaşımın aynısı: eskiden her bölüm
+/// (masa, rakip kutuları, el) kendi başına FittedBox ile küçülüyordu; dar
+/// ekranlarda (ör. Honor serisi) bu, parçaların birbirine göre tutarsız
+/// oranda görünmesine yol açıyordu. Artık kart/fotoğraf boyutları, yazı
+/// puntoları ve boşluklar hep bu tek katsayıyla ölçekleniyor.
+double _computeScale(BoxConstraints c) {
+  const refW = 390.0;
+  const refH = 844.0;
+  final w = c.maxWidth.isFinite ? c.maxWidth : refW;
+  final h = c.maxHeight.isFinite ? c.maxHeight : refH;
+  return math.min(w / refW, h / refH).clamp(0.75, 1.15);
+}
+
 /// UNO tahtası — `docs/uno/game.js`'teki `renderBoard()` ile birebir aynı
 /// görsel dili kullanır. Hem online (Firestore) hem de bilgisayara karşı
 /// (yerel) mod bu widget'ı [UnoBoardController] üzerinden paylaşır.
@@ -71,7 +87,15 @@ class UnoBoardView extends StatelessWidget {
         if (state == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        return _Board(controller: controller, state: state, roomLabel: roomLabel, onLeave: onLeave);
+        return LayoutBuilder(
+          builder: (context, constraints) => _Board(
+            controller: controller,
+            state: state,
+            roomLabel: roomLabel,
+            onLeave: onLeave,
+            scale: _computeScale(constraints),
+          ),
+        );
       },
     );
   }
@@ -83,12 +107,19 @@ class _Board extends StatelessWidget {
   final String roomLabel;
   final VoidCallback onLeave;
 
+  /// bkz. [_computeScale] — tahtadaki tüm ölçüler bununla çarpılır.
+  final double scale;
+
   const _Board({
     required this.controller,
     required this.state,
     required this.roomLabel,
     required this.onLeave,
+    required this.scale,
   });
+
+  /// Referans tasarımdaki bir ölçüyü ([scale] ile) bu ekrana uyarlar.
+  double _s(double v) => v * scale;
 
   bool get _finished => state.status == 'finished';
   bool get _isMyTurn => !_finished && controller.isMyTurn;
@@ -104,19 +135,19 @@ class _Board extends StatelessWidget {
         // --- Üst çubuk ---
         Container(
           color: UnoColors.topbar,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: _s(12), vertical: _s(8)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(roomLabel, style: const TextStyle(color: UnoColors.muted, fontSize: 14)),
+              Text(roomLabel, style: TextStyle(color: UnoColors.muted, fontSize: _s(14))),
               TextButton(
                 onPressed: onLeave,
                 style: TextButton.styleFrom(
                   backgroundColor: const Color(0x1AFFFFFF),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: _s(16), vertical: _s(8)),
                 ),
-                child: const Text('Çık', style: TextStyle(fontSize: 14)),
+                child: Text('Çık', style: TextStyle(fontSize: _s(14))),
               ),
             ],
           ),
@@ -124,14 +155,15 @@ class _Board extends StatelessWidget {
 
         // --- Rakipler (sığmazsa yatay kaydır) ---
         Padding(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(_s(10)),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
                 for (final (i, id) in controller.opponents.indexed) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  _OpponentTile(id: id, controller: controller, state: state),
+                  if (i > 0) SizedBox(width: _s(8)),
+                  _OpponentTile(
+                      id: id, controller: controller, state: state, scale: scale),
                 ],
               ],
             ),
@@ -144,65 +176,65 @@ class _Board extends StatelessWidget {
             color: UnoColors.forCard(state.currentColor).withOpacity(0.13),
             child: Stack(
               children: [
-                // FittedBox: kısa/dar ekranlarda (küçük telefon, büyük
-                // görüntü ölçeği) orta alan dikeyde sığmazsa taşmak yerine
-                // orantılı küçülür. Sağdaki fotoğrafa (70px + 16px boşluk =
-                // 86px) yer açmak için hafif sola kaydırılmış.
+                // İçerik zaten tek ölçek katsayısıyla küçülüyor; FittedBox
+                // yalnızca uç durumlar için emniyet payı olarak duruyor.
+                // Sağdaki fotoğrafa (70px + 16px boşluk = 86px) yer açmak için
+                // hafif sola kaydırılmış.
                 Padding(
-                  padding: const EdgeInsets.only(right: 90),
+                  padding: EdgeInsets.only(right: _s(90)),
                   child: Center(
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Padding(
-                        padding: const EdgeInsets.all(8),
+                        padding: EdgeInsets.all(_s(8)),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text('Deste', style: TextStyle(color: Colors.white, fontSize: 12)),
-                            const SizedBox(height: 6),
+                            Text('Deste', style: TextStyle(color: Colors.white, fontSize: _s(12))),
+                            SizedBox(height: _s(6)),
                             CardWidget(
                               faceDown: true,
-                              width: 84,
+                              width: _s(84),
                               onTap: _isMyTurn && !state.hasDrawn ? controller.drawCard : null,
                             ),
-                            const SizedBox(height: 6),
+                            SizedBox(height: _s(6)),
                             Text(
                               _isMyTurn ? (state.hasDrawn ? 'çektin' : 'çekmek için dokun') : '',
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              style: TextStyle(color: Colors.white, fontSize: _s(12)),
                             ),
                           ],
                         ),
-                        const SizedBox(width: 20),
+                        SizedBox(width: _s(20)),
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             // Pişti'deki "Yerdeki kartlar" ile hizalı görünsün
                             // diye biraz yukarı kaydırıldı.
                             Transform.translate(
-                              offset: const Offset(0, -18),
+                              offset: Offset(0, _s(-18)),
                               child: CardWidget(
-                                  card: top, width: 84, chosenColorOverride: topColorOverride),
+                                  card: top, width: _s(84), chosenColorOverride: topColorOverride),
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: _s(8)),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  width: 14,
-                                  height: 14,
+                                  width: _s(14),
+                                  height: _s(14),
                                   decoration: BoxDecoration(
                                     color: UnoColors.forCard(state.currentColor),
                                     shape: BoxShape.circle,
                                     border: Border.all(color: const Color(0x55FFFFFF)),
                                   ),
                                 ),
-                                const SizedBox(width: 6),
+                                SizedBox(width: _s(6)),
                                 Text(
                                   '${_colorTr[state.currentColor] ?? ''} ${state.direction == 1 ? '↻' : '↺'}',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: _s(13)),
                                 ),
                               ],
                             ),
@@ -218,11 +250,11 @@ class _Board extends StatelessWidget {
                 // bilgi/sıra banner'ına tam yaslanmadan hafif ayrık (ikisinden
                 // de eşit boşlukla).
                 Positioned(
-                  right: 16,
-                  bottom: 16,
+                  right: _s(16),
+                  bottom: _s(16),
                   child: PlayerPhotoFrame(
                     base64Photo: controller.opponentPhoto(controller.selfId),
-                    size: 70,
+                    size: _s(70),
                     borderColor: UnoColors.yellow,
                     backgroundColor: UnoColors.wildCard,
                   ),
@@ -235,16 +267,17 @@ class _Board extends StatelessWidget {
         // Her zaman aynı slotta kalır (yazı yokken de boş satır olarak) —
         // aksi halde metin görünüp kaybolunca orta alan (FittedBox) sürekli
         // yeniden ölçeklenip ekranı zıplatıyordu.
-        _LastActionBanner(text: _infoBannerText(), color: _infoBannerColor()),
+        _LastActionBanner(
+            text: _infoBannerText(), color: _infoBannerColor(), scale: scale),
 
-        _TurnBanner(controller: controller, state: state),
+        _TurnBanner(controller: controller, state: state, scale: scale),
 
         // --- Aksiyonlar ---
         // Buton her zaman ekranda durur (yerleşim zıplamasın diye); yalnızca
         // sıra bizde ve kart çekilmişken basılabilir — kural gereği pas
         // geçmeden önce desteden kart çekmek zorunlu.
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+          padding: EdgeInsets.symmetric(vertical: _s(4), horizontal: _s(12)),
           child: Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -255,7 +288,8 @@ class _Board extends StatelessWidget {
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: const Color(0xFF2B3840),
                     disabledForegroundColor: const Color(0x66FFFFFF),
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                    padding: EdgeInsets.symmetric(horizontal: _s(22), vertical: _s(10)),
+                    textStyle: TextStyle(fontSize: _s(14), fontWeight: FontWeight.w500),
                   ),
                   onPressed: _isMyTurn && state.hasDrawn ? controller.pass : null,
                   child: const Text('Pas Geç ▶'),
@@ -264,13 +298,13 @@ class _Board extends StatelessWidget {
                 // aynı biçimde gösteriyorum: tek turluksa sade 🚫, birden
                 // fazlaysa yanına sayı.
                 if (myBlocked > 0) ...[
-                  const SizedBox(width: 10),
+                  SizedBox(width: _s(10)),
                   Text(
                     '🚫${myBlocked > 1 ? '$myBlocked' : ''}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: UnoColors.blockedTag,
                       fontWeight: FontWeight.w800,
-                      fontSize: 18,
+                      fontSize: _s(18),
                     ),
                   ),
                 ],
@@ -282,20 +316,20 @@ class _Board extends StatelessWidget {
         // --- El ---
         Container(
           color: UnoColors.hand,
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(_s(12)),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             // SizedBox: elde hiç kart kalmadığında Row boş kalıp yüksekliği
             // sıfırlanmasın diye kart yüksekliği kadar sabit yer ayrılıyor.
             child: SizedBox(
-              height: 62 * 1.5,
+              height: _s(62) * 1.5,
               child: Row(
                 children: [
                   for (final (i, card) in sortedHand(controller.myHand).indexed) ...[
-                    if (i > 0) const SizedBox(width: 6),
+                    if (i > 0) SizedBox(width: _s(6)),
                     CardWidget(
                       card: card,
-                      width: 62,
+                      width: _s(62),
                       highlighted: !_finished && controller.canPlay(card),
                       onTap: _finished ? null : () => _tryPlay(context, card),
                     ),
@@ -501,8 +535,15 @@ class _OpponentTile extends StatelessWidget {
   final String id;
   final UnoBoardController controller;
   final GameState state;
+  final double scale;
 
-  const _OpponentTile({required this.id, required this.controller, required this.state});
+  const _OpponentTile(
+      {required this.id,
+      required this.controller,
+      required this.state,
+      required this.scale});
+
+  double _s(double v) => v * scale;
 
   @override
   Widget build(BuildContext context) {
@@ -510,12 +551,13 @@ class _OpponentTile extends StatelessWidget {
     final isTurn = finished ? state.winner == id : state.currentTurn == id;
     final count = controller.opponentCardCount(id);
     final blocked = controller.blockedCount(id);
+    final cardW = _s(27);
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 78),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      constraints: BoxConstraints(minWidth: _s(78)),
+      padding: EdgeInsets.symmetric(horizontal: _s(8), vertical: _s(6)),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(_s(10)),
         border: Border.all(color: isTurn ? UnoColors.oppTurnBorder : Colors.transparent, width: 2),
         color: isTurn ? UnoColors.oppTurnBg : null,
       ),
@@ -524,21 +566,21 @@ class _OpponentTile extends StatelessWidget {
         children: [
           Text(
             controller.opponentName(id),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: _s(13)),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: _s(4)),
           PlayerPhotoFrame(
             base64Photo: controller.opponentPhoto(id),
-            size: 70,
+            size: _s(70),
             borderColor: UnoColors.yellow,
             backgroundColor: UnoColors.wildCard,
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: _s(4)),
           _OverlappingOpponentCards(
             count: count,
-            cardWidth: 27,
-            overlap: 17,
-            cardBuilder: () => const CardWidget(faceDown: true, width: 27),
+            cardWidth: cardW,
+            overlap: _s(17),
+            cardBuilder: () => CardWidget(faceDown: true, width: cardW),
           ),
           // Tek satır: kart sayısı (tek kart kalınca yeşil/kalın) ve blok
           // işareti yan yana — ayrı satır açılırsa rakip kutusu uzayıp
@@ -563,7 +605,7 @@ class _OpponentTile extends StatelessWidget {
                   ),
               ],
             ),
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: _s(12)),
           ),
         ],
       ),
@@ -574,12 +616,16 @@ class _OpponentTile extends StatelessWidget {
 class _LastActionBanner extends StatelessWidget {
   final String text;
   final Color color;
-  const _LastActionBanner({required this.text, this.color = UnoColors.lastAction});
+  final double scale;
+  const _LastActionBanner(
+      {required this.text,
+      required this.scale,
+      this.color = UnoColors.lastAction});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+      padding: EdgeInsets.symmetric(vertical: 4 * scale, horizontal: 10 * scale),
       // FittedBox: satıra sığmayan uzun metinler (satır kaymadan/2 satıra
       // geçip yükseklik değiştirmeden) küçültülerek tek satırda kalır.
       child: FittedBox(
@@ -589,7 +635,7 @@ class _LastActionBanner extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 1,
           softWrap: false,
-          style: TextStyle(color: color, fontSize: 16.5, fontWeight: FontWeight.w700),
+          style: TextStyle(color: color, fontSize: 16.5 * scale, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -599,8 +645,12 @@ class _LastActionBanner extends StatelessWidget {
 class _TurnBanner extends StatelessWidget {
   final UnoBoardController controller;
   final GameState state;
+  final double scale;
 
-  const _TurnBanner({required this.controller, required this.state});
+  const _TurnBanner(
+      {required this.controller, required this.state, required this.scale});
+
+  double _s(double v) => v * scale;
 
   @override
   Widget build(BuildContext context) {
@@ -636,7 +686,7 @@ class _TurnBanner extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(_s(12)),
       color: bg,
       child: Column(
         children: [
@@ -647,12 +697,12 @@ class _TurnBanner extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               softWrap: false,
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 16),
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: _s(16)),
             ),
           ),
           if (reverseColor != null)
             Padding(
-              padding: const EdgeInsets.only(top: 4),
+              padding: EdgeInsets.only(top: _s(4)),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
@@ -660,7 +710,7 @@ class _TurnBanner extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   softWrap: false,
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: Colors.white, fontSize: _s(13), fontWeight: FontWeight.w600),
                 ),
               ),
             ),
