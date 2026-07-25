@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 
 import '../models/pisti_board_controller.dart';
 import '../models/pisti_card.dart';
 import '../models/pisti_game_state.dart';
 import '../services/pisti_engine.dart';
 import '../services/pisti_game_service.dart';
+import '../../services/player_identity.dart';
 
 /// Uygulama genelinde (online) Pişti oyun durumunu tutar ve UI ile
 /// [PistiGameService] arasında köprü kurar.
@@ -17,7 +17,10 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
 
   final PistiGameService _service = PistiGameService();
 
-  final String playerId = const Uuid().v4();
+  /// Bu oyuncunun kimliği — Firebase anonim oturumunun UID'si.
+  /// Firestore kuralları yazma yetkisini buna göre veriyor
+  /// (bkz. [PlayerIdentity], firestore.rules).
+  final String playerId = PlayerIdentity.current();
 
   @override
   String get selfId => playerId;

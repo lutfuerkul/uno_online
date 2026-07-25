@@ -27,6 +27,11 @@ android/key.properties
 *.jks
 *.keystore
 
+# Firestore kuralları testinin Node bağımlılıkları (bkz.
+# test/firestore_rules/README.md) — elle kurulur, depoya girmez.
+node_modules/
+package-lock.json
+
 # OS
 .DS_Store
 tool/__pycache__/

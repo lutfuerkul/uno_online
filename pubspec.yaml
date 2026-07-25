@@ -16,6 +16,10 @@ dependencies:
   # --- Firebase (gerçek zamanlı çok oyunculu) ---
   firebase_core: ^3.8.0
   cloud_firestore: ^5.5.0
+  # Anonim oturum: oyuncu kimliği bu oturumun UID'si oluyor, Firestore
+  # kuralları da "yalnızca odadaki oyuncu yazabilir" kısıtını buna dayandırıyor
+  # (bkz. firestore.rules, lib/services/player_identity.dart).
+  firebase_auth: ^5.3.0
 
   # --- Durum yönetimi ---
   provider: ^6.1.2
