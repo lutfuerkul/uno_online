@@ -39,8 +39,15 @@ class DefaultFirebaseOptions {
   );
 
   /// Android APK — Firestore için web ile aynı Firebase projesi.
-  /// Firebase Console'da `com.example.uno_online` paket adıyla Android
-  /// uygulaması eklenmişse `flutterfire configure` ile güncel appId alınabilir.
+  ///
+  /// DİKKAT: `appId` burada web uygulamasının kimliği (`...:web:...`).
+  /// Firebase'de kayıtlı bir Android uygulaması yok. Ayarlar koda gömülü
+  /// geçildiği için (bkz. `main.dart`) Firestore çalışıyor, ancak API
+  /// anahtarı paket adı + SHA-1 ile kısıtlanamıyor.
+  ///
+  /// Yayın öncesi `flutterfire configure` ile `com.lutfuerkul.uwinokeypisti`
+  /// paket adıyla bir Android uygulaması kaydedilmeli; o zaman buradaki appId
+  /// `...:android:...` olur ve anahtar kısıtlanabilir.
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDB8H-fTzpzVoCyEzGzjvUh57iH8Lh52zA',
     appId: '1:794492266221:web:d5edddbd5899f9490b4ee4',

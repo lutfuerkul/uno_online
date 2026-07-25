@@ -1,7 +1,9 @@
 name: uno_online
-description: "Çok oyunculu (2 kişilik) online UNO mobil oyunu."
+description: "uWin, Okey ve Pişti — 2-4 kişilik online ve bilgisayara karşı kart/taş oyunları."
 publish_to: 'none'
-version: 0.1.0+1
+# versionName buradan gelir. Build numarası (+ sonrası) CI'da
+# `--build-number` ile ezilir; Play her yüklemede artan bir numara ister.
+version: 1.0.0+1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
