@@ -63,8 +63,8 @@ service cloud.firestore {
       return d.keys().hasOnly([
         'status', 'players', 'playerNames', 'playerPhotos', 'hands', 'drawPile',
         'discards', 'indicator', 'currentTurn', 'hasDrawn', 'drawnFromDiscardId',
-        'lastAction', 'winner', 'winners', 'finishedByOkey', 'scores',
-        'cumulativeScores', 'createdAt'
+        'lastAction', 'winner', 'winners', 'finishedByOkey', 'finishedByPair',
+        'scores', 'cumulativeScores', 'createdAt'
       ])
       && d.status is string
       && d.players is list && d.players.size() <= 4
