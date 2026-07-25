@@ -133,12 +133,14 @@ class OkeyGameService {
         OkeyEngine.drawFromDiscard(state: game, playerId: playerId));
   }
 
-  Future<void> discard({
+  /// bkz. drawFromStack — sonucu hemen döndürür ki çağıran taraf attığı
+  /// taşı elinden, gecikmeli dinleyiciyi beklemeden anında kaldırabilsin.
+  Future<OkeyGameState?> discard({
     required String gameId,
     required String playerId,
     required String tileId,
-  }) async {
-    await _mutate(gameId, (game) {
+  }) {
+    return _mutate(gameId, (game) {
       final hand = game.hands[playerId] ?? const <OkeyTile>[];
       final idx = hand.indexWhere((t) => t.id == tileId);
       if (idx == -1) return null;
@@ -147,12 +149,12 @@ class OkeyGameService {
     });
   }
 
-  Future<void> finishDiscard({
+  Future<OkeyGameState?> finishDiscard({
     required String gameId,
     required String playerId,
     required String tileId,
-  }) async {
-    await _mutate(gameId, (game) {
+  }) {
+    return _mutate(gameId, (game) {
       final hand = game.hands[playerId] ?? const <OkeyTile>[];
       final idx = hand.indexWhere((t) => t.id == tileId);
       if (idx == -1) return null;

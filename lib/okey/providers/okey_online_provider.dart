@@ -198,14 +198,26 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   Future<void> discard(OkeyTile tile) async {
     final id = gameId;
     if (id == null) return;
-    await _service.discard(gameId: id, playerId: playerId, tileId: tile.id);
+    // Atılan taşı elden anında kaldır — gecikmeli dinleyiciyi beklersek taş
+    // bir an için eski yuvasına "geri dönüp" sonra kaybolur gibi görünüyordu.
+    final result =
+        await _service.discard(gameId: id, playerId: playerId, tileId: tile.id);
+    if (result != null) {
+      state = result;
+      notifyListeners();
+    }
   }
 
   @override
   Future<void> finishDiscard(OkeyTile tile) async {
     final id = gameId;
     if (id == null) return;
-    await _service.finishDiscard(gameId: id, playerId: playerId, tileId: tile.id);
+    final result = await _service.finishDiscard(
+        gameId: id, playerId: playerId, tileId: tile.id);
+    if (result != null) {
+      state = result;
+      notifyListeners();
+    }
   }
 
   Future<void> rematch() async {
