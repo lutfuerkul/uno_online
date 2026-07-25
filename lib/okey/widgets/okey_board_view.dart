@@ -45,10 +45,20 @@ class OkeyBoardView extends StatefulWidget {
 class _OkeyBoardViewState extends State<OkeyBoardView> {
   String? _selectedId;
 
+  /// Ekranın gerçek boyutunu sabit bir referansa (dikeyde 390x844, yatayda
+  /// 844x390 — yaygın bir telefon ölçüsü) oranlayan TEK katsayı. build()
+  /// içindeki LayoutBuilder her çizimde günceller (bkz. _computeScale).
+  /// Amaç: önceden her bölüm (ıstaka, masa, koltuklar) kendi başına
+  /// FittedBox/clamp ile bağımsız küçülüyordu; dar ekranlarda (ör. Honor
+  /// serisi) bu, parçaların birbirine göre tutarsız oranda görünmesine yol
+  /// açıyordu. Artık _tileSize (ve ona bağlı hemen hemen her ölçü) bu tek
+  /// katsayıyla ölçekleniyor, böylece tüm tahta orantılı büyüyüp küçülüyor.
+  double _scale = 1.0;
+
   /// Tüm taşların ortak ebadı — "oyuncuların yere attığı taş" boyutu. Masa
   /// ortasındaki taşlar (gösterge, deste, yerdeki, attığım) ve ıstakadaki
   /// taşlar bu boyutta çizilir; ıstakada ekrana sığmazsa otomatik küçülür.
-  static const double _tileSize = 33;
+  double get _tileSize => 33 * _scale;
 
   /// Istakada sıra başına her zaman bu kadar taş gösterilir; taş piksel
   /// boyutu ekran genişliğine göre otomatik hesaplanır (bkz. [_rackWithTiles]).
@@ -119,9 +129,26 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
         if (state == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        return _buildBoard(context, state);
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            _scale = _computeScale(constraints);
+            return _buildBoard(context, state);
+          },
+        );
       },
     );
+  }
+
+  /// Referans tasarım boyutuna (dikey 390x844, yatay 844x390) göre tek bir
+  /// ölçek katsayısı üretir; aşırı büyüme/küçülmeyi önlemek için 0.75-1.15
+  /// arasına sıkıştırılır.
+  double _computeScale(BoxConstraints constraints) {
+    final refW = _landscape ? 844.0 : 390.0;
+    final refH = _landscape ? 390.0 : 844.0;
+    final w = constraints.maxWidth.isFinite ? constraints.maxWidth : refW;
+    final h = constraints.maxHeight.isFinite ? constraints.maxHeight : refH;
+    final s = math.min(w / refW, h / refH);
+    return s.clamp(0.75, 1.15);
   }
 
   Widget _buildBoard(BuildContext context, OkeyGameState state) {
@@ -529,14 +556,14 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
   /// sürükleyip bırakırım (bkz. _slotCell'in çekme sinyali kabulü).
   Widget _deckTile(bool canDraw, int deckCount) {
     final visual = deckCount > 0
-        ? const OkeyTileWidget(faceDown: true, width: _tileSize)
+        ? OkeyTileWidget(faceDown: true, width: _tileSize)
         : _emptySlot(_tileSize);
     if (!canDraw || deckCount == 0) return visual;
     return Draggable<_DrawFromStackSignal>(
       data: const _DrawFromStackSignal(),
       feedback: Material(
         color: Colors.transparent,
-        child: const OkeyTileWidget(faceDown: true, width: _tileSize * 1.12),
+        child: OkeyTileWidget(faceDown: true, width: _tileSize * 1.12),
       ),
       childWhenDragging: Opacity(opacity: 0.35, child: visual),
       child: visual,
@@ -669,7 +696,7 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
       List<OkeyTile> myHand, bool canDiscard, bool canDraw) {
     final byId = {for (final t in myHand) t.id: t};
     const perRow = _landscapeTilesPerRow;
-    const tileW = _tileSize;
+    final tileW = _tileSize;
     const gap = 3.0;
     final tileH = tileW * OkeyTileWidget.aspect;
 
