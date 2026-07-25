@@ -169,14 +169,26 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   Future<void> drawFromStack() async {
     final id = gameId;
     if (id == null) return;
-    await _service.drawFromStack(gameId: id, playerId: playerId);
+    // Sonucu (Firestore dinleyicisinin gecikmeli güncellemesini beklemeden)
+    // hemen uygula — aksi hâlde çağıran taraf (ıstakada seçilen boşluğa
+    // yerleştirme, bkz. okey_board_view.dart _drawThenPlace) henüz
+    // güncellenmemiş eski eli görüp yeni çekilen taşı bulamıyordu.
+    final result = await _service.drawFromStack(gameId: id, playerId: playerId);
+    if (result != null) {
+      state = result;
+      notifyListeners();
+    }
   }
 
   @override
   Future<void> drawFromDiscard() async {
     final id = gameId;
     if (id == null) return;
-    await _service.drawFromDiscard(gameId: id, playerId: playerId);
+    final result = await _service.drawFromDiscard(gameId: id, playerId: playerId);
+    if (result != null) {
+      state = result;
+      notifyListeners();
+    }
   }
 
   @override

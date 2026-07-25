@@ -112,19 +112,24 @@ class OkeyGameService {
         );
   }
 
-  Future<void> drawFromStack({
+  /// Yeni durumu (yazılan hâliyle) döndürür — çağıran taraf (bkz.
+  /// OkeyOnlineProvider.drawFromStack), Firestore dinleyicisinin gecikmeli
+  /// güncellemesini beklemeden elini hemen bu sonuca göre güncelleyebilsin
+  /// diye. Aksi hâlde "çektiğim taşı ıstakada seçtiğim boşluğa bırak"
+  /// akışı, henüz güncellenmemiş eski eli görüp yeni taşı bulamıyordu.
+  Future<OkeyGameState?> drawFromStack({
     required String gameId,
     required String playerId,
-  }) async {
-    await _mutate(gameId, (game) =>
+  }) {
+    return _mutate(gameId, (game) =>
         OkeyEngine.drawFromStack(state: game, playerId: playerId));
   }
 
-  Future<void> drawFromDiscard({
+  Future<OkeyGameState?> drawFromDiscard({
     required String gameId,
     required String playerId,
-  }) async {
-    await _mutate(gameId, (game) =>
+  }) {
+    return _mutate(gameId, (game) =>
         OkeyEngine.drawFromDiscard(state: game, playerId: playerId));
   }
 
@@ -156,18 +161,19 @@ class OkeyGameService {
     });
   }
 
-  Future<void> _mutate(
+  Future<OkeyGameState?> _mutate(
     String gameId,
     OkeyGameState? Function(OkeyGameState game) apply,
-  ) async {
+  ) {
     final ref = _games.doc(gameId);
-    await _db.runTransaction((tx) async {
+    return _db.runTransaction<OkeyGameState?>((tx) async {
       final snap = await tx.get(ref);
-      if (!snap.exists) return;
+      if (!snap.exists) return null;
       final game = OkeyGameState.fromMap(gameId, snap.data()!);
       final result = apply(game);
-      if (result == null) return;
+      if (result == null) return null;
       tx.update(ref, result.toMap());
+      return result;
     });
   }
 
