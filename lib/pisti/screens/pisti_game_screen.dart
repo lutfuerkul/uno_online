@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../theme/ui_scale.dart';
 import '../providers/pisti_online_provider.dart';
 import '../services/pisti_engine.dart';
 import '../theme/pisti_theme.dart';
@@ -103,132 +104,150 @@ class _Lobby extends StatelessWidget {
     final isHost = provider.isHost;
     final canStart = PistiEngine.allowedPlayerCounts.contains(players.length);
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Bekleme Odası',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            const Text('Bu kodu paylaş:', style: TextStyle(color: PistiColors.muted, fontSize: 14)),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: provider.gameId ?? ''));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Kopyalandı ✓')),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
-                decoration: BoxDecoration(
-                  color: PistiColors.codeBoxBg,
-                  border: Border.all(color: PistiColors.primary, width: 2),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      provider.gameId ?? '',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 6,
+    // Tüm ölçüler tahtalardaki tek-katsayı yaklaşımıyla (bkz. computeUiScale)
+    // ekrana göre orantılı ölçeklenir.
+    return LayoutBuilder(builder: (context, constraints) {
+      final s = computeUiScale(constraints);
+      return Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(24 * s),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Bekleme Odası',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20 * s,
+                    fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: 8 * s),
+              Text('Bu kodu paylaş:',
+                  style: TextStyle(color: PistiColors.muted, fontSize: 14 * s)),
+              SizedBox(height: 8 * s),
+              GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: provider.gameId ?? ''));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Kopyalandı ✓')),
+                  );
+                },
+                child: Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 26 * s, vertical: 14 * s),
+                  decoration: BoxDecoration(
+                    color: PistiColors.codeBoxBg,
+                    border: Border.all(color: PistiColors.primary, width: 2),
+                    borderRadius: BorderRadius.circular(14 * s),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        provider.gameId ?? '',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 40 * s,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 6,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text('📋', style: TextStyle(fontSize: 22)),
+                      SizedBox(width: 12 * s),
+                      Text('📋', style: TextStyle(fontSize: 22 * s)),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 20 * s),
+              SizedBox(
+                width: 320 * s,
+                child: Column(
+                  children: [
+                    for (final p in players)
+                      Container(
+                        margin: EdgeInsets.only(bottom: 6 * s),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 14 * s, vertical: 10 * s),
+                        decoration: BoxDecoration(
+                          color: PistiColors.lobbyRowBg,
+                          borderRadius: BorderRadius.circular(10 * s),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(state.playerNames[p] ?? 'Oyuncu',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 14 * s)),
+                            Text(
+                              [
+                                if (players.isNotEmpty && players.first == p)
+                                  'kurucu',
+                                if (p == provider.playerId) 'sen',
+                              ].join(' · '),
+                              style: TextStyle(
+                                  color: PistiColors.muted, fontSize: 13 * s),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: 320,
-              child: Column(
-                children: [
-                  for (final p in players)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: PistiColors.lobbyRowBg,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(state.playerNames[p] ?? 'Oyuncu',
-                              style: const TextStyle(color: Colors.white)),
-                          Text(
-                            [
-                              if (players.isNotEmpty && players.first == p) 'kurucu',
-                              if (p == provider.playerId) 'sen',
-                            ].join(' · '),
-                            style: const TextStyle(color: PistiColors.muted, fontSize: 13),
-                          ),
-                        ],
-                      ),
+              SizedBox(height: 8 * s),
+              Text(
+                '${players.length}/${PistiOnlineProvider.maxPlayers} oyuncu',
+                style: TextStyle(color: PistiColors.muted, fontSize: 14 * s),
+              ),
+              SizedBox(height: 16 * s),
+              if (isHost) ...[
+                SizedBox(
+                  width: 260 * s,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: PistiColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 14 * s),
                     ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${players.length}/${PistiOnlineProvider.maxPlayers} oyuncu',
-              style: const TextStyle(color: PistiColors.muted, fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            if (isHost) ...[
-              SizedBox(
-                width: 260,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: PistiColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    onPressed: canStart ? provider.startGame : null,
+                    child:
+                        Text('Oyunu Başlat', style: TextStyle(fontSize: 14 * s)),
                   ),
-                  onPressed: canStart ? provider.startGame : null,
-                  child: const Text('Oyunu Başlat'),
                 ),
-              ),
-              if (players.length < PistiEngine.minPlayers)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text('En az 2 oyuncu gerekiyor',
-                      style: TextStyle(color: PistiColors.muted, fontSize: 13)),
+                if (players.length < PistiEngine.minPlayers)
+                  Padding(
+                    padding: EdgeInsets.only(top: 8 * s),
+                    child: Text('En az 2 oyuncu gerekiyor',
+                        style: TextStyle(
+                            color: PistiColors.muted, fontSize: 13 * s)),
+                  ),
+              ] else ...[
+                Text('Kurucu başlatınca oyun başlayacak...',
+                    style:
+                        TextStyle(color: PistiColors.muted, fontSize: 14 * s)),
+                SizedBox(height: 12 * s),
+                SizedBox(
+                  width: 34 * s,
+                  height: 34 * s,
+                  child: const CircularProgressIndicator(
+                      strokeWidth: 4, color: PistiColors.primary),
                 ),
-            ] else ...[
-              const Text('Kurucu başlatınca oyun başlayacak...',
-                  style: TextStyle(color: PistiColors.muted, fontSize: 14)),
-              const SizedBox(height: 12),
-              const SizedBox(
-                width: 34,
-                height: 34,
-                child: CircularProgressIndicator(strokeWidth: 4, color: PistiColors.primary),
+              ],
+              SizedBox(height: 20 * s),
+              SizedBox(
+                width: 200 * s,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                  ),
+                  onPressed: provider.leaveGame,
+                  child: Text('Çık', style: TextStyle(fontSize: 14 * s)),
+                ),
               ),
             ],
-            const SizedBox(height: 20),
-            SizedBox(
-              width: 200,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
-                ),
-                onPressed: provider.leaveGame,
-                child: const Text('Çık'),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

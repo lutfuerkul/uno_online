@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../theme/ui_scale.dart';
 import '../providers/okey_local_provider.dart';
 import '../theme/okey_theme.dart';
 import '../widgets/okey_board_view.dart';
@@ -161,103 +162,113 @@ class _OkeyBotSetupFormState extends State<_OkeyBotSetupForm> {
   Widget build(BuildContext context) {
     // Bu kurulum ekranının zemin tonu UNO'nunkiyle aynı (#1B2430) —
     // yalnızca bu ekran için; oyun içi renkler (OkeyColors) değişmedi.
+    // Tüm ölçüler tahtalardaki tek-katsayı yaklaşımıyla (bkz. computeUiScale)
+    // ekrana göre orantılı ölçeklenir.
     return Container(
       color: const Color(0xFF1B2430),
-      child: Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🤖', style: TextStyle(fontSize: 44)),
-            const SizedBox(height: 8),
-            const Text(
-              'Bilgisayara Karşı Okey',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 16),
-            OkeyPhotoPicker(onChanged: (photo) => _photo = photo),
-            const SizedBox(height: 16),
-            const Text(
-              'Kaç kişi olsun? (sen + bilgisayarlar)',
-              style: TextStyle(color: OkeyColors.muted, fontSize: 14),
-            ),
-            if (_showNameField) ...[
-              const SizedBox(height: 16),
-              TextField(
-                controller: _nameController,
-                textAlign: TextAlign.center,
-                maxLength: 8,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'İsmin (opsiyonel)',
-                  hintStyle: const TextStyle(color: Color(0x66FFFFFF)),
-                  counterText: '',
-                  filled: true,
-                  fillColor: OkeyColors.inputBg,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: OkeyColors.inputBorder, width: 2),
-                  ),
+      child: LayoutBuilder(builder: (context, constraints) {
+        final s = computeUiScale(constraints);
+        return Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(24 * s),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('🤖', style: TextStyle(fontSize: 44 * s)),
+                SizedBox(height: 8 * s),
+                Text(
+                  'Bilgisayara Karşı Okey',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20 * s,
+                      fontWeight: FontWeight.w800),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            SizedBox(
-              width: 280,
-              child: Column(
-                children: [
-                  for (final n in [2, 3, 4]) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: n == 4
-                              ? OkeyColors.accent
-                              : OkeyColors.primary,
-                          foregroundColor:
-                              n == 4 ? Colors.black : Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () => _start(n),
-                        child: Text(
-                          n == 4
-                              ? '4 Oyuncu (klasik) — sen + 3 bot'
-                              : '$n Oyuncu (sen + ${n - 1} bot)',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
+                SizedBox(height: 16 * s),
+                OkeyPhotoPicker(
+                    onChanged: (photo) => _photo = photo, size: 64 * s),
+                SizedBox(height: 16 * s),
+                Text(
+                  'Kaç kişi olsun? (sen + bilgisayarlar)',
+                  style: TextStyle(color: OkeyColors.muted, fontSize: 14 * s),
+                ),
+                if (_showNameField) ...[
+                  SizedBox(height: 16 * s),
+                  TextField(
+                    controller: _nameController,
+                    textAlign: TextAlign.center,
+                    maxLength: 8,
+                    style: TextStyle(color: Colors.white, fontSize: 14 * s),
+                    decoration: InputDecoration(
+                      hintText: 'İsmin (opsiyonel)',
+                      hintStyle: TextStyle(
+                          color: const Color(0x66FFFFFF), fontSize: 14 * s),
+                      counterText: '',
+                      filled: true,
+                      fillColor: OkeyColors.inputBg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12 * s),
+                        borderSide: const BorderSide(
+                            color: OkeyColors.inputBorder, width: 2),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                  ],
+                  ),
+                  SizedBox(height: 16 * s),
                 ],
-              ),
-            ),
-            const Text(
-              'Klasik okey 4 kişiyle oynanır; 2–3 kişilik de mümkün.',
-              style: TextStyle(color: OkeyColors.muted, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: 200,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                SizedBox(
+                  width: 280 * s,
+                  child: Column(
+                    children: [
+                      for (final n in [2, 3, 4]) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: n == 4
+                                  ? OkeyColors.accent
+                                  : OkeyColors.primary,
+                              foregroundColor:
+                                  n == 4 ? Colors.black : Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 14 * s),
+                            ),
+                            onPressed: () => _start(n),
+                            child: Text(
+                              n == 4
+                                  ? '4 Oyuncu (klasik) — sen + 3 bot'
+                                  : '$n Oyuncu (sen + ${n - 1} bot)',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14 * s),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 12 * s),
+                      ],
+                    ],
+                  ),
                 ),
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Geri'),
-              ),
+                Text(
+                  'Klasik okey 4 kişiyle oynanır; 2–3 kişilik de mümkün.',
+                  style: TextStyle(color: OkeyColors.muted, fontSize: 13 * s),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16 * s),
+                SizedBox(
+                  width: 200 * s,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side:
+                          const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text('Geri', style: TextStyle(fontSize: 14 * s)),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      ),
+          ),
+        );
+      }),
     );
   }
 }
