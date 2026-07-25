@@ -173,10 +173,13 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     // hemen uygula — aksi hâlde çağıran taraf (ıstakada seçilen boşluğa
     // yerleştirme, bkz. okey_board_view.dart _drawThenPlace) henüz
     // güncellenmemiş eski eli görüp yeni çekilen taşı bulamıyordu.
+    // notifyListeners() BİLEREK burada çağrılmıyor: çağıran taraf zaten
+    // hemen ardından placeTile() ile doğru boşluğa yerleştirip TEK bir
+    // bildirim yapıyor — burada da bildirseydik, taş bir an için varsayılan
+    // (ilk boş) yuvada render olup hemen ardından seçilen yuvaya "zıplardı".
     final result = await _service.drawFromStack(gameId: id, playerId: playerId);
     if (result != null) {
       state = result;
-      notifyListeners();
     }
   }
 
@@ -184,10 +187,10 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   Future<void> drawFromDiscard() async {
     final id = gameId;
     if (id == null) return;
+    // bkz. drawFromStack() — notifyListeners() kasıtlı olarak burada değil.
     final result = await _service.drawFromDiscard(gameId: id, playerId: playerId);
     if (result != null) {
       state = result;
-      notifyListeners();
     }
   }
 
