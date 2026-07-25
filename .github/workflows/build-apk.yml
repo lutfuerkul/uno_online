@@ -27,6 +27,39 @@ jobs:
 
       - run: flutter pub get
 
+      # Release imzalama anahtarı secret'lardan kurulur. Secret'lar
+      # tanımlanmamışsa bu adım "atla" der; APK yine üretilir, yalnızca
+      # Play'e yüklenecek AAB adımı devre dışı kalır. Böylece anahtar
+      # eklenmeden önce de CI yeşil kalır.
+      #
+      # Gereken secret'lar (Settings > Secrets and variables > Actions):
+      #   ANDROID_KEYSTORE_BASE64    <- base64 -w0 uwin-upload.jks
+      #   ANDROID_KEYSTORE_PASSWORD
+      #   ANDROID_KEY_ALIAS
+      #   ANDROID_KEY_PASSWORD
+      - name: İmzalama anahtarını hazırla
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Anahtar secret'ı tanımlı değil — imzalı AAB adımı atlanacak."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/upload-keystore.jks
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/key.properties
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      # Test/kurulum için debug APK — telefona doğrudan kurulabilir.
       # Her derleme benzersiz/artan bir build numarası alır (uygulama içi
       # sürüm kontrolü bunu kullanır, bkz. lib/services/update_check_service.dart).
       - run: flutter build apk --debug --build-number=${{ github.run_number }}
@@ -35,6 +68,24 @@ jobs:
         with:
           name: uwin-okey-pisti-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
+
+      # Play Console'a yüklenecek imzalı paket. AAB telefona kurulamaz;
+      # kurulum için yukarıdaki APK kullanılır.
+      - name: Release AAB derle (imzalı)
+        if: steps.signing.outputs.enabled == 'true'
+        run: flutter build appbundle --release --build-number=${{ github.run_number }}
+
+      - name: AAB'yi yükle
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: uwin-okey-pisti-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+
+      # Anahtar ve parolalar runner'ın diskinde kalmasın.
+      - name: İmzalama dosyalarını temizle
+        if: always()
+        run: rm -f android/key.properties android/upload-keystore.jks
 
       # Yalnızca main'e giden derlemede "en güncel sürüm" işaretçisini
       # günceller — feature branch'teki deneme derlemeleri buna dahil

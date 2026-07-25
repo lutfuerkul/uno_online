@@ -1,0 +1,25 @@
+# Release imzalama anahtarı ayarları — ÖRNEK dosya.
+#
+# Bunu `android/key.properties` olarak kopyalayıp kendi değerlerinle doldur.
+# `key.properties` ve `.jks` dosyaları .gitignore'da; repoya ASLA girmemeli.
+#
+# Anahtarı üretmek için (kendi makinende, bir kez):
+#
+#   keytool -genkey -v -keystore ~/uwin-upload.jks -keyalg RSA \
+#     -keysize 2048 -validity 10000 -alias upload
+#
+# Üretilen .jks dosyasını yedekle. Kaybedersen uygulamayı Play'de bir daha
+# GÜNCELLEYEMEZSİN.
+
+# .jks dosyasının yolu. En güvenlisi depo dışında mutlak bir yol vermek:
+storeFile=/home/kullanici/uwin-upload.jks
+# Göreli yol da olur; `android/` klasörüne göre çözülür (CI böyle kullanıyor).
+
+# keytool'da girdiğin keystore parolası
+storePassword=DEĞİŞTİR
+
+# -alias ile verdiğin değer
+keyAlias=upload
+
+# Anahtar parolası (keytool sormazsa storePassword ile aynıdır)
+keyPassword=DEĞİŞTİR

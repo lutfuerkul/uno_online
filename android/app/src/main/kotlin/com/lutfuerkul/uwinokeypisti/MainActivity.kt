@@ -1,4 +1,4 @@
-package com.example.uno_online
+package com.lutfuerkul.uwinokeypisti
 
 import io.flutter.embedding.android.FlutterActivity
 

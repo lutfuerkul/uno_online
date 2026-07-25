@@ -19,6 +19,14 @@ GoogleService-Info.plist
 firebase.json
 .firebaserc
 
+# Android release imzalama anahtarı — ASLA depoya girmemeli.
+# Anahtarı kaybetmek uygulamayı Play'de güncelleyememek demektir; sızdırmak
+# ise başkasının sahte güncelleme imzalayabilmesi demektir.
+# Örnek yapılandırma için: android/key.properties.example
+android/key.properties
+*.jks
+*.keystore
+
 # OS
 .DS_Store
 tool/__pycache__/
