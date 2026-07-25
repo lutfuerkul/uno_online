@@ -94,8 +94,7 @@ class _LocalGameBodyState extends State<_LocalGameBody> {
     if (finished) {
       final s = state!;
       final hasWinner = s.winner != null || s.winners.isNotEmpty;
-      _resultTimer ??=
-          Timer(hasWinner ? _handRevealDuration : _drawDelay, () {
+      _resultTimer ??= Timer(hasWinner ? _handRevealDuration : _drawDelay, () {
         if (mounted) setState(() => _showResult = true);
       });
       if (_showResult) {
@@ -170,7 +169,8 @@ class _OkeyBotSetupFormState extends State<_OkeyBotSetupForm> {
         final s = computeUiScale(constraints);
         return Center(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(24 * s),
+            padding: uiContentPadding(constraints, s,
+                horizontal: 24 * s, vertical: 24 * s),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

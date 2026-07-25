@@ -65,14 +65,16 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
       return null;
     }
     if (name.length > PistiOnlineProvider.maxNameLength) {
-      _toast('İsim en fazla ${PistiOnlineProvider.maxNameLength} karakter olabilir.');
+      _toast(
+          'İsim en fazla ${PistiOnlineProvider.maxNameLength} karakter olabilir.');
       return null;
     }
     return name;
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// [s]: bkz. [computeUiScale] — ekrandaki tüm ölçüler bununla çarpılır.
@@ -112,7 +114,8 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
           final s = computeUiScale(constraints);
           return Center(
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(24 * s),
+              padding: uiContentPadding(constraints, s,
+                  horizontal: 24 * s, vertical: 24 * s),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -201,7 +204,9 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                       ),
                       onPressed: () {
                         final name = _validateName();
-                        if (name != null) provider.createGame(name, photo: _photo);
+                        if (name != null) {
+                          provider.createGame(name, photo: _photo);
+                        }
                       },
                       child: Text('Yeni Oyun Kur',
                           style: TextStyle(
@@ -222,7 +227,8 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                        side: const BorderSide(
+                            color: Color(0x55FFFFFF), width: 2),
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
                       ),
                       onPressed: () {
@@ -232,7 +238,8 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                           _toast('Oda kodunu gir.');
                           return;
                         }
-                        provider.joinGame(_codeController.text, name, photo: _photo);
+                        provider.joinGame(_codeController.text, name,
+                            photo: _photo);
                       },
                       child: Text('Oyuna Katıl',
                           style: TextStyle(
@@ -261,7 +268,8 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                        side: const BorderSide(
+                            color: Color(0x55FFFFFF), width: 2),
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
                       ),
                       onPressed: () => Navigator.of(context).pop(),

@@ -56,7 +56,8 @@ class _UnoBotRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final started = context.select<LocalUnoProvider, bool>((p) => p.state != null);
+    final started =
+        context.select<LocalUnoProvider, bool>((p) => p.state != null);
     return started
         ? const _LocalGameBody()
         : _UnoBotSetupForm(initialPlayerName: initialPlayerName);
@@ -132,7 +133,8 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.initialPlayerName ?? '');
+    _nameController =
+        TextEditingController(text: widget.initialPlayerName ?? '');
   }
 
   @override
@@ -159,7 +161,8 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
       final s = computeUiScale(constraints);
       return Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24 * s),
+          padding: uiContentPadding(constraints, s,
+              horizontal: 24 * s, vertical: 24 * s),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

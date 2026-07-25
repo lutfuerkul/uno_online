@@ -110,7 +110,8 @@ class _Lobby extends StatelessWidget {
       final s = computeUiScale(constraints);
       return Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24 * s),
+          padding: uiContentPadding(constraints, s,
+              horizontal: 24 * s, vertical: 24 * s),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -133,8 +134,8 @@ class _Lobby extends StatelessWidget {
                   );
                 },
                 child: Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 26 * s, vertical: 14 * s),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 26 * s, vertical: 14 * s),
                   decoration: BoxDecoration(
                     color: PistiColors.codeBoxBg,
                     border: Border.all(color: PistiColors.primary, width: 2),
@@ -209,8 +210,8 @@ class _Lobby extends StatelessWidget {
                       padding: EdgeInsets.symmetric(vertical: 14 * s),
                     ),
                     onPressed: canStart ? provider.startGame : null,
-                    child:
-                        Text('Oyunu Başlat', style: TextStyle(fontSize: 14 * s)),
+                    child: Text('Oyunu Başlat',
+                        style: TextStyle(fontSize: 14 * s)),
                   ),
                 ),
                 if (players.length < PistiEngine.minPlayers)

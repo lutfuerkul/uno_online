@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../models/uno_board_controller.dart';
 import '../models/uno_card.dart';
+import '../theme/ui_scale.dart';
 import '../theme/uno_theme.dart';
 import '../widgets/player_photo_frame.dart';
 import 'card_widget.dart';
@@ -47,21 +48,18 @@ List<UnoCard> sortedHand(List<UnoCard> hand) {
     });
 }
 
-/// Ekranın gerçek boyutunu sabit bir referansa (390x844 — yaygın bir telefon
-/// ölçüsü) oranlayan TEK katsayı; aşırı büyüme/küçülmeyi önlemek için
-/// 0.75-1.15 arasına sıkıştırılır. Okey tahtasındaki
-/// (`_OkeyBoardViewState._computeScale`) yaklaşımın aynısı: eskiden her bölüm
-/// (masa, rakip kutuları, el) kendi başına FittedBox ile küçülüyordu; dar
-/// ekranlarda (ör. Honor serisi) bu, parçaların birbirine göre tutarsız
-/// oranda görünmesine yol açıyordu. Artık kart/fotoğraf boyutları, yazı
-/// puntoları ve boşluklar hep bu tek katsayıyla ölçekleniyor.
-double _computeScale(BoxConstraints c) {
-  const refW = 390.0;
-  const refH = 844.0;
-  final w = c.maxWidth.isFinite ? c.maxWidth : refW;
-  final h = c.maxHeight.isFinite ? c.maxHeight : refH;
-  return math.min(w / refW, h / refH).clamp(0.75, 1.15);
-}
+/// Ekranın gerçek boyutunu referans tasarıma oranlayan TEK katsayı —
+/// menü/kurulum ekranlarıyla birebir aynı formül ([computeUiScale]), yalnızca
+/// üst sınır daha yüksek (bkz. [kBoardMaxScale]): menüde boşluğu doldurmak
+/// istemeyiz ama tahtada doldurmak doğrudur, tablette büyük kart daha
+/// okunaklıdır.
+///
+/// Eskiden her bölüm (masa, rakip kutuları, el) kendi başına FittedBox ile
+/// küçülüyordu; dar ekranlarda (ör. Honor serisi) bu, parçaların birbirine
+/// göre tutarsız oranda görünmesine yol açıyordu. Artık kart/fotoğraf
+/// boyutları, yazı puntoları ve boşluklar hep bu tek katsayıyla ölçekleniyor.
+double _computeScale(BoxConstraints c) =>
+    computeUiScale(c, maxScale: kBoardMaxScale);
 
 /// UNO tahtası — `docs/uno/game.js`'teki `renderBoard()` ile birebir aynı
 /// görsel dili kullanır. Hem online (Firestore) hem de bilgisayara karşı

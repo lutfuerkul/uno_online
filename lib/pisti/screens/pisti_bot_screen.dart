@@ -56,7 +56,8 @@ class _PistiBotRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final started = context.select<PistiLocalProvider, bool>((p) => p.state != null);
+    final started =
+        context.select<PistiLocalProvider, bool>((p) => p.state != null);
     return started
         ? const _LocalGameBody()
         : _PistiBotSetupForm(initialPlayerName: initialPlayerName);
@@ -126,7 +127,8 @@ class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.initialPlayerName ?? '');
+    _nameController =
+        TextEditingController(text: widget.initialPlayerName ?? '');
   }
 
   @override
@@ -157,7 +159,8 @@ class _PistiBotSetupFormState extends State<_PistiBotSetupForm> {
         final s = computeUiScale(constraints);
         return Center(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(24 * s),
+            padding: uiContentPadding(constraints, s,
+                horizontal: 24 * s, vertical: 24 * s),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

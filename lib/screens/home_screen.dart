@@ -71,7 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// [s]: bkz. [computeUiScale] — ekrandaki tüm ölçüler bununla çarpılır.
@@ -109,7 +110,8 @@ class _HomeScreenState extends State<HomeScreen> {
           final s = computeUiScale(constraints);
           return Center(
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(24 * s),
+              padding: uiContentPadding(constraints, s,
+                  horizontal: 24 * s, vertical: 24 * s),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -173,7 +175,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (name == null) return;
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => UnoBotScreen(initialPlayerName: name),
+                            builder: (_) =>
+                                UnoBotScreen(initialPlayerName: name),
                           ),
                         );
                       },
@@ -197,7 +200,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       onPressed: () {
                         final name = _validateName();
-                        if (name != null) provider.createGame(name, photo: _photo);
+                        if (name != null) {
+                          provider.createGame(name, photo: _photo);
+                        }
                       },
                       child: Text('Yeni Oyun Kur',
                           style: TextStyle(
@@ -218,7 +223,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                        side: const BorderSide(
+                            color: Color(0x55FFFFFF), width: 2),
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12 * s)),
@@ -230,7 +236,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           _toast('Oda kodunu gir.');
                           return;
                         }
-                        provider.joinGame(_codeController.text, name, photo: _photo);
+                        provider.joinGame(_codeController.text, name,
+                            photo: _photo);
                       },
                       child: Text('Oyuna Katıl',
                           style: TextStyle(
@@ -247,7 +254,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: 12 * s),
                     Text(
                       provider.error!,
-                      style: TextStyle(color: UnoColors.error, fontSize: 14 * s),
+                      style:
+                          TextStyle(color: UnoColors.error, fontSize: 14 * s),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -257,7 +265,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                        side: const BorderSide(
+                            color: Color(0x55FFFFFF), width: 2),
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12 * s)),
