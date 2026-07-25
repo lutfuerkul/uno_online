@@ -7,6 +7,7 @@ import '../models/okey_board_controller.dart';
 import '../models/okey_game_state.dart';
 import '../models/okey_tile.dart';
 import '../services/okey_meld_solver.dart';
+import '../../theme/ui_scale.dart';
 import '../theme/okey_theme.dart';
 import 'okey_photo_frame.dart';
 import 'okey_tile_widget.dart';
@@ -139,17 +140,17 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     );
   }
 
-  /// Referans tasarım boyutuna (dikey 390x844, yatay 844x390) göre tek bir
-  /// ölçek katsayısı üretir; aşırı büyüme/küçülmeyi önlemek için 0.75-1.15
-  /// arasına sıkıştırılır.
-  double _computeScale(BoxConstraints constraints) {
-    final refW = _landscape ? 844.0 : 390.0;
-    final refH = _landscape ? 390.0 : 844.0;
-    final w = constraints.maxWidth.isFinite ? constraints.maxWidth : refW;
-    final h = constraints.maxHeight.isFinite ? constraints.maxHeight : refH;
-    final s = math.min(w / refW, h / refH);
-    return s.clamp(0.75, 1.15);
-  }
+  /// Referans tasarım boyutuna göre tek bir ölçek katsayısı üretir —
+  /// menü/kurulum ekranlarıyla birebir aynı formül ([computeUiScale]), iki
+  /// farkla: yatay moda geçildiğinde referans da yan çevrilir, ve üst sınır
+  /// daha yüksektir (bkz. [kBoardMaxScale]) — menüde boşluğu doldurmak
+  /// istemeyiz ama tahtada doldurmak doğrudur, tablette büyük taş daha
+  /// okunaklıdır.
+  double _computeScale(BoxConstraints constraints) => computeUiScale(
+        constraints,
+        maxScale: kBoardMaxScale,
+        reference: _landscape ? kUiReference.flipped : kUiReference,
+      );
 
   Widget _buildBoard(BuildContext context, OkeyGameState state) {
     final c = widget.controller;

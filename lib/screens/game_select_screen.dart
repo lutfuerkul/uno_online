@@ -24,7 +24,7 @@ class GameSelectScreen extends StatelessWidget {
             final s = computeUiScale(constraints);
             return Center(
               child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
+                padding: uiContentPadding(constraints, s,
                     horizontal: 20 * s, vertical: 32 * s),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -58,7 +58,8 @@ class GameSelectScreen extends StatelessWidget {
                       borderColor: const Color(0x66C62828),
                       scale: s,
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const UnoRootScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const UnoRootScreen()),
                       ),
                     ),
                     SizedBox(height: 16 * s),
@@ -136,8 +137,7 @@ class _GameCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18 * s),
           onTap: onTap,
           child: Container(
-            padding: EdgeInsets.symmetric(
-                horizontal: 18 * s, vertical: 16 * s),
+            padding: EdgeInsets.symmetric(horizontal: 18 * s, vertical: 16 * s),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18 * s),
               border: Border.all(color: borderColor, width: 2),
@@ -175,8 +175,7 @@ class _GameCard extends StatelessWidget {
                       Text(
                         subtitle,
                         style: TextStyle(
-                            fontSize: 13 * s,
-                            color: const Color(0xAAFFFFFF)),
+                            fontSize: 13 * s, color: const Color(0xAAFFFFFF)),
                       ),
                     ],
                   ),

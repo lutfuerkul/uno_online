@@ -76,8 +76,7 @@ class _GameBodyState extends State<_GameBody> {
     if (finished) {
       final s = state!;
       final hasWinner = s.winner != null || s.winners.isNotEmpty;
-      _resultTimer ??=
-          Timer(hasWinner ? _handRevealDuration : _drawDelay, () {
+      _resultTimer ??= Timer(hasWinner ? _handRevealDuration : _drawDelay, () {
         if (mounted) setState(() => _showResult = true);
       });
       if (_showResult) {
@@ -121,7 +120,8 @@ class _Lobby extends StatelessWidget {
       final s = computeUiScale(constraints);
       return Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24 * s),
+          padding: uiContentPadding(constraints, s,
+              horizontal: 24 * s, vertical: 24 * s),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -144,8 +144,8 @@ class _Lobby extends StatelessWidget {
                   );
                 },
                 child: Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 26 * s, vertical: 14 * s),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 26 * s, vertical: 14 * s),
                   decoration: BoxDecoration(
                     color: OkeyColors.codeBoxBg,
                     border: Border.all(color: OkeyColors.primary, width: 2),
@@ -220,8 +220,8 @@ class _Lobby extends StatelessWidget {
                       padding: EdgeInsets.symmetric(vertical: 14 * s),
                     ),
                     onPressed: canStart ? provider.startGame : null,
-                    child:
-                        Text('Oyunu Başlat', style: TextStyle(fontSize: 14 * s)),
+                    child: Text('Oyunu Başlat',
+                        style: TextStyle(fontSize: 14 * s)),
                   ),
                 ),
                 if (players.length < OkeyEngine.minPlayers)
@@ -233,7 +233,8 @@ class _Lobby extends StatelessWidget {
                   ),
               ] else ...[
                 Text('Kurucu başlatınca oyun başlayacak...',
-                    style: TextStyle(color: OkeyColors.muted, fontSize: 14 * s)),
+                    style:
+                        TextStyle(color: OkeyColors.muted, fontSize: 14 * s)),
                 SizedBox(height: 12 * s),
                 SizedBox(
                   width: 34 * s,

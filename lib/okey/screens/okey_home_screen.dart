@@ -63,7 +63,8 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
       return null;
     }
     if (name.length > OkeyOnlineProvider.maxNameLength) {
-      _toast('İsim en fazla ${OkeyOnlineProvider.maxNameLength} karakter olabilir.');
+      _toast(
+          'İsim en fazla ${OkeyOnlineProvider.maxNameLength} karakter olabilir.');
       return null;
     }
     return name;
@@ -111,7 +112,8 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
           final s = computeUiScale(constraints);
           return Center(
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(24 * s),
+              padding: uiContentPadding(constraints, s,
+                  horizontal: 24 * s, vertical: 24 * s),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -124,7 +126,8 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                       letterSpacing: 6,
                       height: 1,
                       shadows: const [
-                        Shadow(color: OkeyColors.logoShadow, offset: Offset(0, 2))
+                        Shadow(
+                            color: OkeyColors.logoShadow, offset: Offset(0, 2))
                       ],
                     ),
                   ),
@@ -191,7 +194,9 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                       ),
                       onPressed: () {
                         final name = _validateName();
-                        if (name != null) provider.createGame(name, photo: _photo);
+                        if (name != null) {
+                          provider.createGame(name, photo: _photo);
+                        }
                       },
                       child: Text('Yeni Oyun Kur',
                           style: TextStyle(
@@ -212,7 +217,8 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                        side: const BorderSide(
+                            color: Color(0x55FFFFFF), width: 2),
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
                       ),
                       onPressed: () {
@@ -251,7 +257,8 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
-                        side: const BorderSide(color: Color(0x55FFFFFF), width: 2),
+                        side: const BorderSide(
+                            color: Color(0x55FFFFFF), width: 2),
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
                       ),
                       onPressed: () => Navigator.of(context).pop(),

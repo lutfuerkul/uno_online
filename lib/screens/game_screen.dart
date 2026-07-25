@@ -112,7 +112,8 @@ class _Lobby extends StatelessWidget {
       final s = computeUiScale(constraints);
       return Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24 * s),
+          padding: uiContentPadding(constraints, s,
+              horizontal: 24 * s, vertical: 24 * s),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -135,8 +136,8 @@ class _Lobby extends StatelessWidget {
                   );
                 },
                 child: Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 26 * s, vertical: 14 * s),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 26 * s, vertical: 14 * s),
                   decoration: BoxDecoration(
                     color: UnoColors.codeBoxBg,
                     border: Border.all(color: UnoColors.red, width: 2),
@@ -219,8 +220,8 @@ class _Lobby extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.only(top: 8 * s),
                     child: Text('En az 2 oyuncu gerekiyor',
-                        style:
-                            TextStyle(color: UnoColors.muted, fontSize: 13 * s)),
+                        style: TextStyle(
+                            color: UnoColors.muted, fontSize: 13 * s)),
                   ),
               ] else ...[
                 Text('Kurucu başlatınca oyun başlayacak...',
