@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 
 import '../models/game_state.dart';
 import '../models/uno_board_controller.dart';
 import '../models/uno_card.dart';
 import '../services/game_service.dart';
 import '../services/uno_engine.dart';
+import '../services/player_identity.dart';
 
 /// Uygulama genelinde (online) oyun durumunu tutar ve UI ile [GameService]
 /// arasında köprü kurar.
@@ -18,8 +18,10 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
 
   final GameService _service = GameService();
 
-  /// Bu cihaz/oyuncu için oturum boyu geçerli benzersiz kimlik.
-  final String playerId = const Uuid().v4();
+  /// Bu oyuncunun kimliği — Firebase anonim oturumunun UID'si.
+  /// Firestore kuralları yazma yetkisini buna göre veriyor
+  /// (bkz. [PlayerIdentity], firestore.rules).
+  final String playerId = PlayerIdentity.current();
 
   @override
   String get selfId => playerId;

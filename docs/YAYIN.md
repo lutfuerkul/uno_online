@@ -46,21 +46,32 @@ Eklendikten sonra CI otomatik olarak `uwin-okey-pisti-release-aab`
 artifact'ini de üretmeye başlar. Eklenmeden önce bu adım atlanır, CI yeşil
 kalır ve APK üretilmeye devam eder.
 
-## 5. Güvenlik: anonim auth + Firestore kuralları
-Şu an kimlik doğrulama yok ve `firestore.rules` içinde `allow read: if true`.
-Projeyi bulan herkes tüm odaları, oyuncu isimlerini ve base64 profil
-fotoğraflarını okuyabilir; şemaya uyan her yazmayı yapabilir. Odaların
-silinmesi ve şema doğrulaması engellenmiş durumda, ama bu halka açık bir
-yayın için yeterli değil.
+## 5. Güvenlik: anonim auth + Firestore kuralları — kod tarafı ✅
+Kod tarafı tamamlandı: uygulama açılışta Firebase'e anonim oturum açıyor,
+oyuncu kimliği artık bu oturumun UID'si ve `firestore.rules` yetkiyi buna
+dayandırıyor (odayı yalnızca odadaki oyuncular değiştirebiliyor, okuma
+kimlik doğrulaması istiyor).
 
-Kod tarafı yapılabilir; kuralları **deploy etmek sende**:
+**Sıra önemli, yoksa uygulama kilitlenir:**
 
-```bash
-firebase deploy --only firestore:rules
-```
+1. **Önce** Firebase Console → Authentication → Sign-in method →
+   **Anonymous** sağlayıcısını aç.
+2. Yeni istemciyi kur ve online oyunun çalıştığını doğrula (bu aşamada eski
+   kurallar hâlâ yürürlükte, istemci her iki kural setiyle de çalışır).
+3. **Sonra** kuralları deploy et:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+   (Repoda `firebase.json` yok — Firebase Console → Firestore → Rules
+   üzerinden elle de yapıştırılabilir.)
+4. Oda kur / katıl / hamle yap / çık akışlarını tekrar doğrula.
 
-(Repoda `firebase.json` yok — Firebase Console → Firestore → Rules üzerinden
-elle de güncellenebilir.)
+Anonim sağlayıcı açılmadan kurallar deploy edilirse istemci oturum açamaz ve
+**tüm online işlemler permission-denied alır**. Eski istemci sürümleri de
+(anonim oturum açmayanlar) yeni kurallar altında çalışmaz.
+
+Kuralların davranışı emülatörle test edilebilir:
+`test/firestore_rules/README.md`.
 
 ## 6. Firebase'de Android uygulamasını kaydet — [sen]
 `lib/firebase_options.dart` içindeki Android `appId` şu an **web**

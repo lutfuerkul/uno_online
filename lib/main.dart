@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/game_provider.dart';
 import 'screens/game_select_screen.dart';
+import 'services/player_identity.dart';
 import 'services/update_check_service.dart';
 
 Future<void> main() async {
@@ -17,6 +18,9 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    // Oyuncu kimliği bu anonim oturumun UID'si olur; Firestore kuralları
+    // yazma yetkisini buna göre veriyor (bkz. PlayerIdentity).
+    await PlayerIdentity.ensureSignedIn();
   } catch (_) {
     // Firebase henüz yapılandırılmadıysa (bkz. README) online oda kur/katıl
     // çalışmaz, ama bilgisayara karşı (çevrimdışı) modlar bundan etkilenmez.

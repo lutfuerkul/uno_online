@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 
 import '../models/okey_board_controller.dart';
 import '../models/okey_game_state.dart';
@@ -10,6 +9,7 @@ import '../services/okey_engine.dart';
 import '../services/okey_game_service.dart';
 import '../services/okey_hand_order.dart';
 import '../services/okey_meld_solver.dart';
+import '../../services/player_identity.dart';
 
 /// Uygulama genelinde (online) Okey oyun durumunu tutar ve UI ile
 /// [OkeyGameService] arasında köprü kurar.
@@ -18,7 +18,10 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   static const int maxPlayers = OkeyEngine.maxPlayers;
 
   final OkeyGameService _service = OkeyGameService();
-  final String playerId = const Uuid().v4();
+  /// Bu oyuncunun kimliği — Firebase anonim oturumunun UID'si.
+  /// Firestore kuralları yazma yetkisini buna göre veriyor
+  /// (bkz. [PlayerIdentity], firestore.rules).
+  final String playerId = PlayerIdentity.current();
 
   @override
   String get selfId => playerId;
