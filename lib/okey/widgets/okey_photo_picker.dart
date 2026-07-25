@@ -65,12 +65,21 @@ class _OkeyPhotoPickerState extends State<OkeyPhotoPicker> {
 
   @override
   Widget build(BuildContext context) {
+    // Yükleniyor göstergesi ve kamera rozeti de [size] ile orantılı büyüyüp
+    // küçülür (referans: 64px'lik fotoğrafta 18/3/12 px) — böylece seçici
+    // dar/geniş ekranda tek parça gibi ölçeklenir.
+    final size = widget.size;
+    final spinner = size * 18 / 64;
+    final badgePadding = size * 3 / 64;
+    final badgeIcon = size * 12 / 64;
+    final badgeOffset = size * -4 / 64;
+
     return GestureDetector(
       onTap: _pick,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          OkeyPhotoFrame(base64Photo: _photo, size: widget.size),
+          OkeyPhotoFrame(base64Photo: _photo, size: size),
           if (_loading)
             Positioned.fill(
               child: DecoratedBox(
@@ -78,25 +87,26 @@ class _OkeyPhotoPickerState extends State<OkeyPhotoPicker> {
                   color: const Color(0x88000000),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Center(
+                child: Center(
                   child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    width: spinner,
+                    height: spinner,
+                    child: const CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
               ),
             ),
           Positioned(
-            right: -4,
-            bottom: -4,
+            right: badgeOffset,
+            bottom: badgeOffset,
             child: Container(
-              padding: const EdgeInsets.all(3),
+              padding: EdgeInsets.all(badgePadding),
               decoration: const BoxDecoration(
                 color: OkeyColors.primary,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.camera_alt, size: 12, color: Colors.black),
+              child: Icon(Icons.camera_alt,
+                  size: badgeIcon, color: Colors.black),
             ),
           ),
         ],
