@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/afk_config.dart';
+import '../../services/room_ttl.dart';
 import '../models/okey_game_state.dart';
 import '../models/okey_tile.dart';
 import 'okey_bot_service.dart';
@@ -42,6 +43,7 @@ class OkeyGameService {
       'afkStrikes': <String, dynamic>{},
       'readyPlayers': <dynamic>[],
       'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'expireAt': RoomTtl.forStatus('waiting'),
     });
     return code;
   }
@@ -74,8 +76,12 @@ class OkeyGameService {
       players.add(playerId);
       names[playerId] = normalized;
       if (photo != null && photo.isNotEmpty) photos[playerId] = photo;
-      tx.update(ref,
-          {'players': players, 'playerNames': names, 'playerPhotos': photos});
+      tx.update(ref, {
+        'players': players,
+        'playerNames': names,
+        'playerPhotos': photos,
+        'expireAt': RoomTtl.forStatus('waiting'),
+      });
     });
   }
 
@@ -112,7 +118,13 @@ class OkeyGameService {
         playerPhotos: photos,
         cumulativeScores: cumulativeScores,
       );
-      tx.update(ref, {...fresh.toMap(), 'readyPlayers': <dynamic>[]});
+      tx.update(
+        ref,
+        RoomTtl.withExpire({
+          ...fresh.toMap(),
+          'readyPlayers': <dynamic>[],
+        }),
+      );
     });
   }
 
@@ -136,7 +148,10 @@ class OkeyGameService {
       } else {
         readyList.remove(playerId);
       }
-      tx.update(ref, {'readyPlayers': readyList});
+      tx.update(ref, {
+        'readyPlayers': readyList,
+        'expireAt': RoomTtl.forStatus('waiting'),
+      });
     });
   }
 
@@ -265,7 +280,11 @@ class OkeyGameService {
         manualPlayerId: manualPlayerId,
         afk: afk,
       );
-      tx.update(ref, stamped.toMap());
+      if (stamped.players.isEmpty) {
+        tx.delete(ref);
+        return stamped;
+      }
+      tx.update(ref, RoomTtl.withExpire(stamped.toMap()));
       return stamped;
     });
   }
@@ -300,8 +319,12 @@ class OkeyGameService {
         final game = OkeyGameState.fromMap(gameId, snap.data()!);
         if (!game.players.contains(playerId)) return;
         final result = OkeyEngine.leavePlayer(state: game, playerId: playerId);
+        if (result.players.isEmpty) {
+          tx.delete(ref);
+          return;
+        }
         final stamped = _stampAfk(previous: game, next: result);
-        tx.update(ref, stamped.toMap());
+        tx.update(ref, RoomTtl.withExpire(stamped.toMap()));
       });
     } catch (_) {
       // hata olsa da yerelden çık
@@ -317,25 +340,28 @@ class OkeyGameService {
       if (data['status'] != 'finished') return;
       final players = List<String>.from(data['players'] as List? ?? []);
       if (players.isEmpty || players.first != playerId) return;
-      tx.update(ref, {
-        'status': 'waiting',
-        'hands': <String, dynamic>{},
-        'drawPile': <dynamic>[],
-        'discards': <String, dynamic>{},
-        'indicator': null,
-        'currentTurn': '',
-        'hasDrawn': false,
-        'drawnFromDiscardId': null,
-        'lastAction': null,
-        'winner': null,
-        'winners': <dynamic>[],
-        'finishedByOkey': false,
-        'finishedByPair': false,
-        'scores': <String, dynamic>{},
-        'turnStartedAt': 0,
-        'afkStrikes': <String, dynamic>{},
-        'readyPlayers': <dynamic>[],
-      });
+      tx.update(
+        ref,
+        RoomTtl.withExpire({
+          'status': 'waiting',
+          'hands': <String, dynamic>{},
+          'drawPile': <dynamic>[],
+          'discards': <String, dynamic>{},
+          'indicator': null,
+          'currentTurn': '',
+          'hasDrawn': false,
+          'drawnFromDiscardId': null,
+          'lastAction': null,
+          'winner': null,
+          'winners': <dynamic>[],
+          'finishedByOkey': false,
+          'finishedByPair': false,
+          'scores': <String, dynamic>{},
+          'turnStartedAt': 0,
+          'afkStrikes': <String, dynamic>{},
+          'readyPlayers': <dynamic>[],
+        }, status: 'waiting'),
+      );
     });
   }
 

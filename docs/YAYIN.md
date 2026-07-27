@@ -65,6 +65,9 @@ kimlik doğrulaması istiyor).
    (Repoda `firebase.json` yok — Firebase Console → Firestore → Rules
    üzerinden elle de yapıştırılabilir.)
 4. Oda kur / katıl / hamle yap / çık akışlarını tekrar doğrula.
+5. (Oda temizliği) Firestore → TTL: `games`, `pisti_games`, `okey_games`
+   koleksiyonlarında `expireAt` alanına TTL politikası ekle (ayrıntı
+   aşağıda "Bilinen açık konular").
 
 Anonim sağlayıcı açılmadan kurallar deploy edilirse istemci oturum açamaz ve
 **tüm online işlemler permission-denied alır**. Eski istemci sürümleri de
@@ -111,7 +114,16 @@ mümkün.
 ## Bilinen açık konular
 - `firestore.rules` otomatik deploy edilmiyor; her değişiklikte elle deploy
   gerekiyor.
-- Odalar hiç silinmiyor (`allow delete: if false`), Firestore'da belge
-  birikiyor. Yayın engeli değil ama zamanla maliyet/temizlik sorunu.
+- **Oda TTL (elle kurulum):** Kod `expireAt` (Timestamp) yazıyor ve son
+  oyuncu çıkınca odayı siliyor. Terk edilmiş odalar için Firebase Console →
+  Firestore → Time-to-live (TTL) altında şu koleksiyonlara politika ekle
+  (field: `expireAt`):
+  - `games`
+  - `pisti_games`
+  - `okey_games`
+  TTL politikası yoksa `expireAt` yalnızca alan olarak durur; silme olmaz.
+  Eski (expireAt'siz) belgeler bir sonraki yazmada alan kazanır veya elle
+  temizlenir. Süreler: waiting 24 saat, playing 2 gün (her hamlede yenilenir),
+  finished 12 saat.
 - iOS tarafı yapılandırılmadı (`iosBundleId` hâlâ `com.example.unoOnline`).
   Yalnızca Play hedefleniyorsa sorun değil.

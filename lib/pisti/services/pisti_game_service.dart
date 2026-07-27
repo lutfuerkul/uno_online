@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../services/afk_config.dart';
+import '../../services/room_ttl.dart';
 import '../models/pisti_game_state.dart';
 import 'pisti_bot_service.dart';
 import 'pisti_engine.dart';
@@ -47,6 +48,7 @@ class PistiGameService {
       'afkStrikes': <String, dynamic>{},
       'readyPlayers': <dynamic>[],
       'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'expireAt': RoomTtl.forStatus('waiting'),
     });
     return code;
   }
@@ -84,8 +86,12 @@ class PistiGameService {
       players.add(playerId);
       names[playerId] = normalized;
       if (photo != null && photo.isNotEmpty) photos[playerId] = photo;
-      tx.update(ref,
-          {'players': players, 'playerNames': names, 'playerPhotos': photos});
+      tx.update(ref, {
+        'players': players,
+        'playerNames': names,
+        'playerPhotos': photos,
+        'expireAt': RoomTtl.forStatus('waiting'),
+      });
     });
   }
 
@@ -116,7 +122,13 @@ class PistiGameService {
         playerNames: names,
         playerPhotos: photos,
       );
-      tx.update(ref, {...fresh.toMap(), 'readyPlayers': <dynamic>[]});
+      tx.update(
+        ref,
+        RoomTtl.withExpire({
+          ...fresh.toMap(),
+          'readyPlayers': <dynamic>[],
+        }),
+      );
     });
   }
 
@@ -140,7 +152,10 @@ class PistiGameService {
       } else {
         readyList.remove(playerId);
       }
-      tx.update(ref, {'readyPlayers': readyList});
+      tx.update(ref, {
+        'readyPlayers': readyList,
+        'expireAt': RoomTtl.forStatus('waiting'),
+      });
     });
   }
 
@@ -222,7 +237,11 @@ class PistiGameService {
         manualPlayerId: manualPlayerId,
         afk: afk,
       );
-      tx.update(ref, stamped.toMap());
+      if (stamped.players.isEmpty) {
+        tx.delete(ref);
+        return stamped;
+      }
+      tx.update(ref, RoomTtl.withExpire(stamped.toMap()));
       return stamped;
     });
   }
@@ -260,8 +279,12 @@ class PistiGameService {
         final game = PistiGameState.fromMap(gameId, snap.data()!);
         if (!game.players.contains(playerId)) return;
         final result = PistiEngine.leavePlayer(state: game, playerId: playerId);
+        if (result.players.isEmpty) {
+          tx.delete(ref);
+          return;
+        }
         final stamped = _stampAfk(previous: game, next: result);
-        tx.update(ref, stamped.toMap());
+        tx.update(ref, RoomTtl.withExpire(stamped.toMap()));
       });
     } catch (_) {
       // hata olsa da yerelden çık
@@ -277,26 +300,29 @@ class PistiGameService {
       if (data['status'] != 'finished') return;
       final players = List<String>.from(data['players'] as List? ?? []);
       if (players.isEmpty || players.first != playerId) return;
-      tx.update(ref, {
-        'status': 'waiting',
-        'hands': <String, dynamic>{},
-        'pile': <dynamic>[],
-        'drawPile': <dynamic>[],
-        'won': <String, dynamic>{},
-        'pistiCount': <String, dynamic>{},
-        'jackPistiCount': <String, dynamic>{},
-        'lastCapturer': null,
-        'lastAction': null,
-        'pendingCapture': null,
-        'currentTurn': '',
-        'winner': null,
-        'winners': <dynamic>[],
-        'scores': <String, dynamic>{},
-        'scoreDetail': <String, dynamic>{},
-        'turnStartedAt': 0,
-        'afkStrikes': <String, dynamic>{},
-        'readyPlayers': <dynamic>[],
-      });
+      tx.update(
+        ref,
+        RoomTtl.withExpire({
+          'status': 'waiting',
+          'hands': <String, dynamic>{},
+          'pile': <dynamic>[],
+          'drawPile': <dynamic>[],
+          'won': <String, dynamic>{},
+          'pistiCount': <String, dynamic>{},
+          'jackPistiCount': <String, dynamic>{},
+          'lastCapturer': null,
+          'lastAction': null,
+          'pendingCapture': null,
+          'currentTurn': '',
+          'winner': null,
+          'winners': <dynamic>[],
+          'scores': <String, dynamic>{},
+          'scoreDetail': <String, dynamic>{},
+          'turnStartedAt': 0,
+          'afkStrikes': <String, dynamic>{},
+          'readyPlayers': <dynamic>[],
+        }, status: 'waiting'),
+      );
     });
   }
 

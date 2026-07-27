@@ -29,6 +29,7 @@ başlatırken ayrı bir `firebase.json` gerekmiyor.
 
 ## Kapsam
 
-14 senaryo: okuma yetkisi, oda kurma (kendi UID'siyle), odada olmayanın
-yazamaması, bekleme odasına katılma, katılırken mevcut oyuncuyu çıkaramama,
-odadan çıkma, silmenin engellenmesi ve şema doğrulaması.
+Okuma yetkisi, oda kurma (kendi UID'siyle), odada olmayanın yazamaması,
+bekleme odasına katılma, katılırken mevcut oyuncuyu çıkaramama, odadan
+çıkma, **son kalan oyuncunun odayı silebilmesi** (çok oyunculu / yabancı
+silme engeli) ve şema doğrulaması.

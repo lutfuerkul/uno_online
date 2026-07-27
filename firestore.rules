@@ -10,8 +10,10 @@ rules_version = '2';
 // olmalı. Açık değilse istemci oturum açamaz ve tüm online işlemler
 // permission-denied ile reddedilir.
 //
-// Ek katman olarak odalar silinemez ve her yazma, uygulamanın ürettiği belge
-// şekliyle (beklenen alanlar + tipler) eşleşmek zorundadır.
+// Oda temizliği: son kalan oyuncu belgeyi silebilir; terk edilmiş odalar
+// için `expireAt` (Timestamp) + Firebase TTL politikası kullanılır
+// (bkz. docs/YAYIN.md). Her yazma, uygulamanın ürettiği belge şekliyle
+// (beklenen alanlar + tipler) eşleşmek zorundadır.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -39,9 +41,17 @@ service cloud.firestore {
       );
     }
 
+    // Son kalan oyuncu (leave sonrası players boşalacakken) odayı silebilir.
+    // Çok oyunculu aktif oda silinemez — terk edilmişler TTL ile düşer.
+    function canDeleteRoom() {
+      return request.auth != null
+             && resource.data.players.size() == 1
+             && resource.data.players[0] == request.auth.uid;
+    }
+
     match /games/{gameId} {
       allow read: if request.auth != null;
-      allow delete: if false;
+      allow delete: if canDeleteRoom();
       allow create: if gameId.matches('^[A-Z0-9]{5}$') && isValidUnoGame(request.resource.data)
                     && isCreator(request.resource.data)
                     && request.resource.data.status == 'waiting';
@@ -50,7 +60,7 @@ service cloud.firestore {
 
     match /pisti_games/{gameId} {
       allow read: if request.auth != null;
-      allow delete: if false;
+      allow delete: if canDeleteRoom();
       allow create: if gameId.matches('^[A-Z0-9]{5}$') && isValidPistiGame(request.resource.data)
                      && isCreator(request.resource.data)
                      && request.resource.data.status == 'waiting';
@@ -59,11 +69,18 @@ service cloud.firestore {
 
     match /okey_games/{gameId} {
       allow read: if request.auth != null;
-      allow delete: if false;
+      allow delete: if canDeleteRoom();
       allow create: if gameId.matches('^[A-Z0-9]{5}$') && isValidOkeyGame(request.resource.data)
                      && isCreator(request.resource.data)
                      && request.resource.data.status == 'waiting';
       allow update: if canWrite() && isValidOkeyGame(request.resource.data);
+    }
+
+    function optionalAfkFields(d) {
+      return (!('turnStartedAt' in d) || d.turnStartedAt is number)
+             && (!('afkStrikes' in d) || d.afkStrikes is map)
+             && (!('readyPlayers' in d) || d.readyPlayers is list)
+             && (!('expireAt' in d) || d.expireAt is timestamp);
     }
 
     function isValidUnoGame(d) {
@@ -71,7 +88,7 @@ service cloud.firestore {
         'status', 'players', 'playerNames', 'playerPhotos', 'hands', 'drawPile',
         'discardPile', 'currentColor', 'currentTurn', 'direction', 'hasDrawn',
         'unoSafe', 'reverseColor', 'blockedPlayers', 'winner', 'lastAction',
-        'createdAt'
+        'createdAt', 'turnStartedAt', 'afkStrikes', 'readyPlayers', 'expireAt'
       ])
       && d.status is string
       && d.players is list && d.players.size() <= 4
@@ -86,7 +103,8 @@ service cloud.firestore {
       && d.hasDrawn is bool
       && d.unoSafe is list
       && d.blockedPlayers is list
-      && d.createdAt is number;
+      && d.createdAt is number
+      && optionalAfkFields(d);
     }
 
     function isValidOkeyGame(d) {
@@ -94,7 +112,8 @@ service cloud.firestore {
         'status', 'players', 'playerNames', 'playerPhotos', 'hands', 'drawPile',
         'discards', 'indicator', 'currentTurn', 'hasDrawn', 'drawnFromDiscardId',
         'lastAction', 'winner', 'winners', 'finishedByOkey', 'finishedByPair',
-        'scores', 'cumulativeScores', 'createdAt'
+        'scores', 'cumulativeScores', 'createdAt', 'turnStartedAt', 'afkStrikes',
+        'readyPlayers', 'expireAt'
       ])
       && d.status is string
       && d.players is list && d.players.size() <= 4
@@ -108,7 +127,8 @@ service cloud.firestore {
       && d.winners is list
       && d.scores is map
       && d.cumulativeScores is map
-      && d.createdAt is number;
+      && d.createdAt is number
+      && optionalAfkFields(d);
     }
 
     function isValidPistiGame(d) {
@@ -116,7 +136,8 @@ service cloud.firestore {
         'status', 'players', 'playerNames', 'playerPhotos', 'hands', 'pile',
         'drawPile', 'won', 'pistiCount', 'jackPistiCount', 'lastCapturer',
         'lastAction', 'pendingCapture', 'currentTurn', 'winner', 'winners',
-        'scores', 'scoreDetail', 'createdAt', 'skipResultDelay'
+        'scores', 'scoreDetail', 'createdAt', 'skipResultDelay',
+        'turnStartedAt', 'afkStrikes', 'readyPlayers', 'expireAt'
       ])
       && d.status is string
       && d.players is list && d.players.size() <= 4
@@ -131,7 +152,8 @@ service cloud.firestore {
       && d.winners is list
       && d.scores is map
       && d.scoreDetail is map
-      && d.createdAt is number;
+      && d.createdAt is number
+      && optionalAfkFields(d);
     }
   }
 }
