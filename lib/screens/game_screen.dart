@@ -201,6 +201,26 @@ class _Lobby extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 8 * s),
+              if (state.lastAction?.isLeave == true) ...[
+                Container(
+                  width: 320 * s,
+                  padding: EdgeInsets.symmetric(horizontal: 12 * s, vertical: 8 * s),
+                  decoration: BoxDecoration(
+                    color: const Color(0x33FF9800),
+                    borderRadius: BorderRadius.circular(8 * s),
+                  ),
+                  child: Text(
+                    '${state.playerNames[state.lastAction!.player] ?? 'Oyuncu'} odadan ayrıldı',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: const Color(0xFFFFE082),
+                      fontSize: 13 * s,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12 * s),
+              ],
               Text(
                 '${players.length}/${GameProvider.maxPlayers} oyuncu',
                 style: TextStyle(color: UnoColors.muted, fontSize: 14 * s),

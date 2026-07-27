@@ -553,6 +553,10 @@ class _StatusBannerState extends State<_StatusBanner>
     } else if (isMyTurn) {
       text = '● Sıra sende — bir kart oyna';
       bg = PistiColors.turnMine;
+    } else if (action != null && action.isLeave) {
+      text = '${c.opponentName(action.player)} odadan ayrıldı';
+      bg = PistiColors.turnTheirs;
+      textColor = PistiColors.turnTheirsText;
     } else if (action != null && action.isPisti) {
       isPisti = true;
       final who = c.opponentName(action.player);

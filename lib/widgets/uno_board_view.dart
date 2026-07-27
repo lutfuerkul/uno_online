@@ -633,6 +633,7 @@ class _StatusBanner extends StatelessWidget {
     final la = state.lastAction;
     if (la == null) return false;
     if (state.status != 'playing') return false;
+    if (la.isLeave) return true;
     if (state.discardPile.length <= 1) return false;
     return true;
   }
@@ -640,6 +641,9 @@ class _StatusBanner extends StatelessWidget {
   String _lastActionText() {
     final la = state.lastAction;
     if (la == null) return '';
+    if (la.isLeave) {
+      return '${controller.opponentName(la.player)} odadan ayrıldı';
+    }
     final who = controller.opponentName(la.player);
     final tgt = la.target != null ? controller.opponentName(la.target!) : '';
     if (la.isPass) return '⏭️ $who pas geçti';
