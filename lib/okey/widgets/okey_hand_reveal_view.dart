@@ -38,9 +38,13 @@ class OkeyHandRevealView extends StatelessWidget {
         : null;
 
     final sorted = [...hand]..sort((a, b) {
-        final aOkey = state.isOkey(a);
-        final bOkey = state.isOkey(b);
-        if (aOkey != bOkey) return aOkey ? 1 : -1;
+        // Gerçek okeyler sonda; sahte (joker görseli) ayrı kalsın.
+        final aReal = state.isRealOkey(a);
+        final bReal = state.isRealOkey(b);
+        if (aReal != bReal) return aReal ? 1 : -1;
+        final aFake = a.isFakeJoker;
+        final bFake = b.isFakeJoker;
+        if (aFake != bFake) return aFake ? 1 : -1;
         if (a.color.index != b.color.index) {
           return a.color.index.compareTo(b.color.index);
         }
@@ -108,7 +112,9 @@ class OkeyHandRevealView extends StatelessWidget {
                                       OkeyTileWidget(
                                         tile: tile,
                                         width: 36,
-                                        isOkey: state.isOkey(tile),
+                                        // Altın çerçeve yalnız gerçek okey;
+                                        // sahte zaten joker.png ile ayrılır.
+                                        isOkey: state.isRealOkey(tile),
                                       ),
                                       const SizedBox(width: 2),
                                     ],
@@ -126,7 +132,7 @@ class OkeyHandRevealView extends StatelessWidget {
                               OkeyTileWidget(
                                 tile: tile,
                                 width: 36,
-                                isOkey: state.isOkey(tile),
+                                isOkey: state.isRealOkey(tile),
                               ),
                           ],
                         ),
