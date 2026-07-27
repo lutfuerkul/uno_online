@@ -185,7 +185,9 @@ class _Lobby extends StatelessWidget {
                               [
                                 if (players.isNotEmpty && players.first == p)
                                   'kurucu',
-                                else if (state.readyPlayers.contains(p))
+                                if (players.isEmpty ||
+                                    players.first != p &&
+                                        state.readyPlayers.contains(p))
                                   'hazır',
                                 if (p == provider.playerId) 'sen',
                               ].join(' · '),
