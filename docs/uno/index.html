@@ -139,7 +139,10 @@
       overflow: hidden; text-overflow: ellipsis; }
     .turn.mine { background: #2e7d32; }
     .turn.theirs { background: #33414f; color: #ffffffbb; }
-    .hand { display: flex; gap: 6px; overflow-x: auto; padding: 12px; background: #131a24; }
+    .hand { overflow-x: auto; padding: 12px; background: #131a24; }
+    .hand-scroll { display: flex; flex-direction: column; gap: 6px; width: max-content;
+      min-height: calc(2 * 62px * 1.5 + 6px); }
+    .hand-row { display: flex; gap: 6px; min-height: calc(62px * 1.5); }
     .hand .card { cursor: pointer; }
 
     .code-box {
