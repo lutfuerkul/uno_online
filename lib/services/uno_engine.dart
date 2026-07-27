@@ -271,8 +271,8 @@ class UnoEngine {
     );
   }
 
-  /// Oyuncu odadan/oyundan ayrılır. Tek kişi kalırsa o kazanır; sırası
-  /// gelen kişi çıktıysa sıra bir sonraki oyuncuya geçer.
+  /// Oyuncu odadan/oyundan ayrılır. Oyuncu sayısı 2'nin altına düşerse bekleme
+  /// odasına dönülür; oyun devam ediyorsa sıra güncellenir.
   static GameState leavePlayer({required GameState state, required String playerId}) {
     final players = state.players.where((p) => p != playerId).toList();
     final names = Map<String, String>.from(state.playerNames)..remove(playerId);
@@ -282,27 +282,41 @@ class UnoEngine {
       for (final e in state.hands.entries)
         if (e.key != playerId) e.key: e.value,
     };
+    final leaveNotice = UnoLastAction(player: playerId, isLeave: true);
 
-    if (players.isEmpty || state.status != 'playing') {
-      return state.copyWith(
-          players: players,
-          playerNames: names,
-          playerPhotos: photos,
-          hands: hands);
-    }
-    if (players.length < 2) {
+    if (players.isEmpty) {
       return state.copyWith(
         players: players,
         playerNames: names,
         playerPhotos: photos,
         hands: hands,
-        status: 'finished',
-        winner: players.first,
       );
     }
+
+    if (players.length < 2) {
+      return _resetToWaitingLobby(
+        state: state,
+        players: players,
+        names: names,
+        photos: photos,
+        lastAction: leaveNotice,
+      );
+    }
+
+    if (state.status != 'playing') {
+      return state.copyWith(
+        players: players,
+        playerNames: names,
+        playerPhotos: photos,
+        hands: hands,
+        lastAction: leaveNotice,
+      );
+    }
+
     if (state.currentTurn == playerId) {
       final oldIdx = state.players.indexOf(playerId);
-      final nextTurn = state.players[_nextIndex(oldIdx, state.direction, state.players.length, 1)];
+      final nextTurn =
+          state.players[_nextIndex(oldIdx, state.direction, state.players.length, 1)];
       return state.copyWith(
         players: players,
         playerNames: names,
@@ -311,12 +325,44 @@ class UnoEngine {
         currentTurn: nextTurn,
         hasDrawn: false,
         clearReverseColor: true,
+        lastAction: leaveNotice,
       );
     }
     return state.copyWith(
-        players: players,
-        playerNames: names,
-        playerPhotos: photos,
-        hands: hands);
+      players: players,
+      playerNames: names,
+      playerPhotos: photos,
+      hands: hands,
+      lastAction: leaveNotice,
+    );
+  }
+
+  static GameState _resetToWaitingLobby({
+    required GameState state,
+    required List<String> players,
+    required Map<String, String> names,
+    required Map<String, String> photos,
+    required UnoLastAction lastAction,
+  }) {
+    return state.copyWith(
+      status: 'waiting',
+      players: players,
+      playerNames: names,
+      playerPhotos: photos,
+      hands: {for (final p in players) p: <UnoCard>[]},
+      drawPile: const [],
+      discardPile: const [],
+      currentColor: CardColor.red,
+      currentTurn: '',
+      direction: 1,
+      hasDrawn: false,
+      clearReverseColor: true,
+      blockedPlayers: const [],
+      clearWinner: true,
+      lastAction: lastAction,
+      readyPlayers: const [],
+      turnStartedAt: 0,
+      afkStrikes: const {},
+    );
   }
 }

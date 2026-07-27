@@ -239,7 +239,7 @@ class OkeyGameState {
 class OkeyLastAction {
   final String player;
 
-  /// 'draw' | 'discard'
+  /// 'draw' | 'discard' | 'leave'
   final String type;
 
   /// Çekme, soldaki ıskartadan mı yapıldı?

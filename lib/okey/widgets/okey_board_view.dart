@@ -582,6 +582,8 @@ class _OkeyBoardViewState extends State<OkeyBoardView> {
     String text;
     if (state.status != 'playing') {
       text = 'El bitti';
+    } else if (action != null && action.type == 'leave') {
+      text = '${c.opponentName(action.player)} odadan ayrıldı';
     } else if (isMyTurn) {
       if (c.canFinish) {
         text = '🎉 Elini bitirebilirsin — kazandıran taşı at!';

@@ -242,9 +242,8 @@ class PistiEngine {
     return null;
   }
 
-  /// Oyuncu odadan/oyundan ayrılır. Yeterli oyuncu kalmazsa kalanlar
-  /// yakaladıkları kartlarla kazanır; sırası gelen kişi çıktıysa sıra elinde
-  /// kartı olan bir sonraki oyuncuya geçer.
+  /// Oyuncu odadan/oyundan ayrılır. Oyuncu sayısı [minPlayers]'in altına
+  /// düşerse bekleme odasına dönülür.
   static PistiGameState leavePlayer({required PistiGameState state, required String playerId}) {
     final players = state.players.where((p) => p != playerId).toList();
     final names = Map<String, String>.from(state.playerNames)..remove(playerId);
@@ -254,31 +253,28 @@ class PistiEngine {
       for (final e in state.hands.entries)
         if (e.key != playerId) e.key: e.value,
     };
+    final leaveNotice = PistiLastAction.leave(playerId);
+
+    if (players.length < minPlayers) {
+      return _resetToWaitingLobby(
+        state: state,
+        players: players,
+        names: names,
+        photos: photos,
+        lastAction: leaveNotice,
+      );
+    }
 
     if (state.status != 'playing') {
-      return state.copyWith(
-          players: players, playerNames: names, playerPhotos: photos, hands: hands);
-    }
-    if (players.length < minPlayers) {
-      final result = PistiDeckService.scoreGame(
-        players,
-        state.won,
-        state.pistiCount,
-        state.jackPistiCount,
-      );
       return state.copyWith(
         players: players,
         playerNames: names,
         playerPhotos: photos,
         hands: hands,
-        status: 'finished',
-        scores: result.scores,
-        scoreDetail: result.detail,
-        winners: result.winners,
-        clearWinner: result.winners.length != 1,
-        winner: result.winners.length == 1 ? result.winners.first : null,
+        lastAction: leaveNotice,
       );
     }
+
     if (state.currentTurn == playerId) {
       final oldIdx = state.players.indexOf(playerId);
       String? afterPlayer;
@@ -296,9 +292,60 @@ class PistiEngine {
         playerPhotos: photos,
         hands: hands,
         currentTurn: afterPlayer ?? players.first,
+        lastAction: leaveNotice,
       );
     }
     return state.copyWith(
-          players: players, playerNames: names, playerPhotos: photos, hands: hands);
+      players: players,
+      playerNames: names,
+      playerPhotos: photos,
+      hands: hands,
+      lastAction: leaveNotice,
+    );
+  }
+
+  static PistiGameState _resetToWaitingLobby({
+    required PistiGameState state,
+    required List<String> players,
+    required Map<String, String> names,
+    required Map<String, String> photos,
+    required PistiLastAction lastAction,
+  }) {
+    return state.copyWith(
+      status: 'waiting',
+      players: players,
+      playerNames: names,
+      playerPhotos: photos,
+      hands: {for (final p in players) p: <PistiCard>[]},
+      pile: const [],
+      drawPile: const [],
+      won: {for (final p in players) p: <PistiCard>[]},
+      pistiCount: {for (final p in players) p: 0},
+      jackPistiCount: {for (final p in players) p: 0},
+      lastCapturer: null,
+      clearPendingCapture: true,
+      currentTurn: '',
+      clearWinner: true,
+      winners: const [],
+      scores: {for (final p in players) p: 0},
+      scoreDetail: {
+        for (final p in players)
+          p: const PistiScoreDetail(
+            cardCount: 0,
+            jackCount: 0,
+            aceCount: 0,
+            clubTwoCount: 0,
+            diamondTenCount: 0,
+            mostCards: false,
+            pisti: 0,
+            jackPisti: 0,
+            total: 0,
+          ),
+      },
+      lastAction: lastAction,
+      readyPlayers: const [],
+      turnStartedAt: 0,
+      afkStrikes: const {},
+    );
   }
 }

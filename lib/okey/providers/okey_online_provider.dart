@@ -382,6 +382,14 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     _pendingDiscardedTileId = null;
     _sub?.cancel();
     _sub = _service.watchGame(id).listen((s) {
+      // Bitişten sonra gelen eski playing snapshot'ı geri alma (çıkış / yarış).
+      if (state?.status == 'finished' && s?.status == 'playing') {
+        return;
+      }
+      if (s?.status == 'waiting') {
+        _pendingDrawnTileId = null;
+        _pendingDiscardedTileId = null;
+      }
       // Optimistic çekme/alma yazılana kadar gelen eski snapshot'lar eli
       // geri alırdı; bekleyen taş henüz sunucuda yoksa bu güncellemeyi atla.
       final pendingDraw = _pendingDrawnTileId;

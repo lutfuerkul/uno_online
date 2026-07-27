@@ -238,6 +238,7 @@ class PistiLastAction {
   final bool captured;
   final bool isPisti;
   final bool isJackPisti;
+  final bool isLeave;
 
   const PistiLastAction({
     required this.player,
@@ -245,18 +246,37 @@ class PistiLastAction {
     required this.captured,
     required this.isPisti,
     required this.isJackPisti,
+    this.isLeave = false,
   });
 
-  Map<String, dynamic> toMap() => {
-        'player': player,
-        'card': card.toMap(),
-        'captured': captured,
-        'isPisti': isPisti,
-        'isJackPisti': isJackPisti,
-      };
+  factory PistiLastAction.leave(String player) => PistiLastAction(
+        player: player,
+        card: const PistiCard(
+            suit: PistiSuit.clubs, rank: PistiRank.ace, id: '_leave'),
+        captured: false,
+        isPisti: false,
+        isJackPisti: false,
+        isLeave: true,
+      );
+
+  Map<String, dynamic> toMap() {
+    if (isLeave) {
+      return {'player': player, 'leave': true};
+    }
+    return {
+      'player': player,
+      'card': card.toMap(),
+      'captured': captured,
+      'isPisti': isPisti,
+      'isJackPisti': isJackPisti,
+    };
+  }
 
   static PistiLastAction? fromMap(Map? map) {
     if (map == null) return null;
+    if (map['leave'] == true) {
+      return PistiLastAction.leave(map['player'] as String? ?? '');
+    }
     final cardMap = map['card'] as Map?;
     if (cardMap == null) return null;
     return PistiLastAction(

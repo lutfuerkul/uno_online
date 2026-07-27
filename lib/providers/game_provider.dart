@@ -318,6 +318,15 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
   bool _shouldIgnoreStale(GameState? s) {
     if (s == null) return false;
 
+    if (state?.status == 'finished' && s.status == 'playing') {
+      return true;
+    }
+    if (s.status == 'waiting') {
+      _pendingDrawnCardId = null;
+      _pendingPlayedCardId = null;
+      _pendingPass = false;
+    }
+
     final drawn = _pendingDrawnCardId;
     if (drawn != null) {
       final hand = s.hands[playerId] ?? const [];

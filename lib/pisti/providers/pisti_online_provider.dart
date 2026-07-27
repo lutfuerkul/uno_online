@@ -240,8 +240,16 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
   }
 
   bool _shouldIgnoreStale(PistiGameState? s) {
+    if (s == null) return false;
+
+    if (state?.status == 'finished' && s.status == 'playing') {
+      return true;
+    }
+    if (s.status == 'waiting') {
+      _pendingPlayedCardId = null;
+    }
+
     final played = _pendingPlayedCardId;
-    if (played == null || s == null) return false;
     final hand = s.hands[playerId] ?? const [];
     final stillInHand = hand.any((c) => c.id == played);
     // Kart hâlâ eldeyse ve sıra/oyun hâlâ bende / playing ise eski görüntü.

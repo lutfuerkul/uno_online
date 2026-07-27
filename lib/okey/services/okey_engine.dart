@@ -261,8 +261,9 @@ class OkeyEngine {
     );
   }
 
-  /// Oyuncu odadan/oyundan ayrılır. Yeterli oyuncu kalmazsa el berabere
-  /// sonlanır; sırası gelen kişi çıktıysa sıra bir sonrakine geçer.
+  /// Oyuncu odadan/oyundan ayrılır. Oyuncu sayısı [minPlayers]'in altına
+  /// düşerse kalan oyuncular bekleme odasına döner; oyun devam ediyorsa sıra
+  /// ve son hamle bilgisi güncellenir.
   static OkeyGameState leavePlayer({
     required OkeyGameState state,
     required String playerId,
@@ -279,6 +280,17 @@ class OkeyEngine {
       for (final e in state.discards.entries)
         if (e.key != playerId) e.key: e.value,
     };
+    final leaveNotice = _leaveAction(playerId);
+
+    if (players.length < minPlayers) {
+      return _resetToWaitingLobby(
+        state: state,
+        players: players,
+        names: names,
+        photos: photos,
+        lastAction: leaveNotice,
+      );
+    }
 
     if (state.status != 'playing') {
       return state.copyWith(
@@ -287,21 +299,7 @@ class OkeyEngine {
         playerPhotos: photos,
         hands: hands,
         discards: discards,
-      );
-    }
-
-    if (players.length < minPlayers) {
-      return state.copyWith(
-        players: players,
-        playerNames: names,
-        playerPhotos: photos,
-        hands: hands,
-        discards: discards,
-        status: 'finished',
-        clearWinner: players.length != 1,
-        winner: players.length == 1 ? players.first : null,
-        winners: players.length == 1 ? [players.first] : const [],
-        scores: {for (final p in players) p: 0},
+        lastAction: leaveNotice,
       );
     }
 
@@ -321,6 +319,45 @@ class OkeyEngine {
       currentTurn: currentTurn,
       hasDrawn: hasDrawn,
       clearDrawnFromDiscard: true,
+      lastAction: leaveNotice,
+    );
+  }
+
+  static OkeyLastAction _leaveAction(String playerId) => OkeyLastAction(
+        player: playerId,
+        type: 'leave',
+        fromDiscard: false,
+        tile: null,
+      );
+
+  /// Rakip ayrılınca tek kişi kaldıysa el/skor sıfırlanıp lobi açılır.
+  static OkeyGameState _resetToWaitingLobby({
+    required OkeyGameState state,
+    required List<String> players,
+    required Map<String, String> names,
+    required Map<String, String> photos,
+    required OkeyLastAction lastAction,
+  }) {
+    return state.copyWith(
+      status: 'waiting',
+      players: players,
+      playerNames: names,
+      playerPhotos: photos,
+      hands: {for (final p in players) p: <OkeyTile>[]},
+      drawPile: const [],
+      discards: {for (final p in players) p: <OkeyTile>[]},
+      currentTurn: '',
+      hasDrawn: false,
+      clearDrawnFromDiscard: true,
+      lastAction: lastAction,
+      clearWinner: true,
+      winners: const [],
+      finishedByOkey: false,
+      finishedByPair: false,
+      scores: {for (final p in players) p: 0},
+      readyPlayers: const [],
+      turnStartedAt: 0,
+      afkStrikes: const {},
     );
   }
 

@@ -205,6 +205,7 @@ class UnoLastAction {
   final int? cardValue;
   final String? target;
   final bool isPass;
+  final bool isLeave;
 
   const UnoLastAction({
     required this.player,
@@ -213,11 +214,12 @@ class UnoLastAction {
     this.cardValue,
     this.target,
     this.isPass = false,
+    this.isLeave = false,
   });
 
   Map<String, dynamic> toMap() => {
         'player': player,
-        'cardType': isPass ? 'pass' : cardType?.name,
+        'cardType': isLeave ? 'leave' : (isPass ? 'pass' : cardType?.name),
         'cardColor': cardColor?.name,
         'cardValue': cardValue,
         'target': target,
@@ -227,6 +229,10 @@ class UnoLastAction {
     if (map == null) return null;
     final typeStr = map['cardType'] as String?;
     if (typeStr == null) return null;
+    if (typeStr == 'leave') {
+      return UnoLastAction(
+          player: map['player'] as String? ?? '', isLeave: true);
+    }
     if (typeStr == 'pass') {
       return UnoLastAction(player: map['player'] as String? ?? '', isPass: true);
     }
