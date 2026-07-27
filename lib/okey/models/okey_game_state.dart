@@ -101,6 +101,13 @@ class OkeyGameState {
   /// göstergeyle aynı renkte, bir büyük sayıdaki iki gerçek taş da jokerdir.
   bool isOkey(OkeyTile tile) {
     if (tile.isFakeJoker) return true;
+    return isRealOkey(tile);
+  }
+
+  /// Yalnızca gerçek okey (göstergenin bir büyüğü). Sahte okey dahil değil.
+  /// "Okey atarak bitirme" çifte puanı buna bakılır — sahte atmak sayılmaz.
+  bool isRealOkey(OkeyTile tile) {
+    if (tile.isFakeJoker) return false;
     return tile.color == okeyColor && tile.number == okeyNumber;
   }
 

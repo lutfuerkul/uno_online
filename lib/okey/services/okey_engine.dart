@@ -237,7 +237,9 @@ class OkeyEngine {
       tile: discarded,
     );
 
-    final byOkey = state.isOkey(discarded);
+    // Çifte puan yalnızca gerçek okey atınca; sahte okey joker olsa da
+    // "okey atarak bitirme" sayılmaz (elde 2 gerçek okey kalabilir).
+    final byOkey = state.isRealOkey(discarded);
     final points = pairWin
         ? (byOkey ? pairOkeyWinPoints : pairWinPoints)
         : (byOkey ? okeyWinPoints : winPoints);
