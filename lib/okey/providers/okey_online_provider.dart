@@ -42,6 +42,10 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   /// optimistic durumu geri silmesini engeller (bkz. [_subscribe]).
   String? _pendingDrawnTileId;
 
+  /// Atılan / bitiş atışı yapılan taşın id'si — transaction bitene kadar
+  /// eski snapshot taşı ele geri koymasın.
+  String? _pendingDiscardedTileId;
+
   @override
   bool get isMyTurn =>
       state?.status == 'playing' && state?.currentTurn == playerId;
@@ -285,25 +289,70 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   @override
   Future<void> discard(OkeyTile tile) async {
     final id = gameId;
-    if (id == null) return;
-    // Atılan taşı elden anında kaldır — gecikmeli dinleyiciyi beklersek taş
-    // bir an için eski yuvasına "geri dönüp" sonra kaybolur gibi görünüyordu.
-    final result =
-        await _service.discard(gameId: id, playerId: playerId, tileId: tile.id);
-    if (result != null) {
-      state = result;
-      notifyListeners();
-    }
+    final previous = state;
+    if (id == null || previous == null) return;
+    final optimistic =
+        OkeyEngine.discard(state: previous, playerId: playerId, tile: tile);
+    if (optimistic == null) return;
+    _applyOptimisticDiscard(previous: previous, optimistic: optimistic, tileId: tile.id);
+    unawaited(_commitDiscard(
+      previous: previous,
+      persist: () =>
+          _service.discard(gameId: id, playerId: playerId, tileId: tile.id),
+    ));
   }
 
   @override
   Future<void> finishDiscard(OkeyTile tile) async {
     final id = gameId;
-    if (id == null) return;
-    final result = await _service.finishDiscard(
-        gameId: id, playerId: playerId, tileId: tile.id);
-    if (result != null) {
-      state = result;
+    final previous = state;
+    if (id == null || previous == null) return;
+    final optimistic = OkeyEngine.finishDiscard(
+        state: previous, playerId: playerId, tile: tile);
+    if (optimistic == null) return;
+    _applyOptimisticDiscard(previous: previous, optimistic: optimistic, tileId: tile.id);
+    unawaited(_commitDiscard(
+      previous: previous,
+      persist: () => _service.finishDiscard(
+          gameId: id, playerId: playerId, tileId: tile.id),
+    ));
+  }
+
+  void _applyOptimisticDiscard({
+    required OkeyGameState previous,
+    required OkeyGameState optimistic,
+    required String tileId,
+  }) {
+    state = optimistic.copyWith(
+      turnStartedAt: AfkConfig.nowMs(),
+      afkStrikes: AfkConfig.resetStrike(previous.afkStrikes, playerId),
+    );
+    _pendingDrawnTileId = null;
+    _pendingDiscardedTileId = tileId;
+    // El slotlarından da hemen düş — sync bir sonraki handSlots okumasında
+    // zaten yapar; notify ile UI taşın Attığım'a gittiğini görür.
+    notifyListeners();
+    _armAfkWatch();
+  }
+
+  Future<void> _commitDiscard({
+    required OkeyGameState previous,
+    required Future<OkeyGameState?> Function() persist,
+  }) async {
+    try {
+      final result = await persist();
+      if (result != null) {
+        state = result;
+        // Pending, sunucu snapshot'ı taşı ele koymayınca [_subscribe]'da temizlenir.
+      } else {
+        state = previous;
+        _pendingDiscardedTileId = null;
+        notifyListeners();
+      }
+    } catch (e) {
+      state = previous;
+      _pendingDiscardedTileId = null;
+      error = _friendlyError(e);
       notifyListeners();
     }
   }
@@ -323,24 +372,36 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     error = null;
     _slots = const [];
     _pendingDrawnTileId = null;
+    _pendingDiscardedTileId = null;
     notifyListeners();
   }
 
   void _subscribe(String id) {
     gameId = id;
     _pendingDrawnTileId = null;
+    _pendingDiscardedTileId = null;
     _sub?.cancel();
     _sub = _service.watchGame(id).listen((s) {
       // Optimistic çekme/alma yazılana kadar gelen eski snapshot'lar eli
       // geri alırdı; bekleyen taş henüz sunucuda yoksa bu güncellemeyi atla.
-      final pending = _pendingDrawnTileId;
-      if (pending != null && s != null) {
+      final pendingDraw = _pendingDrawnTileId;
+      if (pendingDraw != null && s != null) {
         final hand = s.hands[playerId] ?? const [];
-        final caughtUp = hand.any((t) => t.id == pending);
+        final caughtUp = hand.any((t) => t.id == pendingDraw);
         if (!caughtUp && s.currentTurn == playerId) {
           return;
         }
         _pendingDrawnTileId = null;
+      }
+      // Optimistic atış: taş hâlâ eldeyse ve sıra bizdeyse eski anlık görüntü.
+      final pendingDiscard = _pendingDiscardedTileId;
+      if (pendingDiscard != null && s != null) {
+        final hand = s.hands[playerId] ?? const [];
+        final stillInHand = hand.any((t) => t.id == pendingDiscard);
+        if (stillInHand && s.currentTurn == playerId) {
+          return;
+        }
+        _pendingDiscardedTileId = null;
       }
       state = s;
       notifyListeners();
