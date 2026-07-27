@@ -4,7 +4,7 @@ import {
   assertFails,
   assertSucceeds,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 
 const ALICE = 'alice-uid';
 const BOB = 'bob-uid';
@@ -26,6 +26,10 @@ const game = (players, status = 'waiting') => ({
   unoSafe: [],
   blockedPlayers: [],
   createdAt: 1700000000000,
+  turnStartedAt: 0,
+  afkStrikes: {},
+  readyPlayers: [],
+  expireAt: Timestamp.fromMillis(Date.now() + 86400000),
 });
 
 // Kurallar depo kökünden okunur; testin hangi dizinden çalıştırıldığı
@@ -89,8 +93,15 @@ console.log('\nÇIKMA VE SİLME');
 await seed('GGGGG', game([ALICE, BOB], 'playing'));
 await check('oyuncu kendini çıkarabilir',
   () => assertSucceeds(setDoc(doc(db(BOB), 'games/GGGGG'), game([ALICE], 'playing'))));
-await check('oda silinemez',
-  () => assertFails(deleteDoc(doc(db(ALICE), 'games/GGGGG'))));
+await seed('SOLO1', game([ALICE, BOB], 'playing'));
+await check('çok oyunculu oda silinemez',
+  () => assertFails(deleteDoc(doc(db(ALICE), 'games/SOLO1'))));
+await seed('SOLO2', game([ALICE]));
+await check('son kalan oyuncu odayı silebilir',
+  () => assertSucceeds(deleteDoc(doc(db(ALICE), 'games/SOLO2'))));
+await seed('SOLO3', game([ALICE]));
+await check('yabancı tek kişilik odayı silemez',
+  () => assertFails(deleteDoc(doc(db(MALLORY), 'games/SOLO3'))));
 
 console.log('\nŞEMA DOĞRULAMA');
 await seed('HHHHH', game([ALICE]));

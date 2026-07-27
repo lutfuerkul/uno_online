@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/game_state.dart';
 import '../models/uno_card.dart';
 import 'afk_config.dart';
+import 'room_ttl.dart';
 import 'uno_bot_service.dart';
 import 'uno_engine.dart';
 
@@ -51,6 +52,7 @@ class GameService {
       // sürümündeki Date.now() ile eşleşsin diye FieldValue.serverTimestamp()
       // yerine epoch milisaniye kullanılır).
       'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'expireAt': RoomTtl.forStatus('waiting'),
     });
     return code;
   }
@@ -91,8 +93,12 @@ class GameService {
       names[playerId] = normalized;
       if (photo != null && photo.isNotEmpty) photos[playerId] = photo;
 
-      tx.update(ref,
-          {'players': players, 'playerNames': names, 'playerPhotos': photos});
+      tx.update(ref, {
+        'players': players,
+        'playerNames': names,
+        'playerPhotos': photos,
+        'expireAt': RoomTtl.forStatus('waiting'),
+      });
     });
   }
 
@@ -123,10 +129,13 @@ class GameService {
         playerNames: names,
         playerPhotos: photos,
       );
-      tx.update(ref, {
-        ...fresh.toMap(),
-        'readyPlayers': <dynamic>[],
-      });
+      tx.update(
+        ref,
+        RoomTtl.withExpire({
+          ...fresh.toMap(),
+          'readyPlayers': <dynamic>[],
+        }),
+      );
     });
   }
 
@@ -152,7 +161,10 @@ class GameService {
       } else {
         readyList.remove(playerId);
       }
-      tx.update(ref, {'readyPlayers': readyList});
+      tx.update(ref, {
+        'readyPlayers': readyList,
+        'expireAt': RoomTtl.forStatus('waiting'),
+      });
     });
   }
 
@@ -304,7 +316,11 @@ class GameService {
         manualPlayerId: manualPlayerId,
         afk: afk,
       );
-      tx.update(ref, stamped.toMap());
+      if (stamped.players.isEmpty) {
+        tx.delete(ref);
+        return stamped;
+      }
+      tx.update(ref, RoomTtl.withExpire(stamped.toMap()));
       return stamped;
     });
   }
@@ -347,8 +363,12 @@ class GameService {
         final game = GameState.fromMap(gameId, snap.data()!);
         if (!game.players.contains(playerId)) return;
         final result = UnoEngine.leavePlayer(state: game, playerId: playerId);
+        if (result.players.isEmpty) {
+          tx.delete(ref);
+          return;
+        }
         final stamped = _stampAfk(previous: game, next: result);
-        tx.update(ref, stamped.toMap());
+        tx.update(ref, RoomTtl.withExpire(stamped.toMap()));
       });
     } catch (_) {
       // hata olsa da yerelden çık
@@ -366,24 +386,27 @@ class GameService {
       if (data['status'] != 'finished') return;
       final players = List<String>.from(data['players'] as List? ?? []);
       if (players.isEmpty || players.first != playerId) return;
-      tx.update(ref, {
-        'status': 'waiting',
-        'hands': <String, dynamic>{},
-        'drawPile': <dynamic>[],
-        'discardPile': <dynamic>[],
-        'currentColor': CardColor.red.name,
-        'currentTurn': '',
-        'direction': 1,
-        'hasDrawn': false,
-        'unoSafe': <dynamic>[],
-        'reverseColor': null,
-        'blockedPlayers': <dynamic>[],
-        'winner': null,
-        'lastAction': null,
-        'turnStartedAt': 0,
-        'afkStrikes': <String, dynamic>{},
-        'readyPlayers': <dynamic>[],
-      });
+      tx.update(
+        ref,
+        RoomTtl.withExpire({
+          'status': 'waiting',
+          'hands': <String, dynamic>{},
+          'drawPile': <dynamic>[],
+          'discardPile': <dynamic>[],
+          'currentColor': CardColor.red.name,
+          'currentTurn': '',
+          'direction': 1,
+          'hasDrawn': false,
+          'unoSafe': <dynamic>[],
+          'reverseColor': null,
+          'blockedPlayers': <dynamic>[],
+          'winner': null,
+          'lastAction': null,
+          'turnStartedAt': 0,
+          'afkStrikes': <String, dynamic>{},
+          'readyPlayers': <dynamic>[],
+        }, status: 'waiting'),
+      );
     });
   }
 
