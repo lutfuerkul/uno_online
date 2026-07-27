@@ -34,6 +34,12 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
 
   StreamSubscription<GameState?>? _sub;
 
+  /// Optimistic hamleler için: Firestore yazılana kadar stale snapshot'ların
+  /// yerel sonucu geri silmesini engeller (Okey draw deseni).
+  String? _pendingDrawnCardId;
+  String? _pendingPlayedCardId;
+  bool _pendingPass = false;
+
   @override
   bool get isMyTurn => state?.currentTurn == playerId;
   @override
@@ -118,30 +124,102 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
   }
 
   @override
-  Future<void> playCard(UnoCard card, {CardColor? chosenColor, String? targetId}) async {
+  Future<void> playCard(UnoCard card,
+      {CardColor? chosenColor, String? targetId}) async {
     final id = gameId;
-    if (id == null) return;
-    await _service.playCard(
-      gameId: id,
+    final previous = state;
+    if (id == null || previous == null) return;
+    final optimistic = UnoEngine.playCard(
+      state: previous,
       playerId: playerId,
-      cardId: card.id,
+      card: card,
       chosenColor: chosenColor,
       targetId: targetId,
     );
+    if (optimistic == null) return;
+    state = optimistic;
+    _pendingPlayedCardId = card.id;
+    notifyListeners();
+    unawaited(_commitMove(
+      previous: previous,
+      persist: () => _service.playCard(
+        gameId: id,
+        playerId: playerId,
+        cardId: card.id,
+        chosenColor: chosenColor,
+        targetId: targetId,
+      ),
+      clearPending: () => _pendingPlayedCardId = null,
+    ));
   }
 
   @override
   Future<void> drawCard() async {
     final id = gameId;
-    if (id == null) return;
-    await _service.drawCard(gameId: id, playerId: playerId);
+    final previous = state;
+    if (id == null || previous == null) return;
+    final optimistic =
+        UnoEngine.drawCard(state: previous, playerId: playerId);
+    if (optimistic == null) return;
+    final newId = _newCardId(previous, optimistic);
+    state = optimistic;
+    _pendingDrawnCardId = newId;
+    notifyListeners();
+    unawaited(_commitMove(
+      previous: previous,
+      persist: () => _service.drawCard(gameId: id, playerId: playerId),
+      clearPending: () => _pendingDrawnCardId = null,
+    ));
   }
 
   @override
   Future<void> pass() async {
     final id = gameId;
-    if (id == null) return;
-    await _service.pass(gameId: id, playerId: playerId);
+    final previous = state;
+    if (id == null || previous == null) return;
+    final optimistic = UnoEngine.pass(state: previous, playerId: playerId);
+    if (optimistic == null) return;
+    state = optimistic;
+    _pendingPass = true;
+    notifyListeners();
+    unawaited(_commitMove(
+      previous: previous,
+      persist: () => _service.pass(gameId: id, playerId: playerId),
+      clearPending: () => _pendingPass = false,
+    ));
+  }
+
+  String? _newCardId(GameState before, GameState after) {
+    final beforeIds =
+        (before.hands[playerId] ?? const []).map((c) => c.id).toSet();
+    for (final c in after.hands[playerId] ?? const []) {
+      if (!beforeIds.contains(c.id)) return c.id;
+    }
+    return null;
+  }
+
+  Future<void> _commitMove({
+    required GameState previous,
+    required Future<GameState?> Function() persist,
+    required void Function() clearPending,
+  }) async {
+    try {
+      final result = await persist();
+      if (result != null) {
+        state = result;
+        // Pending, eşleşen snapshot gelince [_subscribe] içinde temizlenir —
+        // yoldaki eski snapshot optimistic sonucu silmesin.
+      } else {
+        state = previous;
+        clearPending();
+        notifyListeners();
+      }
+    } catch (e) {
+      state = previous;
+      clearPending();
+      error = _friendlyError(e);
+      notifyListeners();
+    }
   }
 
   Future<void> rematch() async {
@@ -162,17 +240,56 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
     gameId = null;
     state = null;
     error = null;
+    _clearPending();
     notifyListeners();
+  }
+
+  void _clearPending() {
+    _pendingDrawnCardId = null;
+    _pendingPlayedCardId = null;
+    _pendingPass = false;
   }
 
   void _subscribe(String id) {
     gameId = id;
+    _clearPending();
     _sub?.cancel();
     _sub = _service.watchGame(id).listen((s) {
+      if (_shouldIgnoreStale(s)) return;
       state = s;
       notifyListeners();
     });
     notifyListeners();
+  }
+
+  /// Optimistic hamle yazılana kadar gelen eski snapshot'ları atlar.
+  bool _shouldIgnoreStale(GameState? s) {
+    if (s == null) return false;
+
+    final drawn = _pendingDrawnCardId;
+    if (drawn != null) {
+      final hand = s.hands[playerId] ?? const [];
+      final caughtUp = hand.any((c) => c.id == drawn);
+      if (!caughtUp && s.currentTurn == playerId) return true;
+      _pendingDrawnCardId = null;
+    }
+
+    final played = _pendingPlayedCardId;
+    if (played != null) {
+      final hand = s.hands[playerId] ?? const [];
+      final stillInHand = hand.any((c) => c.id == played);
+      if (stillInHand && s.currentTurn == playerId && s.status == 'playing') {
+        return true;
+      }
+      _pendingPlayedCardId = null;
+    }
+
+    if (_pendingPass) {
+      if (s.currentTurn == playerId && s.status == 'playing') return true;
+      _pendingPass = false;
+    }
+
+    return false;
   }
 
   String _normalizeName(String name) {

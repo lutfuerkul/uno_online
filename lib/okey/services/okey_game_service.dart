@@ -48,13 +48,17 @@ class OkeyGameService {
       final snap = await tx.get(ref);
       if (!snap.exists) throw Exception('Oda bulunamadı: $gameId');
       final data = snap.data()!;
-      if (data['status'] != 'waiting') throw Exception('Oyun çoktan başladı.');
       final players = List<String>.from(data['players'] as List? ?? []);
       final names = Map<String, dynamic>.from(data['playerNames'] as Map? ?? {});
       final photos =
           Map<String, dynamic>.from(data['playerPhotos'] as Map? ?? {});
 
-      if (players.contains(playerId)) return; // yeniden bağlanma
+      // Rejoin: UID hâlâ odadaysa status'e bakmadan dinlemeye devam.
+      if (players.contains(playerId)) return;
+
+      if (data['status'] != 'waiting') {
+        throw Exception('Oyun çoktan başladı.');
+      }
       if (players.length >= OkeyEngine.maxPlayers) {
         throw Exception('Oda dolu (en fazla ${OkeyEngine.maxPlayers} kişi).');
       }

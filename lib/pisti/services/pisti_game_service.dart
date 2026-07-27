@@ -56,15 +56,17 @@ class PistiGameService {
         throw Exception('Oda bulunamadı: $gameId');
       }
       final data = snap.data()!;
-      if (data['status'] != 'waiting') {
-        throw Exception('Oyun çoktan başladı.');
-      }
       final players = List<String>.from(data['players'] as List? ?? []);
       final names = Map<String, dynamic>.from(data['playerNames'] as Map? ?? {});
       final photos =
           Map<String, dynamic>.from(data['playerPhotos'] as Map? ?? {});
 
-      if (players.contains(playerId)) return; // yeniden bağlanma
+      // Rejoin: UID hâlâ odadaysa status'e bakmadan dinlemeye devam.
+      if (players.contains(playerId)) return;
+
+      if (data['status'] != 'waiting') {
+        throw Exception('Oyun çoktan başladı.');
+      }
       if (players.length >= PistiEngine.maxPlayers) {
         throw Exception('Oda dolu (en fazla ${PistiEngine.maxPlayers} kişi).');
       }
@@ -117,24 +119,24 @@ class PistiGameService {
         );
   }
 
-  Future<void> playCard({
+  Future<PistiGameState?> playCard({
     required String gameId,
     required String playerId,
     required String cardId,
-  }) async {
+  }) {
     final ref = _games.doc(gameId);
-    await _db.runTransaction((tx) async {
+    return _db.runTransaction<PistiGameState?>((tx) async {
       final snap = await tx.get(ref);
-      if (!snap.exists) return;
+      if (!snap.exists) return null;
       final game = PistiGameState.fromMap(gameId, snap.data()!);
       final hand = game.hands[playerId] ?? const [];
       final idx = hand.indexWhere((c) => c.id == cardId);
-      if (idx == -1) return;
-      final card = hand[idx];
-
-      final result = PistiEngine.playCard(state: game, playerId: playerId, card: card);
-      if (result == null) return;
+      if (idx == -1) return null;
+      final result =
+          PistiEngine.playCard(state: game, playerId: playerId, card: hand[idx]);
+      if (result == null) return null;
       tx.update(ref, result.toMap());
+      return result;
     });
   }
 

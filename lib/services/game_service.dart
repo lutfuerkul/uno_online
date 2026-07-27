@@ -50,7 +50,8 @@ class GameService {
     return code;
   }
 
-  /// Var olan (bekleme aşamasındaki) odaya katılır. En fazla 4 kişi.
+  /// Var olan odaya katılır. Oyuncu zaten listedeyse (kopup geri gelme)
+  /// status ne olursa olsun kabul edilir; yeni katılım yalnızca `waiting`'de.
   Future<void> joinGame(String gameId, String playerId, String name,
       {String? photo}) async {
     final ref = _games.doc(gameId);
@@ -60,15 +61,18 @@ class GameService {
         throw Exception('Oyun bulunamadı: $gameId');
       }
       final data = snap.data()!;
-      if (data['status'] != 'waiting') {
-        throw Exception('Oyun çoktan başladı.');
-      }
       final players = List<String>.from(data['players'] as List? ?? []);
       final names = Map<String, dynamic>.from(data['playerNames'] as Map? ?? {});
       final photos =
           Map<String, dynamic>.from(data['playerPhotos'] as Map? ?? {});
 
-      if (players.contains(playerId)) return; // yeniden bağlanma
+      // Rejoin: UID hâlâ odadaysa (uygulama kapanması leave çağırmaz) sadece
+      // dinlemeye devam edilir — "oyun başladı" engeli uygulanmaz.
+      if (players.contains(playerId)) return;
+
+      if (data['status'] != 'waiting') {
+        throw Exception('Oyun çoktan başladı.');
+      }
       if (players.length >= UnoEngine.maxPlayers) {
         throw Exception('Oda dolu (en fazla ${UnoEngine.maxPlayers} kişi).');
       }
@@ -125,58 +129,55 @@ class GameService {
 
   /// Sırası gelen oyuncu bir kart oynar. Joker ise [chosenColor], skip/+2/+4
   /// ise (birden fazla rakip varsa) [targetId] verilebilir.
-  Future<void> playCard({
+  /// Yazılan durumu döndürür — provider optimistic UI'ı doğrulasın diye.
+  Future<GameState?> playCard({
     required String gameId,
     required String playerId,
     required String cardId,
     CardColor? chosenColor,
     String? targetId,
-  }) async {
-    final ref = _games.doc(gameId);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (!snap.exists) return;
-      final game = GameState.fromMap(gameId, snap.data()!);
+  }) {
+    return _mutate(gameId, (game) {
       final hand = game.hands[playerId] ?? const [];
       final idx = hand.indexWhere((c) => c.id == cardId);
-      if (idx == -1) return;
-      final card = hand[idx];
-
-      final result = UnoEngine.playCard(
+      if (idx == -1) return null;
+      return UnoEngine.playCard(
         state: game,
         playerId: playerId,
-        card: card,
+        card: hand[idx],
         chosenColor: chosenColor,
         targetId: targetId,
       );
-      if (result == null) return;
-      tx.update(ref, result.toMap());
     });
   }
 
   /// Desteden 1 kart çeker. Sıra geçmez.
-  Future<void> drawCard({required String gameId, required String playerId}) async {
-    final ref = _games.doc(gameId);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (!snap.exists) return;
-      final game = GameState.fromMap(gameId, snap.data()!);
-      final result = UnoEngine.drawCard(state: game, playerId: playerId);
-      if (result == null) return;
-      tx.update(ref, result.toMap());
-    });
+  Future<GameState?> drawCard(
+      {required String gameId, required String playerId}) {
+    return _mutate(gameId,
+        (game) => UnoEngine.drawCard(state: game, playerId: playerId));
   }
 
   /// Kart çektikten sonra oynamak istemeyince sırayı sonraki oyuncuya bırakır.
-  Future<void> pass({required String gameId, required String playerId}) async {
+  Future<GameState?> pass(
+      {required String gameId, required String playerId}) {
+    return _mutate(
+        gameId, (game) => UnoEngine.pass(state: game, playerId: playerId));
+  }
+
+  Future<GameState?> _mutate(
+    String gameId,
+    GameState? Function(GameState game) apply,
+  ) {
     final ref = _games.doc(gameId);
-    await _db.runTransaction((tx) async {
+    return _db.runTransaction<GameState?>((tx) async {
       final snap = await tx.get(ref);
-      if (!snap.exists) return;
+      if (!snap.exists) return null;
       final game = GameState.fromMap(gameId, snap.data()!);
-      final result = UnoEngine.pass(state: game, playerId: playerId);
-      if (result == null) return;
+      final result = apply(game);
+      if (result == null) return null;
       tx.update(ref, result.toMap());
+      return result;
     });
   }
 
