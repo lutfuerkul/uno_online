@@ -261,10 +261,7 @@ class _Board extends StatelessWidget {
           ),
         ),
 
-        // Son hamle + sıra durumu tek satırda (Okey ile aynı dil).
-        _StatusBanner(controller: controller, state: state, scale: scale),
-
-        // --- Aksiyonlar ---
+        // --- Aksiyonlar (durum banner'ının üstünde) ---
         // Buton her zaman ekranda durur (yerleşim zıplamasın diye); yalnızca
         // sıra bizde ve kart çekilmişken basılabilir — kural gereği pas
         // geçmeden önce desteden kart çekmek zorunlu.
@@ -305,31 +302,16 @@ class _Board extends StatelessWidget {
           ),
         ),
 
-        // --- El ---
-        Container(
-          color: UnoColors.hand,
-          padding: EdgeInsets.all(_s(12)),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            // SizedBox: elde hiç kart kalmadığında Row boş kalıp yüksekliği
-            // sıfırlanmasın diye kart yüksekliği kadar sabit yer ayrılıyor.
-            child: SizedBox(
-              height: _s(62) * 1.5,
-              child: Row(
-                children: [
-                  for (final (i, card) in sortedHand(controller.myHand).indexed) ...[
-                    if (i > 0) SizedBox(width: _s(6)),
-                    CardWidget(
-                      card: card,
-                      width: _s(62),
-                      highlighted: !_finished && controller.canPlay(card),
-                      onTap: _finished ? null : () => _tryPlay(context, card),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+        // Son hamle + sıra durumu tek satırda (Okey ile aynı dil).
+        _StatusBanner(controller: controller, state: state, scale: scale),
+
+        // --- El: eşit iki yatay kaydırılabilir sıra ---
+        _HandRows(
+          cards: sortedHand(controller.myHand),
+          scale: scale,
+          finished: _finished,
+          canPlay: controller.canPlay,
+          onPlay: (card) => _tryPlay(context, card),
         ),
       ],
     );
@@ -557,6 +539,76 @@ class _OpponentTile extends StatelessWidget {
             style: TextStyle(fontSize: _s(12)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Eli eşit iki sıraya böler; her iki sıra birlikte yatay kaydırılır
+/// (tek [SingleChildScrollView] — eski tek sıra davranışı).
+class _HandRows extends StatelessWidget {
+  final List<UnoCard> cards;
+  final double scale;
+  final bool finished;
+  final bool Function(UnoCard) canPlay;
+  final Future<void> Function(UnoCard) onPlay;
+
+  const _HandRows({
+    required this.cards,
+    required this.scale,
+    required this.finished,
+    required this.canPlay,
+    required this.onPlay,
+  });
+
+  double _s(double v) => v * scale;
+
+  @override
+  Widget build(BuildContext context) {
+    final cardW = _s(62);
+    final cardH = cardW * 1.5;
+    final gap = _s(6);
+    // Üst sıra bir fazla alabilir (tek sayıda kartta).
+    final mid = (cards.length + 1) ~/ 2;
+    final topRow = cards.sublist(0, mid);
+    final bottomRow = cards.sublist(mid);
+
+    Widget rowOf(List<UnoCard> row) {
+      return SizedBox(
+        height: cardH,
+        child: Row(
+          children: [
+            for (final (i, card) in row.indexed) ...[
+              if (i > 0) SizedBox(width: gap),
+              CardWidget(
+                card: card,
+                width: cardW,
+                highlighted: !finished && canPlay(card),
+                onTap: finished ? null : () => onPlay(card),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      color: UnoColors.hand,
+      padding: EdgeInsets.all(_s(12)),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        // İki sıra yüksekliği sabit — el boşalsa da yerleşim zıplamasın.
+        child: SizedBox(
+          height: cardH * 2 + gap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              rowOf(topRow),
+              SizedBox(height: gap),
+              rowOf(bottomRow),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1152,10 +1152,6 @@ function renderBoard() {
   }).join("");
   const iAmBlocked = blockedList.includes(playerId);
 
-  const handHtml = sortedHand(myHand).map((c) =>
-    cardHtml(c, { clickable: !finished, playable: playableNow(c) })
-  ).join("");
-
   // Joker açık karttaysa, seçilen rengi herkes görsün diye o renkte göster.
   const topColorOverride = top && isWild(top) ? state.currentColor : null;
 
@@ -1183,6 +1179,10 @@ function renderBoard() {
         </div>
       </div>
 
+      <div class="actions">
+        <button class="btn-pass" id="pass" ${isMyTurn && hasDrawn ? "" : "disabled"}>Pas Geç ▶</button>
+      </div>
+
       ${(() => {
         // Son hamle + sıra tek satırda (Flutter / Okey ile aynı öncelik).
         let text = "";
@@ -1204,11 +1204,17 @@ function renderBoard() {
         return `<div class="turn ${cls}">${text}</div>`;
       })()}
 
-      <div class="actions">
-        ${isMyTurn && hasDrawn ? `<button class="btn-pass" id="pass">Pas Geç ▶</button>` : ""}
-      </div>
-
-      <div class="hand">${handHtml}</div>
+      ${(() => {
+        const sorted = sortedHand(myHand);
+        const mid = Math.ceil(sorted.length / 2);
+        const row = (cards) => cards.map((c) =>
+          cardHtml(c, { clickable: !finished, playable: playableNow(c) })
+        ).join("");
+        return `<div class="hand"><div class="hand-scroll">
+          <div class="hand-row">${row(sorted.slice(0, mid))}</div>
+          <div class="hand-row">${row(sorted.slice(mid))}</div>
+        </div></div>`;
+      })()}
     </div>`;
 
   document.getElementById("leave").onclick = leaveRoom;
@@ -1217,7 +1223,7 @@ function renderBoard() {
   if (deckEl && isMyTurn && !hasDrawn) deckEl.onclick = drawCard;
 
   const passBtn = document.getElementById("pass");
-  if (passBtn) passBtn.onclick = pass;
+  if (passBtn && isMyTurn && hasDrawn) passBtn.onclick = pass;
 
   app.querySelectorAll(".hand .card[data-card]").forEach((el) => {
     el.onclick = () => tryPlay(el.getAttribute("data-card"));
