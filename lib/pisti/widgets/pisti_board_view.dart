@@ -166,9 +166,6 @@ class _Board extends StatelessWidget {
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Yerdeki kartlar',
-                                style: TextStyle(color: PistiColors.pileLabel, fontSize: _s(12))),
-                            SizedBox(height: _s(6)),
                             top != null
                                 ? _TableStack(pile: pile, cardWidth: _s(84))
                                 : _EmptySlot(width: _s(84)),

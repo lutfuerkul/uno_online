@@ -956,7 +956,6 @@ function renderBoard() {
           ${deckCount > 0 ? cardHtml(null, { faceDown: true, big: true }) : `<div class="empty-slot">boş</div>`}
         </div>
         <div class="pile">
-          <small>Yerdeki kartlar</small>
           ${top ? tableStackHtml(pile) : `<div class="empty-slot">boş</div>`}
           <div class="pile-count">${pile.length} kart</div>
         </div>
