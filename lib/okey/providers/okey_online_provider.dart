@@ -236,6 +236,11 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
         // [_pendingDrawnTileId] bilerek burada temizlenmez — transaction
         // döndükten sonra hâlâ yoldaki eski snapshot optimistic eli silmesin;
         // taş sunucu anlık görüntüsünde görünince [_subscribe] temizler.
+      } else {
+        // Sunucu mutasyonu reddetti (el değiştirilemedi) — geri al.
+        state = previous;
+        _pendingDrawnTileId = null;
+        notifyListeners();
       }
     } catch (e) {
       state = previous;
