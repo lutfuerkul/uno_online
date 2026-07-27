@@ -10,6 +10,7 @@ import '../services/okey_game_service.dart';
 import '../services/okey_hand_order.dart';
 import '../services/okey_meld_solver.dart';
 import '../../services/player_identity.dart';
+import '../../services/afk_config.dart';
 
 /// Uygulama genelinde (online) Okey oyun durumunu tutar ve UI ile
 /// [OkeyGameService] arasında köprü kurar.
@@ -34,6 +35,7 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   List<String?> _slots = const [];
 
   StreamSubscription<OkeyGameState?>? _sub;
+  Timer? _afkTimer;
 
   /// Online çekme/alma sırasında Firestore transaction bitmeden UI'ı
   /// güncellemek için tutulan "bekleyen" taş. Stale snapshot'ların
@@ -70,6 +72,19 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
 
   bool get isHost =>
       state != null && state!.players.isNotEmpty && state!.players.first == playerId;
+
+  bool get isReady => state?.readyPlayers.contains(playerId) ?? false;
+
+  bool get allOthersReady {
+    final s = state;
+    if (s == null || s.players.length < 2) return false;
+    final host = s.players.first;
+    for (final p in s.players) {
+      if (p == host) continue;
+      if (!s.readyPlayers.contains(p)) return false;
+    }
+    return true;
+  }
 
   @override
   List<String> get opponents {
@@ -155,6 +170,18 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     await _service.startGame(gameId: id, playerId: playerId);
   }
 
+  Future<void> setReady(bool ready) async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.setReady(gameId: id, playerId: playerId, ready: ready);
+  }
+
+  Future<void> rematch() async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.rematch(id, playerId: playerId);
+  }
+
   @override
   void arrangeHand({required bool byGroups}) {
     final s = state;
@@ -212,8 +239,13 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     required OkeyGameState previous,
     required OkeyGameState optimistic,
   }) {
-    state = optimistic;
+    state = optimistic.copyWith(
+      turnStartedAt: AfkConfig.nowMs(),
+      afkStrikes: AfkConfig.resetStrike(previous.afkStrikes, playerId),
+    );
     _pendingDrawnTileId = _newTileId(previous, optimistic);
+    // placeTile notify edecek; AFK saatini şimdiden kur.
+    _armAfkWatch();
   }
 
   String? _newTileId(OkeyGameState before, OkeyGameState after) {
@@ -276,12 +308,6 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     }
   }
 
-  Future<void> rematch() async {
-    final id = gameId;
-    if (id == null) return;
-    await _service.rematch(id);
-  }
-
   @override
   Future<void> leaveGame() async {
     final id = gameId;
@@ -290,6 +316,8 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     }
     _sub?.cancel();
     _sub = null;
+    _afkTimer?.cancel();
+    _afkTimer = null;
     gameId = null;
     state = null;
     error = null;
@@ -316,8 +344,23 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
       }
       state = s;
       notifyListeners();
+      _armAfkWatch();
     });
     notifyListeners();
+  }
+
+  void _armAfkWatch() {
+    _afkTimer?.cancel();
+    final s = state;
+    final id = gameId;
+    if (id == null || s == null || s.status != 'playing') return;
+    if (s.currentTurn.isEmpty) return;
+    final wait = AfkConfig.remainingMs(s.turnStartedAt);
+    _afkTimer = Timer(Duration(milliseconds: wait < 0 ? 0 : wait), () async {
+      if (gameId != id) return;
+      await _service.resolveAfk(gameId: id);
+      _armAfkWatch();
+    });
   }
 
   String _normalizeName(String name) {
@@ -332,6 +375,7 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   @override
   void dispose() {
     _sub?.cancel();
+    _afkTimer?.cancel();
     super.dispose();
   }
 }

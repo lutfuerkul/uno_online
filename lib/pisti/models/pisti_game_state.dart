@@ -46,6 +46,15 @@ class PistiGameState {
 
   final PistiLastAction? lastAction;
 
+  /// Bu turun başladığı zaman (ms). Online AFK için.
+  final int turnStartedAt;
+
+  /// Oyuncu → ardışık AFK sayısı.
+  final Map<String, int> afkStrikes;
+
+  /// Bekleme odasında "Hazırım" diyenler.
+  final List<String> readyPlayers;
+
   const PistiGameState({
     required this.id,
     required this.status,
@@ -66,6 +75,9 @@ class PistiGameState {
     required this.scoreDetail,
     required this.pendingCapture,
     required this.lastAction,
+    this.turnStartedAt = 0,
+    this.afkStrikes = const {},
+    this.readyPlayers = const [],
   });
 
   PistiCard? get topOfPile => pile.isNotEmpty ? pile.last : null;
@@ -92,6 +104,9 @@ class PistiGameState {
     PendingCapture? pendingCapture,
     bool clearLastAction = false,
     PistiLastAction? lastAction,
+    int? turnStartedAt,
+    Map<String, int>? afkStrikes,
+    List<String>? readyPlayers,
   }) {
     return PistiGameState(
       id: id,
@@ -114,6 +129,9 @@ class PistiGameState {
       pendingCapture:
           clearPendingCapture ? null : (pendingCapture ?? this.pendingCapture),
       lastAction: clearLastAction ? null : (lastAction ?? this.lastAction),
+      turnStartedAt: turnStartedAt ?? this.turnStartedAt,
+      afkStrikes: afkStrikes ?? this.afkStrikes,
+      readyPlayers: readyPlayers ?? this.readyPlayers,
     );
   }
 
@@ -151,6 +169,10 @@ class PistiGameState {
       ),
       pendingCapture: PendingCapture.fromMap(map['pendingCapture'] as Map?),
       lastAction: PistiLastAction.fromMap(map['lastAction'] as Map?),
+      turnStartedAt: (map['turnStartedAt'] as num?)?.toInt() ?? 0,
+      afkStrikes: (map['afkStrikes'] as Map? ?? {}).map(
+          (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0)),
+      readyPlayers: List<String>.from(map['readyPlayers'] as List? ?? []),
     );
   }
 
@@ -173,6 +195,9 @@ class PistiGameState {
         'scoreDetail': scoreDetail.map((k, v) => MapEntry(k, v.toMap())),
         'pendingCapture': pendingCapture?.toMap(),
         'lastAction': lastAction?.toMap(),
+        'turnStartedAt': turnStartedAt,
+        'afkStrikes': afkStrikes,
+        'readyPlayers': readyPlayers,
       };
 }
 

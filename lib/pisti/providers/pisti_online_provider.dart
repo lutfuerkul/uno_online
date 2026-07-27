@@ -8,6 +8,7 @@ import '../models/pisti_game_state.dart';
 import '../services/pisti_engine.dart';
 import '../services/pisti_game_service.dart';
 import '../../services/player_identity.dart';
+import '../../services/afk_config.dart';
 
 /// Uygulama genelinde (online) Pişti oyun durumunu tutar ve UI ile
 /// [PistiGameService] arasında köprü kurar.
@@ -33,6 +34,10 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
 
   StreamSubscription<PistiGameState?>? _sub;
   Timer? _collectTimer;
+  Timer? _afkTimer;
+
+  /// Optimistic play: kart hâlâ elde görünen stale snapshot'ları yok say.
+  String? _pendingPlayedCardId;
 
   @override
   bool get isMyTurn => state?.currentTurn == playerId && state?.pendingCapture == null;
@@ -40,6 +45,19 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
   List<PistiCard> get myHand => state?.hands[playerId] ?? const [];
 
   bool get isHost => state != null && state!.players.isNotEmpty && state!.players.first == playerId;
+
+  bool get isReady => state?.readyPlayers.contains(playerId) ?? false;
+
+  bool get allOthersReady {
+    final s = state;
+    if (s == null || s.players.length < 2) return false;
+    final host = s.players.first;
+    for (final p in s.players) {
+      if (p == host) continue;
+      if (!s.readyPlayers.contains(p)) return false;
+    }
+    return true;
+  }
 
   @override
   List<String> get opponents {
@@ -99,16 +117,61 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     await _service.startGame(gameId: id, playerId: playerId);
   }
 
+  Future<void> setReady(bool ready) async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.setReady(gameId: id, playerId: playerId, ready: ready);
+  }
+
+  Future<void> rematch() async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.rematch(id, playerId: playerId);
+  }
+
   @override
   Future<void> playCard(PistiCard card) async {
     final id = gameId;
-    if (id == null) return;
-    await _service.playCard(gameId: id, playerId: playerId, cardId: card.id);
-    // Toplama, snapshot dinleyicisindeki _maybeScheduleCollect ile zamanlanır
-    // (web'deki maybeScheduleCollect ile aynı desen). Burada state'e bakmak
-    // güvenli değil: transaction'lar yerel önbelleği atladığı için await
-    // bittiğinde snapshot henüz gelmemiş olabilir ve toplama hiç zamanlanmaz
-    // (oyun "masa toplanıyor" fazında takılı kalırdı).
+    final previous = state;
+    if (id == null || previous == null) return;
+    final optimistic =
+        PistiEngine.playCard(state: previous, playerId: playerId, card: card);
+    if (optimistic == null) return;
+    state = optimistic.copyWith(
+      turnStartedAt: AfkConfig.nowMs(),
+      afkStrikes: AfkConfig.resetStrike(previous.afkStrikes, playerId),
+    );
+    _pendingPlayedCardId = card.id;
+    notifyListeners();
+    _armAfkWatch();
+    // Toplama burada zamanlanmaz — yalnızca gerçek snapshot'ta
+    // (_maybeScheduleCollect). Optimistic pendingCapture ile timer kurmak
+    // sunucu yazılmadan collectPile yarışı yaratırdı.
+    unawaited(_commitPlay(previous: previous, gameId: id, cardId: card.id));
+  }
+
+  Future<void> _commitPlay({
+    required PistiGameState previous,
+    required String gameId,
+    required String cardId,
+  }) async {
+    try {
+      final result = await _service.playCard(
+          gameId: gameId, playerId: playerId, cardId: cardId);
+      if (result != null) {
+        state = result;
+        // Pending snapshot yakalayınca temizlenir.
+      } else {
+        state = previous;
+        _pendingPlayedCardId = null;
+        notifyListeners();
+      }
+    } catch (e) {
+      state = previous;
+      _pendingPlayedCardId = null;
+      error = _friendlyError(e);
+      notifyListeners();
+    }
   }
 
   /// Masayı yakalayan bensem, oynanan kart masada kısa süre görünsün diye
@@ -129,12 +192,6 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     });
   }
 
-  Future<void> rematch() async {
-    final id = gameId;
-    if (id == null) return;
-    await _service.rematch(id);
-  }
-
   @override
   Future<void> leaveGame() async {
     final id = gameId;
@@ -145,21 +202,57 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     _sub = null;
     _collectTimer?.cancel();
     _collectTimer = null;
+    _afkTimer?.cancel();
+    _afkTimer = null;
     gameId = null;
     state = null;
     error = null;
+    _pendingPlayedCardId = null;
     notifyListeners();
   }
 
   void _subscribe(String id) {
     gameId = id;
+    _pendingPlayedCardId = null;
     _sub?.cancel();
     _sub = _service.watchGame(id).listen((s) {
+      if (_shouldIgnoreStale(s)) return;
       state = s;
       notifyListeners();
       _maybeScheduleCollect();
+      _armAfkWatch();
     });
     notifyListeners();
+  }
+
+  void _armAfkWatch() {
+    _afkTimer?.cancel();
+    final s = state;
+    final id = gameId;
+    if (id == null || s == null || s.status != 'playing') return;
+    if (s.currentTurn.isEmpty && s.pendingCapture == null) return;
+    final wait = AfkConfig.remainingMs(s.turnStartedAt);
+    _afkTimer = Timer(Duration(milliseconds: wait < 0 ? 0 : wait), () async {
+      if (gameId != id) return;
+      await _service.resolveAfk(gameId: id);
+      _armAfkWatch();
+    });
+  }
+
+  bool _shouldIgnoreStale(PistiGameState? s) {
+    final played = _pendingPlayedCardId;
+    if (played == null || s == null) return false;
+    final hand = s.hands[playerId] ?? const [];
+    final stillInHand = hand.any((c) => c.id == played);
+    // Kart hâlâ eldeyse ve sıra/oyun hâlâ bende / playing ise eski görüntü.
+    if (stillInHand &&
+        s.currentTurn == playerId &&
+        s.pendingCapture == null &&
+        s.status == 'playing') {
+      return true;
+    }
+    _pendingPlayedCardId = null;
+    return false;
   }
 
   String _normalizeName(String name) {
@@ -173,6 +266,7 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
   void dispose() {
     _sub?.cancel();
     _collectTimer?.cancel();
+    _afkTimer?.cancel();
     super.dispose();
   }
 }

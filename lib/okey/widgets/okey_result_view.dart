@@ -6,7 +6,7 @@ import '../theme/okey_theme.dart';
 /// Okey el bitiş ekranı. Hem online hem bilgisayara karşı modda ortak.
 class OkeyResultView extends StatelessWidget {
   final OkeyBoardController controller;
-  final VoidCallback onRematch;
+  final VoidCallback? onRematch;
   final VoidCallback onLeave;
 
   const OkeyResultView({
@@ -26,6 +26,7 @@ class OkeyResultView extends StatelessWidget {
     final tie = winners.isEmpty;
     final title = tie ? 'Berabere!' : (iWon ? 'Kazandın!' : 'Kaybettin');
     final emoji = tie ? '🤝' : (iWon ? '🎉' : '😔');
+    final canRematch = onRematch != null;
 
     final winnerName =
         winners.isNotEmpty ? controller.opponentName(winners.first) : '';
@@ -74,19 +75,28 @@ class OkeyResultView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: 260,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: OkeyColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+            if (canRematch) ...[
+              SizedBox(
+                width: 260,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: OkeyColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: onRematch,
+                  child: const Text('🔁 Yeni El'),
                 ),
-                onPressed: onRematch,
-                child: const Text('🔁 Yeni El'),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
+            ] else ...[
+              const Text(
+                'Kurucu “Yeni El” deyince bekleme odasına dönülür.',
+                style: TextStyle(color: OkeyColors.muted, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+            ],
             SizedBox(
               width: 260,
               child: OutlinedButton(

@@ -49,6 +49,8 @@ class PistiEngine {
       scoreDetail: const {},
       pendingCapture: null,
       lastAction: null,
+      turnStartedAt: DateTime.now().millisecondsSinceEpoch,
+      afkStrikes: const {},
     );
   }
 

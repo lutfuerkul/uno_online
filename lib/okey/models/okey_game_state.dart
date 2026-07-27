@@ -59,6 +59,15 @@ class OkeyGameState {
   /// güncel tutulan toplam puan tablosu.
   final Map<String, int> cumulativeScores;
 
+  /// Bu turun başladığı zaman (ms). Online AFK için.
+  final int turnStartedAt;
+
+  /// Oyuncu → ardışık AFK sayısı.
+  final Map<String, int> afkStrikes;
+
+  /// Bekleme odasında "Hazırım" diyenler.
+  final List<String> readyPlayers;
+
   const OkeyGameState({
     required this.id,
     required this.status,
@@ -79,6 +88,9 @@ class OkeyGameState {
     required this.finishedByPair,
     required this.scores,
     required this.cumulativeScores,
+    this.turnStartedAt = 0,
+    this.afkStrikes = const {},
+    this.readyPlayers = const [],
   });
 
   /// Okey (joker) sayısı: göstergenin bir büyüğü (13'ten sonra 1'e döner).
@@ -114,6 +126,9 @@ class OkeyGameState {
     bool? finishedByPair,
     Map<String, int>? scores,
     Map<String, int>? cumulativeScores,
+    int? turnStartedAt,
+    Map<String, int>? afkStrikes,
+    List<String>? readyPlayers,
   }) {
     return OkeyGameState(
       id: id,
@@ -137,6 +152,9 @@ class OkeyGameState {
       finishedByPair: finishedByPair ?? this.finishedByPair,
       scores: scores ?? this.scores,
       cumulativeScores: cumulativeScores ?? this.cumulativeScores,
+      turnStartedAt: turnStartedAt ?? this.turnStartedAt,
+      afkStrikes: afkStrikes ?? this.afkStrikes,
+      readyPlayers: readyPlayers ?? this.readyPlayers,
     );
   }
 
@@ -176,6 +194,10 @@ class OkeyGameState {
       scores: Map<String, int>.from(map['scores'] as Map? ?? {}),
       cumulativeScores:
           Map<String, int>.from(map['cumulativeScores'] as Map? ?? {}),
+      turnStartedAt: (map['turnStartedAt'] as num?)?.toInt() ?? 0,
+      afkStrikes: (map['afkStrikes'] as Map? ?? {}).map(
+          (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0)),
+      readyPlayers: List<String>.from(map['readyPlayers'] as List? ?? []),
     );
   }
 
@@ -200,6 +222,9 @@ class OkeyGameState {
         'finishedByPair': finishedByPair,
         'scores': scores,
         'cumulativeScores': cumulativeScores,
+        'turnStartedAt': turnStartedAt,
+        'afkStrikes': afkStrikes,
+        'readyPlayers': readyPlayers,
       };
 }
 

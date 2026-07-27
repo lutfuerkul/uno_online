@@ -53,6 +53,8 @@ class OkeyEngine {
       finishedByPair: false,
       scores: const {},
       cumulativeScores: cumulativeScores,
+      turnStartedAt: DateTime.now().millisecondsSinceEpoch,
+      afkStrikes: const {},
     );
   }
 

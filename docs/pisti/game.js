@@ -267,9 +267,10 @@ async function joinGame(code, name) {
       const snap = await tx.get(ref);
       if (!snap.exists()) throw new Error("Oda bulunamadı.");
       const g = snap.data();
-      if (g.status !== "waiting") throw new Error("Oyun çoktan başladı.");
       const players = g.players || [];
-      if (players.includes(playerId)) return; // yeniden bağlanma
+      // Rejoin: UID hâlâ odadaysa status'e bakmadan dinlemeye devam.
+      if (players.includes(playerId)) return;
+      if (g.status !== "waiting") throw new Error("Oyun çoktan başladı.");
       if (players.length >= MAX_PLAYERS) throw new Error(`Oda dolu (en fazla ${MAX_PLAYERS} kişi).`);
       const names = g.playerNames || {};
       if (isNameTaken(names, name)) throw new Error("Bu isim zaten alınmış. Başka bir isim seç.");
