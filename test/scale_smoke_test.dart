@@ -82,6 +82,19 @@ void main() {
       expect(scaleFor(const Size(200, 400)), 0.75);
       expect(scaleFor(const Size(1600, 2400)), 1.15);
     });
+
+    test('klavye yüksekliği düşürülürse katsayı küçülür (eski davranış)', () {
+      const size = Size(390, 844);
+      final full = computeUiScale(BoxConstraints(
+        maxWidth: size.width,
+        maxHeight: size.height,
+      ));
+      final shrunk = computeUiScale(BoxConstraints(
+        maxWidth: size.width,
+        maxHeight: size.height - 336,
+      ));
+      expect(shrunk, lessThan(full));
+    });
   });
 
   group('oyun seçim ekranı gerçekten orantılı ölçekleniyor', () {

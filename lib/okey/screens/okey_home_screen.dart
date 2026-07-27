@@ -104,16 +104,20 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
     final provider = context.watch<OkeyOnlineProvider>();
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       // Bu kurulum ekranının zemin tonu UNO'nunkiyle aynı (#1B2430) —
       // yalnızca bu ekran için; oyun içi renkler (OkeyColors) değişmedi.
       backgroundColor: const Color(0xFF1B2430),
       body: SafeArea(
-        child: LayoutBuilder(builder: (context, constraints) {
-          final s = computeUiScale(constraints);
+        child: Builder(builder: (context) {
+          final constraints = menuLayoutConstraints(context);
+          final s = computeMenuUiScale(context);
+          final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
           return Center(
             child: SingleChildScrollView(
               padding: uiContentPadding(constraints, s,
-                  horizontal: 24 * s, vertical: 24 * s),
+                      horizontal: 24 * s, vertical: 24 * s)
+                  .add(EdgeInsets.only(bottom: bottomInset)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

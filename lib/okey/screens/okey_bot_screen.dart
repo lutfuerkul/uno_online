@@ -36,6 +36,7 @@ class OkeyBotScreen extends StatelessWidget {
               if (leave) provider.leaveGame();
             },
             child: Scaffold(
+              resizeToAvoidBottomInset: false,
               backgroundColor: OkeyColors.background,
               body: SafeArea(
                 child: _OkeyBotRoot(initialPlayerName: initialPlayerName),
@@ -165,12 +166,15 @@ class _OkeyBotSetupFormState extends State<_OkeyBotSetupForm> {
     // ekrana göre orantılı ölçeklenir.
     return Container(
       color: const Color(0xFF1B2430),
-      child: LayoutBuilder(builder: (context, constraints) {
-        final s = computeUiScale(constraints);
+      child: Builder(builder: (context) {
+        final constraints = menuLayoutConstraints(context);
+        final s = computeMenuUiScale(context);
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
         return Center(
           child: SingleChildScrollView(
             padding: uiContentPadding(constraints, s,
-                horizontal: 24 * s, vertical: 24 * s),
+                    horizontal: 24 * s, vertical: 24 * s)
+                .add(EdgeInsets.only(bottom: bottomInset)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

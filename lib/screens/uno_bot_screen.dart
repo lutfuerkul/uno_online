@@ -38,6 +38,7 @@ class UnoBotScreen extends StatelessWidget {
               if (leave) provider.leaveGame();
             },
             child: Scaffold(
+              resizeToAvoidBottomInset: false,
               backgroundColor: UnoColors.background,
               body: SafeArea(
                   child: _UnoBotRoot(initialPlayerName: initialPlayerName)),
@@ -157,12 +158,15 @@ class _UnoBotSetupFormState extends State<_UnoBotSetupForm> {
   Widget build(BuildContext context) {
     // Tüm ölçüler tahtalardaki tek-katsayı yaklaşımıyla (bkz. computeUiScale)
     // ekrana göre orantılı ölçeklenir.
-    return LayoutBuilder(builder: (context, constraints) {
-      final s = computeUiScale(constraints);
+    return Builder(builder: (context) {
+      final constraints = menuLayoutConstraints(context);
+      final s = computeMenuUiScale(context);
+      final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
       return Center(
         child: SingleChildScrollView(
           padding: uiContentPadding(constraints, s,
-              horizontal: 24 * s, vertical: 24 * s),
+                  horizontal: 24 * s, vertical: 24 * s)
+              .add(EdgeInsets.only(bottom: bottomInset)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
