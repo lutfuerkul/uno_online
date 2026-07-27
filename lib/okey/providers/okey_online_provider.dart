@@ -35,6 +35,11 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
 
   StreamSubscription<OkeyGameState?>? _sub;
 
+  /// Online çekme/alma sırasında Firestore transaction bitmeden UI'ı
+  /// güncellemek için tutulan "bekleyen" taş. Stale snapshot'ların
+  /// optimistic durumu geri silmesini engeller (bkz. [_subscribe]).
+  String? _pendingDrawnTileId;
+
   @override
   bool get isMyTurn =>
       state?.status == 'playing' && state?.currentTurn == playerId;
@@ -171,29 +176,72 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
   @override
   Future<void> drawFromStack() async {
     final id = gameId;
-    if (id == null) return;
-    // Sonucu (Firestore dinleyicisinin gecikmeli güncellemesini beklemeden)
-    // hemen uygula — aksi hâlde çağıran taraf (ıstakada seçilen boşluğa
-    // yerleştirme, bkz. okey_board_view.dart _drawThenPlace) henüz
-    // güncellenmemiş eski eli görüp yeni çekilen taşı bulamıyordu.
-    // notifyListeners() BİLEREK burada çağrılmıyor: çağıran taraf zaten
-    // hemen ardından placeTile() ile doğru boşluğa yerleştirip TEK bir
-    // bildirim yapıyor — burada da bildirseydik, taş bir an için varsayılan
-    // (ilk boş) yuvada render olup hemen ardından seçilen yuvaya "zıplardı".
-    final result = await _service.drawFromStack(gameId: id, playerId: playerId);
-    if (result != null) {
-      state = result;
-    }
+    final previous = state;
+    if (id == null || previous == null) return;
+    // Optimistic: motoru yerelde uygula — UI (ıstaka drop) Firestore
+    // round-trip beklemeden taşı göstersin. Yazma arka planda gider.
+    final optimistic =
+        OkeyEngine.drawFromStack(state: previous, playerId: playerId);
+    if (optimistic == null) return;
+    _applyOptimisticDraw(previous: previous, optimistic: optimistic);
+    unawaited(_commitDraw(
+      previous: previous,
+      persist: () => _service.drawFromStack(gameId: id, playerId: playerId),
+    ));
   }
 
   @override
   Future<void> drawFromDiscard() async {
     final id = gameId;
-    if (id == null) return;
-    // bkz. drawFromStack() — notifyListeners() kasıtlı olarak burada değil.
-    final result = await _service.drawFromDiscard(gameId: id, playerId: playerId);
-    if (result != null) {
-      state = result;
+    final previous = state;
+    if (id == null || previous == null) return;
+    final optimistic =
+        OkeyEngine.drawFromDiscard(state: previous, playerId: playerId);
+    if (optimistic == null) return;
+    _applyOptimisticDraw(previous: previous, optimistic: optimistic);
+    unawaited(_commitDraw(
+      previous: previous,
+      persist: () => _service.drawFromDiscard(gameId: id, playerId: playerId),
+    ));
+  }
+
+  /// Yerel motor sonucunu uygular. [notifyListeners] çağrılmaz — çağıran
+  /// taraf hemen ardından [placeTile] ile doğru boşluğa koyup tek bildirim
+  /// yapar; burada bildirse taş bir an varsayılan yuvada "zıplardı".
+  void _applyOptimisticDraw({
+    required OkeyGameState previous,
+    required OkeyGameState optimistic,
+  }) {
+    state = optimistic;
+    _pendingDrawnTileId = _newTileId(previous, optimistic);
+  }
+
+  String? _newTileId(OkeyGameState before, OkeyGameState after) {
+    final beforeIds =
+        (before.hands[playerId] ?? const []).map((t) => t.id).toSet();
+    for (final t in after.hands[playerId] ?? const []) {
+      if (!beforeIds.contains(t.id)) return t.id;
+    }
+    return null;
+  }
+
+  Future<void> _commitDraw({
+    required OkeyGameState previous,
+    required Future<OkeyGameState?> Function() persist,
+  }) async {
+    try {
+      final result = await persist();
+      if (result != null) {
+        state = result;
+        // [_pendingDrawnTileId] bilerek burada temizlenmez — transaction
+        // döndükten sonra hâlâ yoldaki eski snapshot optimistic eli silmesin;
+        // taş sunucu anlık görüntüsünde görünince [_subscribe] temizler.
+      }
+    } catch (e) {
+      state = previous;
+      _pendingDrawnTileId = null;
+      error = _friendlyError(e);
+      notifyListeners();
     }
   }
 
@@ -241,13 +289,26 @@ class OkeyOnlineProvider extends ChangeNotifier implements OkeyBoardController {
     state = null;
     error = null;
     _slots = const [];
+    _pendingDrawnTileId = null;
     notifyListeners();
   }
 
   void _subscribe(String id) {
     gameId = id;
+    _pendingDrawnTileId = null;
     _sub?.cancel();
     _sub = _service.watchGame(id).listen((s) {
+      // Optimistic çekme/alma yazılana kadar gelen eski snapshot'lar eli
+      // geri alırdı; bekleyen taş henüz sunucuda yoksa bu güncellemeyi atla.
+      final pending = _pendingDrawnTileId;
+      if (pending != null && s != null) {
+        final hand = s.hands[playerId] ?? const [];
+        final caughtUp = hand.any((t) => t.id == pending);
+        if (!caughtUp && s.currentTurn == playerId) {
+          return;
+        }
+        _pendingDrawnTileId = null;
+      }
       state = s;
       notifyListeners();
     });
