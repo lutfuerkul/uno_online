@@ -245,8 +245,7 @@ class _Board extends StatelessWidget {
                   ),
                 ),
                 // Kendi fotoğrafım — sağ altta, ekranın kenarına ve alttaki
-                // bilgi/sıra banner'ına tam yaslanmadan hafif ayrık (ikisinden
-                // de eşit boşlukla).
+                // durum banner'ına tam yaslanmadan hafif ayrık.
                 Positioned(
                   right: _s(16),
                   bottom: _s(16),
@@ -262,13 +261,8 @@ class _Board extends StatelessWidget {
           ),
         ),
 
-        // Her zaman aynı slotta kalır (yazı yokken de boş satır olarak) —
-        // aksi halde metin görünüp kaybolunca orta alan (FittedBox) sürekli
-        // yeniden ölçeklenip ekranı zıplatıyordu.
-        _LastActionBanner(
-            text: _infoBannerText(), color: _infoBannerColor(), scale: scale),
-
-        _TurnBanner(controller: controller, state: state, scale: scale),
+        // Son hamle + sıra durumu tek satırda (Okey ile aynı dil).
+        _StatusBanner(controller: controller, state: state, scale: scale),
 
         // --- Aksiyonlar ---
         // Buton her zaman ekranda durur (yerleşim zıplamasın diye); yalnızca
@@ -339,49 +333,6 @@ class _Board extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _infoBannerText() {
-    if (state.blockedPlayers.contains(controller.selfId)) return '🚫 Bloklandın';
-    if (_shouldShowLastAction()) return _lastActionText();
-    return '';
-  }
-
-  Color _infoBannerColor() {
-    if (state.blockedPlayers.contains(controller.selfId)) return UnoColors.blockedTag;
-    return UnoColors.lastAction;
-  }
-
-  bool _shouldShowLastAction() {
-    final la = state.lastAction;
-    if (la == null) return false;
-    if (state.status != 'playing') return false;
-    if (state.discardPile.length <= 1) return false;
-    return true;
-  }
-
-  String _lastActionText() {
-    final la = state.lastAction;
-    if (la == null) return '';
-    final who = controller.opponentName(la.player);
-    final tgt = la.target != null ? controller.opponentName(la.target!) : '';
-    if (la.isPass) return '⏭️ $who pas geçti';
-    switch (la.cardType) {
-      case CardType.skip:
-        return '🚫 $who → $tgt bloklandı';
-      case CardType.drawTwo:
-        return "➕2 $who → $tgt'e 2 kart çektirdi";
-      case CardType.wildDrawFour:
-        return "➕4 $who → $tgt'e 4 kart çektirdi (renk seçti)";
-      case CardType.reverse:
-        return '↩️ $who tekrar oynuyor';
-      case CardType.wild:
-        return '🎨 $who Joker oynadı (renk seçti)';
-      case CardType.number:
-        return '$who ${_colorTr[la.cardColor] ?? ''} ${la.cardValue} oynadı';
-      case null:
-        return '';
-    }
   }
 
   Future<void> _tryPlay(BuildContext context, UnoCard card) async {
@@ -611,54 +562,61 @@ class _OpponentTile extends StatelessWidget {
   }
 }
 
-class _LastActionBanner extends StatelessWidget {
-  final String text;
-  final Color color;
-  final double scale;
-  const _LastActionBanner(
-      {required this.text,
-      required this.scale,
-      this.color = UnoColors.lastAction});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4 * scale, horizontal: 10 * scale),
-      // FittedBox: satıra sığmayan uzun metinler (satır kaymadan/2 satıra
-      // geçip yükseklik değiştirmeden) küçültülerek tek satırda kalır.
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          softWrap: false,
-          style: TextStyle(color: color, fontSize: 16.5 * scale, fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
-  }
-}
-
-class _TurnBanner extends StatelessWidget {
+/// Son hamle bilgisi ve sıra durumu tek satırda — Okey `_turnBanner` ile
+/// aynı öncelik: bitiş → sıra bende → blok/son hamle → kimin sırası.
+class _StatusBanner extends StatelessWidget {
   final UnoBoardController controller;
   final GameState state;
   final double scale;
 
-  const _TurnBanner(
+  const _StatusBanner(
       {required this.controller, required this.state, required this.scale});
 
   double _s(double v) => v * scale;
 
+  bool get _finished => state.status == 'finished';
+  bool get _isMyTurn => !_finished && controller.isMyTurn;
+
+  bool _shouldShowLastAction() {
+    final la = state.lastAction;
+    if (la == null) return false;
+    if (state.status != 'playing') return false;
+    if (state.discardPile.length <= 1) return false;
+    return true;
+  }
+
+  String _lastActionText() {
+    final la = state.lastAction;
+    if (la == null) return '';
+    final who = controller.opponentName(la.player);
+    final tgt = la.target != null ? controller.opponentName(la.target!) : '';
+    if (la.isPass) return '⏭️ $who pas geçti';
+    switch (la.cardType) {
+      case CardType.skip:
+        return '🚫 $who → $tgt bloklandı';
+      case CardType.drawTwo:
+        return "➕2 $who → $tgt'e 2 kart çektirdi";
+      case CardType.wildDrawFour:
+        return "➕4 $who → $tgt'e 4 kart çektirdi (renk seçti)";
+      case CardType.reverse:
+        return '↩️ $who tekrar oynuyor';
+      case CardType.wild:
+        return '🎨 $who Joker oynadı (renk seçti)';
+      case CardType.number:
+        return '$who ${_colorTr[la.cardColor] ?? ''} ${la.cardValue} oynadı';
+      case null:
+        return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final finished = state.status == 'finished';
-    final isMyTurn = !finished && controller.isMyTurn;
+    final isMyTurn = _isMyTurn;
 
     String text;
     Color bg;
     Color textColor = Colors.white;
-    if (finished) {
+    if (_finished) {
       if (state.winner == null) {
         text = '🤝 Hamle şansı kalmadı — berabere bitti';
         bg = UnoColors.turnTheirs;
@@ -672,47 +630,45 @@ class _TurnBanner extends StatelessWidget {
         textColor = UnoColors.turnTheirsText;
       }
     } else if (isMyTurn) {
-      text = '● Sıra sende';
       bg = UnoColors.turnMine;
+      final reverseColor = controller.reverseColor;
+      if (reverseColor != null) {
+        text =
+            '● Sıra sende — ↩️ ${_colorTr[reverseColor] ?? ''} ya da Joker / +4 yoksa çek/pas';
+      } else {
+        text = '● Sıra sende';
+      }
+    } else if (state.blockedPlayers.contains(controller.selfId)) {
+      text = '🚫 Bloklandın';
+      bg = UnoColors.turnTheirs;
+      textColor = UnoColors.turnTheirsText;
+    } else if (_shouldShowLastAction()) {
+      text = _lastActionText();
+      bg = UnoColors.turnTheirs;
+      textColor = UnoColors.turnTheirsText;
     } else {
       text = '○ Sıra: ${controller.opponentName(state.currentTurn)}';
       bg = UnoColors.turnTheirs;
       textColor = UnoColors.turnTheirsText;
     }
 
-    final reverseColor = !finished && isMyTurn ? controller.reverseColor : null;
-
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(_s(12)),
+      padding: EdgeInsets.all(_s(10)),
       color: bg,
-      child: Column(
-        children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              softWrap: false,
-              style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: _s(16)),
-            ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w800,
+            fontSize: _s(16),
           ),
-          if (reverseColor != null)
-            Padding(
-              padding: EdgeInsets.only(top: _s(4)),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  '↩️ ${_colorTr[reverseColor] ?? ''} ya da Joker / +4 yoksa çek/pas',
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: TextStyle(color: Colors.white, fontSize: _s(13), fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
