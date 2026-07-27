@@ -52,6 +52,9 @@ class PistiGameState {
   /// Oyuncu → ardışık AFK sayısı.
   final Map<String, int> afkStrikes;
 
+  /// Bekleme odasında "Hazırım" diyenler.
+  final List<String> readyPlayers;
+
   const PistiGameState({
     required this.id,
     required this.status,
@@ -74,6 +77,7 @@ class PistiGameState {
     required this.lastAction,
     this.turnStartedAt = 0,
     this.afkStrikes = const {},
+    this.readyPlayers = const [],
   });
 
   PistiCard? get topOfPile => pile.isNotEmpty ? pile.last : null;
@@ -102,6 +106,7 @@ class PistiGameState {
     PistiLastAction? lastAction,
     int? turnStartedAt,
     Map<String, int>? afkStrikes,
+    List<String>? readyPlayers,
   }) {
     return PistiGameState(
       id: id,
@@ -126,6 +131,7 @@ class PistiGameState {
       lastAction: clearLastAction ? null : (lastAction ?? this.lastAction),
       turnStartedAt: turnStartedAt ?? this.turnStartedAt,
       afkStrikes: afkStrikes ?? this.afkStrikes,
+      readyPlayers: readyPlayers ?? this.readyPlayers,
     );
   }
 
@@ -166,6 +172,7 @@ class PistiGameState {
       turnStartedAt: (map['turnStartedAt'] as num?)?.toInt() ?? 0,
       afkStrikes: (map['afkStrikes'] as Map? ?? {}).map(
           (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0)),
+      readyPlayers: List<String>.from(map['readyPlayers'] as List? ?? []),
     );
   }
 
@@ -190,6 +197,7 @@ class PistiGameState {
         'lastAction': lastAction?.toMap(),
         'turnStartedAt': turnStartedAt,
         'afkStrikes': afkStrikes,
+        'readyPlayers': readyPlayers,
       };
 }
 

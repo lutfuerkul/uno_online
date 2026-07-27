@@ -51,6 +51,20 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
 
   bool get isHost => state != null && state!.players.isNotEmpty && state!.players.first == playerId;
 
+  bool get isReady => state?.readyPlayers.contains(playerId) ?? false;
+
+  /// Kurucu dışındaki herkes hazır mı? (başlatma koşulu)
+  bool get allOthersReady {
+    final s = state;
+    if (s == null || s.players.length < 2) return false;
+    final host = s.players.first;
+    for (final p in s.players) {
+      if (p == host) continue;
+      if (!s.readyPlayers.contains(p)) return false;
+    }
+    return true;
+  }
+
   @override
   List<UnoCard> get myHand => state?.hands[playerId] ?? const [];
 
@@ -123,6 +137,18 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
     final id = gameId;
     if (id == null) return;
     await _service.startGame(gameId: id, playerId: playerId);
+  }
+
+  Future<void> setReady(bool ready) async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.setReady(gameId: id, playerId: playerId, ready: ready);
+  }
+
+  Future<void> rematch() async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.rematch(id, playerId: playerId);
   }
 
   @override
@@ -234,12 +260,6 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
       error = _friendlyError(e);
       notifyListeners();
     }
-  }
-
-  Future<void> rematch() async {
-    final id = gameId;
-    if (id == null) return;
-    await _service.rematch(id);
   }
 
   /// Odadan ayrılıp giriş ekranına döner.

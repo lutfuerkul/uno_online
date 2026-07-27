@@ -9,7 +9,7 @@ import '../theme/pisti_theme.dart';
 /// modda ortak kullanılır.
 class PistiResultView extends StatelessWidget {
   final PistiBoardController controller;
-  final VoidCallback onRematch;
+  final VoidCallback? onRematch;
   final VoidCallback onLeave;
 
   const PistiResultView({
@@ -27,6 +27,7 @@ class PistiResultView extends StatelessWidget {
     final tie = winners.length > 1;
     final title = tie ? 'Berabere!' : (iWon ? 'Kazandın!' : 'Kaybettin');
     final emoji = tie ? '🤝' : (iWon ? '🎉' : '😔');
+    final canRematch = onRematch != null;
 
     final players = [...state.players]
       ..sort((a, b) => (state.scores[b] ?? 0).compareTo(state.scores[a] ?? 0));
@@ -59,19 +60,28 @@ class PistiResultView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: 260,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: PistiColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+            if (canRematch) ...[
+              SizedBox(
+                width: 260,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PistiColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: onRematch,
+                  child: const Text('🔁 Tekrar Oyna'),
                 ),
-                onPressed: onRematch,
-                child: const Text('🔁 Tekrar Oyna'),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
+            ] else ...[
+              const Text(
+                'Kurucu “Tekrar Oyna” deyince bekleme odasına dönülür.',
+                style: TextStyle(color: PistiColors.muted, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+            ],
             SizedBox(
               width: 260,
               child: OutlinedButton(
@@ -85,9 +95,11 @@ class PistiResultView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Tekrar Oyna herkesi bekleme odasına döndürür; kurucu yeniden başlatır.',
-              style: TextStyle(color: PistiColors.muted, fontSize: 12),
+            Text(
+              canRematch
+                  ? 'Tekrar Oyna lobiyi açar; herkes Hazırım deyince kurucu başlatır.'
+                  : 'Kurucunun tekrar başlatmasını bekliyorsun.',
+              style: const TextStyle(color: PistiColors.muted, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],

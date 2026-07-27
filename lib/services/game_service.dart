@@ -46,6 +46,7 @@ class GameService {
       'lastAction': null,
       'turnStartedAt': 0,
       'afkStrikes': <String, dynamic>{},
+      'readyPlayers': <dynamic>[],
       // Firestore güvenlik kuralları bunun bir sayı olmasını bekliyor (web
       // sürümündeki Date.now() ile eşleşsin diye FieldValue.serverTimestamp()
       // yerine epoch milisaniye kullanılır).
@@ -95,7 +96,7 @@ class GameService {
     });
   }
 
-  /// Yalnızca kurucu, en az 2 oyuncu varken oyunu başlatır.
+  /// Yalnızca kurucu, en az 2 oyuncu varken ve diğerleri hazırken başlatır.
   Future<void> startGame({required String gameId, required String playerId}) async {
     final ref = _games.doc(gameId);
     await _db.runTransaction((tx) async {
@@ -106,6 +107,8 @@ class GameService {
       final players = List<String>.from(data['players'] as List? ?? []);
       if (players.isEmpty || players.first != playerId) return; // sadece kurucu
       if (players.length < 2) return;
+      final ready = List<String>.from(data['readyPlayers'] as List? ?? []);
+      if (!_allOthersReady(players, ready)) return;
 
       final names = Map<String, String>.from(
         (data['playerNames'] as Map? ?? {}).map((k, v) => MapEntry(k.toString(), v.toString())),
@@ -120,8 +123,47 @@ class GameService {
         playerNames: names,
         playerPhotos: photos,
       );
-      tx.update(ref, fresh.toMap());
+      tx.update(ref, {
+        ...fresh.toMap(),
+        'readyPlayers': <dynamic>[],
+      });
     });
+  }
+
+  /// Bekleme odasında hazır durumunu aç/kapa. Kurucu hazır sayılmaz
+  /// (başlatma yetkisi onda).
+  Future<void> setReady({
+    required String gameId,
+    required String playerId,
+    required bool ready,
+  }) async {
+    final ref = _games.doc(gameId);
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final data = snap.data()!;
+      if (data['status'] != 'waiting') return;
+      final players = List<String>.from(data['players'] as List? ?? []);
+      if (!players.contains(playerId)) return;
+      if (players.isNotEmpty && players.first == playerId) return; // kurucu
+      final readyList = List<String>.from(data['readyPlayers'] as List? ?? []);
+      if (ready) {
+        if (!readyList.contains(playerId)) readyList.add(playerId);
+      } else {
+        readyList.remove(playerId);
+      }
+      tx.update(ref, {'readyPlayers': readyList});
+    });
+  }
+
+  static bool _allOthersReady(List<String> players, List<String> ready) {
+    if (players.length < 2) return false;
+    final host = players.first;
+    for (final p in players) {
+      if (p == host) continue;
+      if (!ready.contains(p)) return false;
+    }
+    return true;
   }
 
   /// Oyun belgesini canlı dinler.
@@ -314,13 +356,16 @@ class GameService {
   }
 
   /// Oyunu aynı oyuncularla yeniden başlatmak için bekleme odasına döndürür.
-  Future<void> rematch(String gameId) async {
+  /// Yalnızca kurucu çağırabilir.
+  Future<void> rematch(String gameId, {required String playerId}) async {
     final ref = _games.doc(gameId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
       if (!snap.exists) return;
       final data = snap.data()!;
       if (data['status'] != 'finished') return;
+      final players = List<String>.from(data['players'] as List? ?? []);
+      if (players.isEmpty || players.first != playerId) return;
       tx.update(ref, {
         'status': 'waiting',
         'hands': <String, dynamic>{},
@@ -337,6 +382,7 @@ class GameService {
         'lastAction': null,
         'turnStartedAt': 0,
         'afkStrikes': <String, dynamic>{},
+        'readyPlayers': <dynamic>[],
       });
     });
   }

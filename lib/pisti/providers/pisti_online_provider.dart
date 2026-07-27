@@ -46,6 +46,19 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
 
   bool get isHost => state != null && state!.players.isNotEmpty && state!.players.first == playerId;
 
+  bool get isReady => state?.readyPlayers.contains(playerId) ?? false;
+
+  bool get allOthersReady {
+    final s = state;
+    if (s == null || s.players.length < 2) return false;
+    final host = s.players.first;
+    for (final p in s.players) {
+      if (p == host) continue;
+      if (!s.readyPlayers.contains(p)) return false;
+    }
+    return true;
+  }
+
   @override
   List<String> get opponents {
     final s = state;
@@ -102,6 +115,18 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     final id = gameId;
     if (id == null) return;
     await _service.startGame(gameId: id, playerId: playerId);
+  }
+
+  Future<void> setReady(bool ready) async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.setReady(gameId: id, playerId: playerId, ready: ready);
+  }
+
+  Future<void> rematch() async {
+    final id = gameId;
+    if (id == null) return;
+    await _service.rematch(id, playerId: playerId);
   }
 
   @override
@@ -165,12 +190,6 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
       _collectTimer = null;
       if (gameId == id) _service.collectPile(id);
     });
-  }
-
-  Future<void> rematch() async {
-    final id = gameId;
-    if (id == null) return;
-    await _service.rematch(id);
   }
 
   @override

@@ -7,7 +7,7 @@ import '../theme/uno_theme.dart';
 /// aynı. Hem online hem bilgisayara karşı modda ortak kullanılır.
 class UnoResultView extends StatelessWidget {
   final UnoBoardController controller;
-  final VoidCallback onRematch;
+  final VoidCallback? onRematch;
   final VoidCallback onLeave;
 
   const UnoResultView({
@@ -23,6 +23,7 @@ class UnoResultView extends StatelessWidget {
     final tie = state.winner == null;
     final won = !tie && state.winner == controller.selfId;
     final winnerName = won ? 'Sen' : controller.opponentName(state.winner ?? '');
+    final canRematch = onRematch != null;
 
     return Center(
       child: SingleChildScrollView(
@@ -45,19 +46,28 @@ class UnoResultView extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 28),
-            SizedBox(
-              width: 260,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: UnoColors.red,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+            if (canRematch) ...[
+              SizedBox(
+                width: 260,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: UnoColors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: onRematch,
+                  child: const Text('🔁 Tekrar Oyna'),
                 ),
-                onPressed: onRematch,
-                child: const Text('🔁 Tekrar Oyna'),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
+            ] else ...[
+              const Text(
+                'Kurucu “Tekrar Oyna” deyince bekleme odasına dönülür.',
+                style: TextStyle(color: UnoColors.muted, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+            ],
             SizedBox(
               width: 260,
               child: OutlinedButton(
@@ -71,9 +81,11 @@ class UnoResultView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Tekrar Oyna herkesi bekleme odasına döndürür; kurucu yeniden başlatır.',
-              style: TextStyle(color: UnoColors.muted, fontSize: 12),
+            Text(
+              canRematch
+                  ? 'Tekrar Oyna lobiyi açar; herkes Hazırım deyince kurucu başlatır.'
+                  : 'Kurucunun tekrar başlatmasını bekliyorsun.',
+              style: const TextStyle(color: UnoColors.muted, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],

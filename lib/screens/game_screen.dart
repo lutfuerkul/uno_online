@@ -76,7 +76,7 @@ class _GameBodyState extends State<_GameBody> {
       if (_showResult) {
         return UnoResultView(
           controller: provider,
-          onRematch: provider.rematch,
+          onRematch: provider.isHost ? provider.rematch : null,
           onLeave: provider.leaveGame,
         );
       }
@@ -185,6 +185,8 @@ class _Lobby extends StatelessWidget {
                               [
                                 if (players.isNotEmpty && players.first == p)
                                   'kurucu',
+                                else if (state.readyPlayers.contains(p))
+                                  'hazır',
                                 if (p == provider.playerId) 'sen',
                               ].join(' · '),
                               style: TextStyle(
@@ -211,7 +213,9 @@ class _Lobby extends StatelessWidget {
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 14 * s),
                     ),
-                    onPressed: players.length < 2 ? null : provider.startGame,
+                    onPressed: players.length >= 2 && provider.allOthersReady
+                        ? provider.startGame
+                        : null,
                     child: Text('Oyunu Başlat',
                         style: TextStyle(fontSize: 14 * s)),
                   ),
@@ -222,16 +226,39 @@ class _Lobby extends StatelessWidget {
                     child: Text('En az 2 oyuncu gerekiyor',
                         style: TextStyle(
                             color: UnoColors.muted, fontSize: 13 * s)),
+                  )
+                else if (!provider.allOthersReady)
+                  Padding(
+                    padding: EdgeInsets.only(top: 8 * s),
+                    child: Text('Herkes Hazırım deyince başlatabilirsin',
+                        style: TextStyle(
+                            color: UnoColors.muted, fontSize: 13 * s)),
                   ),
               ] else ...[
-                Text('Kurucu başlatınca oyun başlayacak...',
-                    style: TextStyle(color: UnoColors.muted, fontSize: 14 * s)),
-                SizedBox(height: 12 * s),
                 SizedBox(
-                  width: 34 * s,
-                  height: 34 * s,
-                  child: const CircularProgressIndicator(
-                      strokeWidth: 4, color: UnoColors.red),
+                  width: 260 * s,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: provider.isReady
+                          ? const Color(0xFF2E7D32)
+                          : UnoColors.btnPass,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 14 * s),
+                    ),
+                    onPressed: () => provider.setReady(!provider.isReady),
+                    child: Text(
+                      provider.isReady ? '✓ Hazırım' : 'Hazırım',
+                      style: TextStyle(fontSize: 14 * s),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 10 * s),
+                Text(
+                  provider.isReady
+                      ? 'Kurucu başlatınca oyun başlayacak...'
+                      : 'Hazır olunca “Hazırım”a bas',
+                  style: TextStyle(color: UnoColors.muted, fontSize: 14 * s),
+                  textAlign: TextAlign.center,
                 ),
               ],
               SizedBox(height: 20 * s),

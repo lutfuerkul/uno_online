@@ -65,6 +65,9 @@ class OkeyGameState {
   /// Oyuncu → ardışık AFK sayısı.
   final Map<String, int> afkStrikes;
 
+  /// Bekleme odasında "Hazırım" diyenler.
+  final List<String> readyPlayers;
+
   const OkeyGameState({
     required this.id,
     required this.status,
@@ -87,6 +90,7 @@ class OkeyGameState {
     required this.cumulativeScores,
     this.turnStartedAt = 0,
     this.afkStrikes = const {},
+    this.readyPlayers = const [],
   });
 
   /// Okey (joker) sayısı: göstergenin bir büyüğü (13'ten sonra 1'e döner).
@@ -124,6 +128,7 @@ class OkeyGameState {
     Map<String, int>? cumulativeScores,
     int? turnStartedAt,
     Map<String, int>? afkStrikes,
+    List<String>? readyPlayers,
   }) {
     return OkeyGameState(
       id: id,
@@ -149,6 +154,7 @@ class OkeyGameState {
       cumulativeScores: cumulativeScores ?? this.cumulativeScores,
       turnStartedAt: turnStartedAt ?? this.turnStartedAt,
       afkStrikes: afkStrikes ?? this.afkStrikes,
+      readyPlayers: readyPlayers ?? this.readyPlayers,
     );
   }
 
@@ -191,6 +197,7 @@ class OkeyGameState {
       turnStartedAt: (map['turnStartedAt'] as num?)?.toInt() ?? 0,
       afkStrikes: (map['afkStrikes'] as Map? ?? {}).map(
           (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0)),
+      readyPlayers: List<String>.from(map['readyPlayers'] as List? ?? []),
     );
   }
 
@@ -217,6 +224,7 @@ class OkeyGameState {
         'cumulativeScores': cumulativeScores,
         'turnStartedAt': turnStartedAt,
         'afkStrikes': afkStrikes,
+        'readyPlayers': readyPlayers,
       };
 }
 

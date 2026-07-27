@@ -61,6 +61,9 @@ class GameState {
   /// Oyuncu kimliği → ardışık AFK sayısı. Manuel hamlede sıfırlanır.
   final Map<String, int> afkStrikes;
 
+  /// Bekleme odasında "Hazırım" diyen oyuncular (kurucu hariç gerekir).
+  final List<String> readyPlayers;
+
   const GameState({
     required this.id,
     required this.status,
@@ -80,6 +83,7 @@ class GameState {
     required this.lastAction,
     this.turnStartedAt = 0,
     this.afkStrikes = const {},
+    this.readyPlayers = const [],
   });
 
   UnoCard? get topCard => discardPile.isNotEmpty ? discardPile.last : null;
@@ -105,6 +109,7 @@ class GameState {
     UnoLastAction? lastAction,
     int? turnStartedAt,
     Map<String, int>? afkStrikes,
+    List<String>? readyPlayers,
   }) {
     return GameState(
       id: id,
@@ -125,6 +130,7 @@ class GameState {
       lastAction: clearLastAction ? null : (lastAction ?? this.lastAction),
       turnStartedAt: turnStartedAt ?? this.turnStartedAt,
       afkStrikes: afkStrikes ?? this.afkStrikes,
+      readyPlayers: readyPlayers ?? this.readyPlayers,
     );
   }
 
@@ -159,6 +165,7 @@ class GameState {
       turnStartedAt: (map['turnStartedAt'] as num?)?.toInt() ?? 0,
       afkStrikes: (map['afkStrikes'] as Map? ?? {}).map(
           (k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0)),
+      readyPlayers: List<String>.from(map['readyPlayers'] as List? ?? []),
     );
   }
 
@@ -183,6 +190,7 @@ class GameState {
         'lastAction': lastAction?.toMap(),
         'turnStartedAt': turnStartedAt,
         'afkStrikes': afkStrikes,
+        'readyPlayers': readyPlayers,
       };
 }
 
