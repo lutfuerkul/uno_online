@@ -8,6 +8,7 @@ import '../models/uno_card.dart';
 import '../services/game_service.dart';
 import '../services/uno_engine.dart';
 import '../services/player_identity.dart';
+import '../services/afk_config.dart';
 
 /// Uygulama genelinde (online) oyun durumunu tutar ve UI ile [GameService]
 /// arasında köprü kurar.
@@ -33,6 +34,7 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
   String? error;
 
   StreamSubscription<GameState?>? _sub;
+  Timer? _afkTimer;
 
   /// Optimistic hamleler için: Firestore yazılana kadar stale snapshot'ların
   /// yerel sonucu geri silmesini engeller (Okey draw deseni).
@@ -137,9 +139,13 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
       targetId: targetId,
     );
     if (optimistic == null) return;
-    state = optimistic;
+    state = optimistic.copyWith(
+      turnStartedAt: AfkConfig.nowMs(),
+      afkStrikes: AfkConfig.resetStrike(previous.afkStrikes, playerId),
+    );
     _pendingPlayedCardId = card.id;
     notifyListeners();
+    _armAfkWatch();
     unawaited(_commitMove(
       previous: previous,
       persist: () => _service.playCard(
@@ -162,9 +168,13 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
         UnoEngine.drawCard(state: previous, playerId: playerId);
     if (optimistic == null) return;
     final newId = _newCardId(previous, optimistic);
-    state = optimistic;
+    state = optimistic.copyWith(
+      turnStartedAt: AfkConfig.nowMs(),
+      afkStrikes: AfkConfig.resetStrike(previous.afkStrikes, playerId),
+    );
     _pendingDrawnCardId = newId;
     notifyListeners();
+    _armAfkWatch();
     unawaited(_commitMove(
       previous: previous,
       persist: () => _service.drawCard(gameId: id, playerId: playerId),
@@ -179,9 +189,13 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
     if (id == null || previous == null) return;
     final optimistic = UnoEngine.pass(state: previous, playerId: playerId);
     if (optimistic == null) return;
-    state = optimistic;
+    state = optimistic.copyWith(
+      turnStartedAt: AfkConfig.nowMs(),
+      afkStrikes: AfkConfig.resetStrike(previous.afkStrikes, playerId),
+    );
     _pendingPass = true;
     notifyListeners();
+    _armAfkWatch();
     unawaited(_commitMove(
       previous: previous,
       persist: () => _service.pass(gameId: id, playerId: playerId),
@@ -237,6 +251,8 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
     }
     _sub?.cancel();
     _sub = null;
+    _afkTimer?.cancel();
+    _afkTimer = null;
     gameId = null;
     state = null;
     error = null;
@@ -258,8 +274,24 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
       if (_shouldIgnoreStale(s)) return;
       state = s;
       notifyListeners();
+      _armAfkWatch();
     });
     notifyListeners();
+  }
+
+  void _armAfkWatch() {
+    _afkTimer?.cancel();
+    final s = state;
+    final id = gameId;
+    if (id == null || s == null || s.status != 'playing') return;
+    if (s.currentTurn.isEmpty) return;
+    final wait = AfkConfig.remainingMs(s.turnStartedAt);
+    _afkTimer = Timer(Duration(milliseconds: wait < 0 ? 0 : wait), () async {
+      if (gameId != id) return;
+      await _service.resolveAfk(gameId: id);
+      // Snapshot gelince yeniden kurulur; gelmezse kısa sonra tekrar dene.
+      _armAfkWatch();
+    });
   }
 
   /// Optimistic hamle yazılana kadar gelen eski snapshot'ları atlar.
@@ -307,6 +339,7 @@ class GameProvider extends ChangeNotifier implements UnoBoardController {
   @override
   void dispose() {
     _sub?.cancel();
+    _afkTimer?.cancel();
     super.dispose();
   }
 }

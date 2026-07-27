@@ -8,6 +8,7 @@ import '../models/pisti_game_state.dart';
 import '../services/pisti_engine.dart';
 import '../services/pisti_game_service.dart';
 import '../../services/player_identity.dart';
+import '../../services/afk_config.dart';
 
 /// Uygulama genelinde (online) Pişti oyun durumunu tutar ve UI ile
 /// [PistiGameService] arasında köprü kurar.
@@ -33,6 +34,7 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
 
   StreamSubscription<PistiGameState?>? _sub;
   Timer? _collectTimer;
+  Timer? _afkTimer;
 
   /// Optimistic play: kart hâlâ elde görünen stale snapshot'ları yok say.
   String? _pendingPlayedCardId;
@@ -110,9 +112,13 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     final optimistic =
         PistiEngine.playCard(state: previous, playerId: playerId, card: card);
     if (optimistic == null) return;
-    state = optimistic;
+    state = optimistic.copyWith(
+      turnStartedAt: AfkConfig.nowMs(),
+      afkStrikes: AfkConfig.resetStrike(previous.afkStrikes, playerId),
+    );
     _pendingPlayedCardId = card.id;
     notifyListeners();
+    _armAfkWatch();
     // Toplama burada zamanlanmaz — yalnızca gerçek snapshot'ta
     // (_maybeScheduleCollect). Optimistic pendingCapture ile timer kurmak
     // sunucu yazılmadan collectPile yarışı yaratırdı.
@@ -177,6 +183,8 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
     _sub = null;
     _collectTimer?.cancel();
     _collectTimer = null;
+    _afkTimer?.cancel();
+    _afkTimer = null;
     gameId = null;
     state = null;
     error = null;
@@ -193,8 +201,23 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
       state = s;
       notifyListeners();
       _maybeScheduleCollect();
+      _armAfkWatch();
     });
     notifyListeners();
+  }
+
+  void _armAfkWatch() {
+    _afkTimer?.cancel();
+    final s = state;
+    final id = gameId;
+    if (id == null || s == null || s.status != 'playing') return;
+    if (s.currentTurn.isEmpty && s.pendingCapture == null) return;
+    final wait = AfkConfig.remainingMs(s.turnStartedAt);
+    _afkTimer = Timer(Duration(milliseconds: wait < 0 ? 0 : wait), () async {
+      if (gameId != id) return;
+      await _service.resolveAfk(gameId: id);
+      _armAfkWatch();
+    });
   }
 
   bool _shouldIgnoreStale(PistiGameState? s) {
@@ -224,6 +247,7 @@ class PistiOnlineProvider extends ChangeNotifier implements PistiBoardController
   void dispose() {
     _sub?.cancel();
     _collectTimer?.cancel();
+    _afkTimer?.cancel();
     super.dispose();
   }
 }

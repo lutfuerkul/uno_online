@@ -2,8 +2,10 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../services/afk_config.dart';
 import '../models/okey_game_state.dart';
 import '../models/okey_tile.dart';
+import 'okey_bot_service.dart';
 import 'okey_engine.dart';
 
 /// Firestore ile tüm Okey oyun iletişimini yürütür: oda kurma, katılma,
@@ -36,6 +38,8 @@ class OkeyGameService {
       'finishedByPair': false,
       'scores': <String, dynamic>{},
       'cumulativeScores': <String, dynamic>{},
+      'turnStartedAt': 0,
+      'afkStrikes': <String, dynamic>{},
       'createdAt': DateTime.now().millisecondsSinceEpoch,
     });
     return code;
@@ -123,16 +127,22 @@ class OkeyGameService {
     required String gameId,
     required String playerId,
   }) {
-    return _mutate(gameId, (game) =>
-        OkeyEngine.drawFromStack(state: game, playerId: playerId));
+    return _mutate(
+      gameId,
+      (game) => OkeyEngine.drawFromStack(state: game, playerId: playerId),
+      manualPlayerId: playerId,
+    );
   }
 
   Future<OkeyGameState?> drawFromDiscard({
     required String gameId,
     required String playerId,
   }) {
-    return _mutate(gameId, (game) =>
-        OkeyEngine.drawFromDiscard(state: game, playerId: playerId));
+    return _mutate(
+      gameId,
+      (game) => OkeyEngine.drawFromDiscard(state: game, playerId: playerId),
+      manualPlayerId: playerId,
+    );
   }
 
   /// bkz. drawFromStack — sonucu hemen döndürür ki çağıran taraf attığı
@@ -148,7 +158,7 @@ class OkeyGameService {
       if (idx == -1) return null;
       return OkeyEngine.discard(
           state: game, playerId: playerId, tile: hand[idx]);
-    });
+    }, manualPlayerId: playerId);
   }
 
   Future<OkeyGameState?> finishDiscard({
@@ -162,13 +172,49 @@ class OkeyGameService {
       if (idx == -1) return null;
       return OkeyEngine.finishDiscard(
           state: game, playerId: playerId, tile: hand[idx]);
-    });
+    }, manualPlayerId: playerId);
+  }
+
+  Future<OkeyGameState?> resolveAfk({required String gameId}) {
+    return _mutate(gameId, (game) {
+      if (game.status != 'playing') return null;
+      final playerId = game.currentTurn;
+      if (playerId.isEmpty) return null;
+      if (!AfkConfig.isExpired(game.turnStartedAt)) return null;
+
+      final strikes = game.afkStrikes[playerId] ?? 0;
+      if (strikes >= AfkConfig.kickAfterStrikes - 1) {
+        return OkeyEngine.leavePlayer(state: game, playerId: playerId);
+      }
+      return _autoMove(game, playerId);
+    }, afk: true);
+  }
+
+  static OkeyGameState? _autoMove(OkeyGameState game, String playerId) {
+    var cur = game;
+    if (!cur.hasDrawn) {
+      final decision = OkeyBotService.decide(cur, playerId);
+      final drawn = decision.fromDiscard
+          ? OkeyEngine.drawFromDiscard(state: cur, playerId: playerId)
+          : OkeyEngine.drawFromStack(state: cur, playerId: playerId);
+      cur = drawn ??
+          OkeyEngine.drawFromStack(state: cur, playerId: playerId) ??
+          cur;
+      if (!cur.hasDrawn) return null;
+    }
+    final decision = OkeyBotService.decide(cur, playerId);
+    final tile = decision.tile;
+    if (tile == null) return null;
+    return OkeyEngine.finishDiscard(state: cur, playerId: playerId, tile: tile) ??
+        OkeyEngine.discard(state: cur, playerId: playerId, tile: tile);
   }
 
   Future<OkeyGameState?> _mutate(
     String gameId,
-    OkeyGameState? Function(OkeyGameState game) apply,
-  ) {
+    OkeyGameState? Function(OkeyGameState game) apply, {
+    String? manualPlayerId,
+    bool afk = false,
+  }) {
     final ref = _games.doc(gameId);
     return _db.runTransaction<OkeyGameState?>((tx) async {
       final snap = await tx.get(ref);
@@ -176,9 +222,36 @@ class OkeyGameService {
       final game = OkeyGameState.fromMap(gameId, snap.data()!);
       final result = apply(game);
       if (result == null) return null;
-      tx.update(ref, result.toMap());
-      return result;
+      final stamped = _stampAfk(
+        previous: game,
+        next: result,
+        manualPlayerId: manualPlayerId,
+        afk: afk,
+      );
+      tx.update(ref, stamped.toMap());
+      return stamped;
     });
+  }
+
+  OkeyGameState _stampAfk({
+    required OkeyGameState previous,
+    required OkeyGameState next,
+    String? manualPlayerId,
+    bool afk = false,
+  }) {
+    final now = AfkConfig.nowMs();
+    var strikes = Map<String, int>.from(next.afkStrikes);
+    if (manualPlayerId != null) {
+      strikes = AfkConfig.resetStrike(strikes, manualPlayerId);
+    } else if (afk) {
+      final victim = previous.currentTurn;
+      if (victim.isNotEmpty && next.players.contains(victim)) {
+        strikes = AfkConfig.bumpStrike(strikes, victim);
+      } else if (victim.isNotEmpty) {
+        strikes = Map<String, int>.from(strikes)..remove(victim);
+      }
+    }
+    return next.copyWith(turnStartedAt: now, afkStrikes: strikes);
   }
 
   Future<void> leaveRoom({required String gameId, required String playerId}) async {
@@ -190,7 +263,8 @@ class OkeyGameService {
         final game = OkeyGameState.fromMap(gameId, snap.data()!);
         if (!game.players.contains(playerId)) return;
         final result = OkeyEngine.leavePlayer(state: game, playerId: playerId);
-        tx.update(ref, result.toMap());
+        final stamped = _stampAfk(previous: game, next: result);
+        tx.update(ref, stamped.toMap());
       });
     } catch (_) {
       // hata olsa da yerelden çık
@@ -217,8 +291,10 @@ class OkeyGameService {
         'winner': null,
         'winners': <dynamic>[],
         'finishedByOkey': false,
-      'finishedByPair': false,
+        'finishedByPair': false,
         'scores': <String, dynamic>{},
+        'turnStartedAt': 0,
+        'afkStrikes': <String, dynamic>{},
       });
     });
   }

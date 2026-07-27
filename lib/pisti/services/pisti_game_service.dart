@@ -2,7 +2,9 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../services/afk_config.dart';
 import '../models/pisti_game_state.dart';
+import 'pisti_bot_service.dart';
 import 'pisti_engine.dart';
 
 /// Firestore ile tüm Pişti oyun iletişimini yürütür: oda kurma, katılma,
@@ -41,6 +43,8 @@ class PistiGameService {
       'winners': <dynamic>[],
       'scores': <String, dynamic>{},
       'scoreDetail': <String, dynamic>{},
+      'turnStartedAt': 0,
+      'afkStrikes': <String, dynamic>{},
       'createdAt': DateTime.now().millisecondsSinceEpoch,
     });
     return code;
@@ -124,35 +128,90 @@ class PistiGameService {
     required String playerId,
     required String cardId,
   }) {
+    return _mutate(gameId, (game) {
+      final hand = game.hands[playerId] ?? const [];
+      final idx = hand.indexWhere((c) => c.id == cardId);
+      if (idx == -1) return null;
+      return PistiEngine.playCard(
+          state: game, playerId: playerId, card: hand[idx]);
+    }, manualPlayerId: playerId);
+  }
+
+  /// Faz B: masa toplanır (yakalayan oyuncuya), sıra ilerler.
+  Future<PistiGameState?> collectPile(String gameId) {
+    return _mutate(gameId, (game) => PistiEngine.collectPile(state: game));
+  }
+
+  /// AFK: 60 sn → otomatik kart; 3. AFK → kick.
+  /// pendingCapture takılıysa süre dolunca herkes toplayabilir (strike yok).
+  Future<PistiGameState?> resolveAfk({required String gameId}) {
+    return _mutate(gameId, (game) {
+      if (game.status != 'playing') return null;
+      if (!AfkConfig.isExpired(game.turnStartedAt)) return null;
+
+      if (game.pendingCapture != null) {
+        return PistiEngine.collectPile(state: game);
+      }
+
+      final playerId = game.currentTurn;
+      if (playerId.isEmpty) return null;
+      final strikes = game.afkStrikes[playerId] ?? 0;
+      if (strikes >= AfkConfig.kickAfterStrikes - 1) {
+        return PistiEngine.leavePlayer(state: game, playerId: playerId);
+      }
+      final hand = game.hands[playerId] ?? const [];
+      if (hand.isEmpty) return null;
+      final card = PistiBotService.choose(game, playerId);
+      return PistiEngine.playCard(state: game, playerId: playerId, card: card);
+    }, afk: true);
+  }
+
+  Future<PistiGameState?> _mutate(
+    String gameId,
+    PistiGameState? Function(PistiGameState game) apply, {
+    String? manualPlayerId,
+    bool afk = false,
+  }) {
     final ref = _games.doc(gameId);
     return _db.runTransaction<PistiGameState?>((tx) async {
       final snap = await tx.get(ref);
       if (!snap.exists) return null;
       final game = PistiGameState.fromMap(gameId, snap.data()!);
-      final hand = game.hands[playerId] ?? const [];
-      final idx = hand.indexWhere((c) => c.id == cardId);
-      if (idx == -1) return null;
-      final result =
-          PistiEngine.playCard(state: game, playerId: playerId, card: hand[idx]);
+      final result = apply(game);
       if (result == null) return null;
-      tx.update(ref, result.toMap());
-      return result;
+      final stamped = _stampAfk(
+        previous: game,
+        next: result,
+        manualPlayerId: manualPlayerId,
+        afk: afk,
+      );
+      tx.update(ref, stamped.toMap());
+      return stamped;
     });
   }
 
-  /// Faz B: masa toplanır (yakalayan oyuncuya), sıra ilerler. İstemci,
-  /// oynanan kartın masada kısa süre görünmesi için bunu bir gecikmeyle
-  /// çağırır.
-  Future<void> collectPile(String gameId) async {
-    final ref = _games.doc(gameId);
-    await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (!snap.exists) return;
-      final game = PistiGameState.fromMap(gameId, snap.data()!);
-      final result = PistiEngine.collectPile(state: game);
-      if (result == null) return;
-      tx.update(ref, result.toMap());
-    });
+  PistiGameState _stampAfk({
+    required PistiGameState previous,
+    required PistiGameState next,
+    String? manualPlayerId,
+    bool afk = false,
+  }) {
+    final now = AfkConfig.nowMs();
+    var strikes = Map<String, int>.from(next.afkStrikes);
+
+    if (manualPlayerId != null) {
+      strikes = AfkConfig.resetStrike(strikes, manualPlayerId);
+    } else if (afk && previous.pendingCapture == null) {
+      // pendingCapture kurtarma strike sayılmaz.
+      final victim = previous.currentTurn;
+      if (victim.isNotEmpty && next.players.contains(victim)) {
+        strikes = AfkConfig.bumpStrike(strikes, victim);
+      } else if (victim.isNotEmpty) {
+        strikes = Map<String, int>.from(strikes)..remove(victim);
+      }
+    }
+
+    return next.copyWith(turnStartedAt: now, afkStrikes: strikes);
   }
 
   Future<void> leaveRoom({required String gameId, required String playerId}) async {
@@ -164,7 +223,8 @@ class PistiGameService {
         final game = PistiGameState.fromMap(gameId, snap.data()!);
         if (!game.players.contains(playerId)) return;
         final result = PistiEngine.leavePlayer(state: game, playerId: playerId);
-        tx.update(ref, result.toMap());
+        final stamped = _stampAfk(previous: game, next: result);
+        tx.update(ref, stamped.toMap());
       });
     } catch (_) {
       // hata olsa da yerelden çık
@@ -194,6 +254,8 @@ class PistiGameService {
         'winners': <dynamic>[],
         'scores': <String, dynamic>{},
         'scoreDetail': <String, dynamic>{},
+        'turnStartedAt': 0,
+        'afkStrikes': <String, dynamic>{},
       });
     });
   }
