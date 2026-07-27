@@ -112,11 +112,9 @@ class OkeyGameService {
         );
   }
 
-  /// Yeni durumu (yazılan hâliyle) döndürür — çağıran taraf (bkz.
-  /// OkeyOnlineProvider.drawFromStack), Firestore dinleyicisinin gecikmeli
-  /// güncellemesini beklemeden elini hemen bu sonuca göre güncelleyebilsin
-  /// diye. Aksi hâlde "çektiğim taşı ıstakada seçtiğim boşluğa bırak"
-  /// akışı, henüz güncellenmemiş eski eli görüp yeni taşı bulamıyordu.
+  /// Yeni durumu (yazılan hâliyle) döndürür. Çağıran taraf (online
+  /// provider) çekmeyi önce yerelde optimistic uygular; bu sonuç
+  /// transaction doğrulaması / eşitleme içindir.
   Future<OkeyGameState?> drawFromStack({
     required String gameId,
     required String playerId,

@@ -937,12 +937,6 @@ function renderBoard() {
   const myWon = (state.won[playerId] || []).length;
   const myPisti = pistiCount[playerId] || 0;
   const lastAction = state.lastAction;
-  const lastActionHtml = lastAction
-    ? (lastAction.isPisti
-        ? `<div class="last-action pisti-banner">🎉 ${escapeHtml(state.playerNames[lastAction.player] || "Oyuncu")} ${lastAction.isJackPisti ? "VALE PİŞTİ yaptı! (+15)" : `PİŞTİ yaptı! (${cardName(lastAction.card)})`}</div>`
-        : `<div class="last-action">${escapeHtml(state.playerNames[lastAction.player] || "Oyuncu")}
-            <b>${cardName(lastAction.card)}</b> oynadı${lastAction.captured ? " — yaktı! 🔥" : ""}</div>`)
-    : "";
 
   const handHtml = myHand.map((c) =>
     cardHtml(c, { width: 70, clickable: isMyTurn, dim: !isMyTurn })
@@ -962,7 +956,6 @@ function renderBoard() {
           ${deckCount > 0 ? cardHtml(null, { faceDown: true, big: true }) : `<div class="empty-slot">boş</div>`}
         </div>
         <div class="pile">
-          <small>Yerdeki kartlar</small>
           ${top ? tableStackHtml(pile) : `<div class="empty-slot">boş</div>`}
           <div class="pile-count">${pile.length} kart</div>
         </div>
@@ -973,13 +966,30 @@ function renderBoard() {
         </div>
       </div>
 
-      ${lastActionHtml}
-
-      <div class="turn ${isMyTurn ? "mine" : "theirs"}">
-        ${collecting
-          ? "🧹 " + escapeHtml(state.playerNames[state.pendingCapture.by] || "Oyuncu") + " masayı topluyor..."
-          : (isMyTurn ? "● Sıra sende — bir kart oyna" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu"))}
-      </div>
+      ${(() => {
+        // Son hamle + sıra tek satırda (Flutter / Okey ile aynı öncelik).
+        let text = "";
+        let cls = isMyTurn ? "mine" : "theirs";
+        let extra = "";
+        if (collecting) {
+          text = "🧹 " + escapeHtml(state.playerNames[state.pendingCapture.by] || "Oyuncu") + " masayı topluyor...";
+        } else if (isMyTurn) {
+          text = "● Sıra sende — bir kart oyna";
+        } else if (lastAction && lastAction.isPisti) {
+          const who = escapeHtml(state.playerNames[lastAction.player] || "Oyuncu");
+          text = lastAction.isJackPisti
+            ? `🎉 ${who} VALE PİŞTİ yaptı! (+15)`
+            : `🎉 ${who} PİŞTİ yaptı! (${cardName(lastAction.card)})`;
+          cls = "pisti";
+          extra = " pisti-banner";
+        } else if (lastAction) {
+          const who = escapeHtml(state.playerNames[lastAction.player] || "Oyuncu");
+          text = `${who} <b>${cardName(lastAction.card)}</b> oynadı${lastAction.captured ? " — yaktı! 🔥" : ""}`;
+        } else {
+          text = "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu");
+        }
+        return `<div class="turn ${cls}${extra}">${text}</div>`;
+      })()}
 
       <div class="hand">${handHtml}</div>
     </div>`;

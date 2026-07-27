@@ -166,9 +166,6 @@ class _Board extends StatelessWidget {
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Yerdeki kartlar',
-                                style: TextStyle(color: PistiColors.pileLabel, fontSize: _s(12))),
-                            SizedBox(height: _s(6)),
                             top != null
                                 ? _TableStack(pile: pile, cardWidth: _s(84))
                                 : _EmptySlot(width: _s(84)),
@@ -213,8 +210,7 @@ class _Board extends StatelessWidget {
                   ),
                 ),
                 // Kendi fotoğrafım — sağ altta, ekranın kenarına ve alttaki
-                // bilgi/sıra banner'ına tam yaslanmadan hafif ayrık (ikisinden
-                // de eşit boşlukla).
+                // durum banner'ına tam yaslanmadan hafif ayrık.
                 Positioned(
                   right: _s(16),
                   bottom: _s(16),
@@ -230,39 +226,13 @@ class _Board extends StatelessWidget {
           ),
         ),
 
-        // Her zaman aynı slotta kalır (yazı yokken de boş satır olarak) —
-        // aksi halde banner görünüp kaybolunca orta alan (FittedBox) sürekli
-        // yeniden ölçeklenip ekranı zıplatıyordu.
-        _LastActionBanner(
-          action: state.status == 'playing' ? state.lastAction : null,
-          playerName: state.lastAction != null
-              ? controller.opponentName(state.lastAction!.player)
-              : '',
+        // Son hamle + sıra durumu tek satırda (Okey ile aynı dil).
+        _StatusBanner(
+          controller: controller,
+          state: state,
+          collecting: _collecting,
+          isMyTurn: _isMyTurn,
           scale: scale,
-        ),
-
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(_s(10)),
-          color: _isMyTurn ? PistiColors.turnMine : PistiColors.turnTheirs,
-          // FittedBox: satıra sığmayan uzun metinler (2 satıra geçip
-          // yükseklik değiştirmeden) küçültülerek tek satırda kalır.
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              _collecting
-                  ? '🧹 ${controller.opponentName(state.pendingCapture!.by)} masayı topluyor...'
-                  : (_isMyTurn ? '● Sıra sende — bir kart oyna' : '○ Sıra: ${controller.opponentName(state.currentTurn)}'),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              softWrap: false,
-              style: TextStyle(
-                color: _isMyTurn ? Colors.white : PistiColors.turnTheirsText,
-                fontWeight: FontWeight.w800,
-                fontSize: _s(16),
-              ),
-            ),
-          ),
         ),
 
         Container(
@@ -492,32 +462,36 @@ class _OpponentTile extends StatelessWidget {
   }
 }
 
-class _LastActionBanner extends StatefulWidget {
-  /// null ise gösterilecek bir şey yok — yine de aynı boş satır yüksekliği
-  /// korunur (bkz. çağıran yerdeki yorum).
-  final PistiLastAction? action;
-  final String playerName;
-
-  /// bkz. [_computeScale] — yazı puntoları/boşluklar bununla çarpılır.
-  /// (Aşağıdaki `_pulse` ile karıştırılmamalı: o, pişti anındaki büyüyüp
-  /// küçülme animasyonu.)
+/// Son hamle bilgisi ve sıra durumu tek satırda — Okey `_turnBanner` ile
+/// aynı öncelik: toplama → sıra bende → son hamle (pişti pulse) → kimin sırası.
+class _StatusBanner extends StatefulWidget {
+  final PistiBoardController controller;
+  final PistiGameState state;
+  final bool collecting;
+  final bool isMyTurn;
   final double scale;
-  const _LastActionBanner(
-      {required this.action, required this.playerName, required this.scale});
+
+  const _StatusBanner({
+    required this.controller,
+    required this.state,
+    required this.collecting,
+    required this.isMyTurn,
+    required this.scale,
+  });
 
   @override
-  State<_LastActionBanner> createState() => _LastActionBannerState();
+  State<_StatusBanner> createState() => _StatusBannerState();
 }
 
-class _LastActionBannerState extends State<_LastActionBanner>
+class _StatusBannerState extends State<_StatusBanner>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-
-  /// Pişti olunca banner'ı hafifçe büyütüp küçülten animasyon — ekran
-  /// ölçeğiyle (widget.scale) ilgisi yok.
   late final Animation<double> _pulse;
 
   double _s(double v) => v * widget.scale;
+
+  PistiLastAction? get _action =>
+      widget.state.status == 'playing' ? widget.state.lastAction : null;
 
   @override
   void initState() {
@@ -529,20 +503,18 @@ class _LastActionBannerState extends State<_LastActionBanner>
     _pulse = Tween<double>(begin: 1, end: 1.05).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-    if (widget.action?.isPisti ?? false) {
+    if (_action?.isPisti ?? false) {
       _runPistiPulse();
     }
   }
 
   @override
-  void didUpdateWidget(covariant _LastActionBanner oldWidget) {
+  void didUpdateWidget(covariant _StatusBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Widget artık her zaman aynı yuvada kalıyor (bkz. çağıran yer); bu
-    // yüzden yeni bir pişti olduğunda pulse animasyonunu burada tetikliyoruz
-    // (eskiden widget her seferinde yeniden oluşturulduğu için initState
-    // yeterliydi).
-    final a = widget.action;
-    if (a != null && a.isPisti && a != oldWidget.action) {
+    final a = _action;
+    final oldAction =
+        oldWidget.state.status == 'playing' ? oldWidget.state.lastAction : null;
+    if (a != null && a.isPisti && a != oldAction) {
       _runPistiPulse();
     }
   }
@@ -564,77 +536,66 @@ class _LastActionBannerState extends State<_LastActionBanner>
 
   @override
   Widget build(BuildContext context) {
-    final action = widget.action;
-    if (action == null) {
-      return Padding(
-        padding: EdgeInsets.symmetric(vertical: _s(4), horizontal: _s(10)),
-        child: Text(
-          '',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              color: PistiColors.lastAction, fontSize: _s(16.5), fontWeight: FontWeight.w700),
-        ),
-      );
+    final c = widget.controller;
+    final isMyTurn = widget.isMyTurn;
+    final action = _action;
+
+    String text;
+    Color bg;
+    Color textColor = Colors.white;
+    var isPisti = false;
+
+    if (widget.collecting) {
+      text =
+          '🧹 ${c.opponentName(widget.state.pendingCapture!.by)} masayı topluyor...';
+      bg = isMyTurn ? PistiColors.turnMine : PistiColors.turnTheirs;
+      textColor = isMyTurn ? Colors.white : PistiColors.turnTheirsText;
+    } else if (isMyTurn) {
+      text = '● Sıra sende — bir kart oyna';
+      bg = PistiColors.turnMine;
+    } else if (action != null && action.isPisti) {
+      isPisti = true;
+      final who = c.opponentName(action.player);
+      text = action.isJackPisti
+          ? '🎉 $who VALE PİŞTİ yaptı! (+15)'
+          : '🎉 $who PİŞTİ yaptı! (${action.card.nameTr})';
+      bg = PistiColors.pistiBannerBg;
+      textColor = PistiColors.pistiBannerText;
+    } else if (action != null) {
+      final who = c.opponentName(action.player);
+      text = action.captured
+          ? '$who ${action.card.nameTr} oynadı — yaktı! 🔥'
+          : '$who ${action.card.nameTr} oynadı';
+      bg = PistiColors.turnTheirs;
+      textColor = PistiColors.turnTheirsText;
+    } else {
+      text = '○ Sıra: ${c.opponentName(widget.state.currentTurn)}';
+      bg = PistiColors.turnTheirs;
+      textColor = PistiColors.turnTheirsText;
     }
-    if (action.isPisti) {
-      return ScaleTransition(
-        scale: _pulse,
-        child: Container(
-          margin: EdgeInsets.symmetric(vertical: _s(4), horizontal: _s(12)),
-          padding: EdgeInsets.symmetric(vertical: _s(8), horizontal: _s(10)),
-          decoration: BoxDecoration(
-            color: PistiColors.pistiBannerBg,
-            borderRadius: BorderRadius.circular(_s(10)),
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              action.isJackPisti
-                  ? '🎉 ${widget.playerName} VALE PİŞTİ yaptı! (+15)'
-                  : '🎉 ${widget.playerName} PİŞTİ yaptı! (${action.card.nameTr})',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              softWrap: false,
-              style: TextStyle(
-                color: PistiColors.pistiBannerText,
-                fontSize: _s(17),
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: _s(4), horizontal: _s(10)),
-      // FittedBox: satıra sığmayan uzun metinler (2 satıra geçip yükseklik
-      // değiştirmeden) küçültülerek tek satırda kalır.
+
+    final banner = Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_s(10)),
+      color: bg,
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        child: RichText(
+        child: Text(
+          text,
           textAlign: TextAlign.center,
           maxLines: 1,
-          overflow: TextOverflow.clip,
-          text: TextSpan(
-            style: TextStyle(
-              color: PistiColors.lastAction,
-              fontSize: _s(16.5),
-              fontWeight: FontWeight.w700,
-            ),
-            children: [
-              TextSpan(text: '${widget.playerName} '),
-              TextSpan(
-                text: action.card.nameTr,
-                style: const TextStyle(fontWeight: FontWeight.w900),
-              ),
-              TextSpan(
-                text: action.captured ? ' oynadı — yaktı! 🔥' : ' oynadı',
-              ),
-            ],
+          softWrap: false,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w800,
+            fontSize: _s(16),
           ),
         ),
       ),
     );
+
+    if (!isPisti) return banner;
+    return ScaleTransition(scale: _pulse, child: banner);
   }
 }
 

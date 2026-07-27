@@ -1183,17 +1183,26 @@ function renderBoard() {
         </div>
       </div>
 
-      ${shouldShowLastAction() ? `<div class="last-action">${lastActionText()}</div>` : ""}
-      ${iAmBlocked ? `<div class="last-action" style="color:#ff8a80">🚫 Bloklandın</div>` : ""}
-
-      <div class="turn ${finishBanner ? finishBanner.cls : (isMyTurn ? "mine" : "theirs")}">
-        ${finishBanner
-          ? finishBanner.text
-          : (isMyTurn ? "● Sıra sende" : "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu"))}
-        ${!finished && isMyTurn && reverseColor != null
-          ? `<div class="hint">↩️ ${COLOR_TR[reverseColor] || reverseColor} ya da Joker / +4 yoksa çek/pas</div>`
-          : ""}
-      </div>
+      ${(() => {
+        // Son hamle + sıra tek satırda (Flutter / Okey ile aynı öncelik).
+        let text = "";
+        let cls = isMyTurn ? "mine" : "theirs";
+        if (finishBanner) {
+          text = finishBanner.text;
+          cls = finishBanner.cls;
+        } else if (isMyTurn) {
+          text = reverseColor != null
+            ? `● Sıra sende — ↩️ ${COLOR_TR[reverseColor] || reverseColor} ya da Joker / +4 yoksa çek/pas`
+            : "● Sıra sende";
+        } else if (iAmBlocked) {
+          text = "🚫 Bloklandın";
+        } else if (shouldShowLastAction()) {
+          text = lastActionText();
+        } else {
+          text = "○ Sıra: " + escapeHtml(state.playerNames[state.currentTurn] || "Oyuncu");
+        }
+        return `<div class="turn ${cls}">${text}</div>`;
+      })()}
 
       <div class="actions">
         ${isMyTurn && hasDrawn ? `<button class="btn-pass" id="pass">Pas Geç ▶</button>` : ""}
