@@ -176,6 +176,26 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: PistiColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 14 * s),
+                      ),
+                      onPressed: () {
+                        final name = _validateName();
+                        if (name != null) {
+                          provider.createGame(name, photo: _photo);
+                        }
+                      },
+                      child: Text('Yeni Oyun Kur',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 14 * s)),
+                    ),
+                  ),
+                  SizedBox(height: 14 * s),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: PistiColors.cardBackBg,
                         foregroundColor: Colors.white,
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
@@ -198,26 +218,6 @@ class _PistiHomeScreenState extends State<PistiHomeScreen> {
                   SizedBox(height: 16 * s),
                   Container(height: 1, color: PistiColors.divider),
                   SizedBox(height: 16 * s),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: PistiColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14 * s),
-                      ),
-                      onPressed: () {
-                        final name = _validateName();
-                        if (name != null) {
-                          provider.createGame(name, photo: _photo);
-                        }
-                      },
-                      child: Text('Yeni Oyun Kur',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 14 * s)),
-                    ),
-                  ),
-                  SizedBox(height: 14 * s),
                   TextField(
                     controller: _codeController,
                     textAlign: TextAlign.center,
