@@ -166,6 +166,26 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: OkeyColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 14 * s),
+                      ),
+                      onPressed: () {
+                        final name = _validateName();
+                        if (name != null) {
+                          provider.createGame(name, photo: _photo);
+                        }
+                      },
+                      child: Text('Yeni Oyun Kur',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 14 * s)),
+                    ),
+                  ),
+                  SizedBox(height: 14 * s),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: OkeyColors.tileBackBg,
                         foregroundColor: Colors.white,
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
@@ -188,26 +208,6 @@ class _OkeyHomeScreenState extends State<OkeyHomeScreen> {
                   SizedBox(height: 16 * s),
                   Container(height: 1, color: OkeyColors.divider),
                   SizedBox(height: 16 * s),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: OkeyColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14 * s),
-                      ),
-                      onPressed: () {
-                        final name = _validateName();
-                        if (name != null) {
-                          provider.createGame(name, photo: _photo);
-                        }
-                      },
-                      child: Text('Yeni Oyun Kur',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 14 * s)),
-                    ),
-                  ),
-                  SizedBox(height: 14 * s),
                   TextField(
                     controller: _codeController,
                     textAlign: TextAlign.center,

@@ -168,6 +168,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: UnoColors.red,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 14 * s),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12 * s)),
+                      ),
+                      onPressed: () {
+                        final name = _validateName();
+                        if (name != null) {
+                          provider.createGame(name, photo: _photo);
+                        }
+                      },
+                      child: Text('Yeni Oyun Kur',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 14 * s)),
+                    ),
+                  ),
+                  SizedBox(height: 14 * s),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: UnoColors.btnUnoBg,
                         foregroundColor: UnoColors.background,
                         padding: EdgeInsets.symmetric(vertical: 14 * s),
@@ -192,28 +214,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(height: 16 * s),
                   Container(height: 1, color: UnoColors.divider),
                   SizedBox(height: 16 * s),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: UnoColors.red,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14 * s),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12 * s)),
-                      ),
-                      onPressed: () {
-                        final name = _validateName();
-                        if (name != null) {
-                          provider.createGame(name, photo: _photo);
-                        }
-                      },
-                      child: Text('Yeni Oyun Kur',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 14 * s)),
-                    ),
-                  ),
-                  SizedBox(height: 14 * s),
                   TextField(
                     controller: _codeController,
                     textAlign: TextAlign.center,
