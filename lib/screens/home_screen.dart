@@ -104,14 +104,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final provider = context.watch<GameProvider>();
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: UnoColors.background,
       body: SafeArea(
-        child: LayoutBuilder(builder: (context, constraints) {
-          final s = computeUiScale(constraints);
+        child: Builder(builder: (context) {
+          final constraints = menuLayoutConstraints(context);
+          final s = computeMenuUiScale(context);
+          final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
           return Center(
             child: SingleChildScrollView(
               padding: uiContentPadding(constraints, s,
-                  horizontal: 24 * s, vertical: 24 * s),
+                      horizontal: 24 * s, vertical: 24 * s)
+                  .add(EdgeInsets.only(bottom: bottomInset)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -286,3 +290,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

@@ -46,6 +46,23 @@ double computeUiScale(
       .clamp(kMinScale, maxScale);
 }
 
+/// Menü / kurulum ekranlarında ölçek hesabı için kullanılacak alan.
+///
+/// Klavye açıldığında [MediaQuery.viewInsets] yüksekliği düşürülmez — aksi
+/// halde [computeUiScale] yeniden küçülür ve tüm arayüz yeniden ölçeklenir.
+BoxConstraints menuLayoutConstraints(BuildContext context) {
+  final media = MediaQuery.of(context);
+  final padding = media.padding;
+  return BoxConstraints(
+    maxWidth: media.size.width,
+    maxHeight: media.size.height - padding.top - padding.bottom,
+  );
+}
+
+/// [menuLayoutConstraints] ile [computeUiScale] kısayolu.
+double computeMenuUiScale(BuildContext context) =>
+    computeUiScale(menuLayoutConstraints(context));
+
 /// Menü / kurulum ekranlarındaki içerik sütununun azami genişliği:
 /// referans genişliğinin ölçeklenmiş hali.
 ///
